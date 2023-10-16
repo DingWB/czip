@@ -1,22 +1,39 @@
 #!/usr/bin/env python
-import os,sys
+import glob
+import os, sys
 import struct
 import zlib
 from builtins import open as _open
 import numpy as np
 import pandas as pd
-import fire
+import gzip
 
 _bmz_magic = b'BMZIP'
 _block_magic = b"MB"
 _chunk_magic = b"MC"
 _BLOCK_MAX_LEN = 65535
 _bmz_eof = b"\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00BM\x02\x00\x1b\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-_version=1.0
+_version = 1.0
+
+# ==========================================================
+def str2byte(x):
+    return bytes(str(x), 'utf-8')
+# ==========================================================
+dtype_func = {
+    'h': int, 'H': int,
+    'i': int, 'I': int, 'b': int, 'B': int,
+    'L': int, 'l': int, 'q': int, 'Q': int,
+    'f': float, 'd': float,
+    's': str2byte, 'c': str2byte
+}
+# ==========================================================
+def get_dtfuncs(formats):
+    return [dtype_func[t[-1]] for t in formats]
+
 
 # ==========================================================
 def make_virtual_offset(block_start_offset, within_block_offset):
-	"""Compute a BGZF virtual offset from block start and within block offsets.
+    """Compute a BGZF virtual offset from block start and within block offsets.
 
 	The BAM indexing scheme records read positions using a 64 bit
 	'virtual offset', comprising in C terms:
@@ -28,18 +45,20 @@ def make_virtual_offset(block_start_offset, within_block_offset):
 	within_block_offset within the (decompressed) block (unsigned
 	16 bit integer).
 	"""
-	if within_block_offset < 0 or within_block_offset >= _BLOCK_MAX_LEN:
-		raise ValueError(
-			"Require 0 <= within_block_offset < 2**16, got %i" % within_block_offset
-		)
-	if block_start_offset < 0 or block_start_offset >= 281474976710656:
-		raise ValueError(
-			"Require 0 <= block_start_offset < 2**48, got %i" % block_start_offset
-		)
-	return (block_start_offset << 16) | within_block_offset
+    if within_block_offset < 0 or within_block_offset >= _BLOCK_MAX_LEN:
+        raise ValueError(
+            "Require 0 <= within_block_offset < 2**16, got %i" % within_block_offset
+        )
+    if block_start_offset < 0 or block_start_offset >= 281474976710656:
+        raise ValueError(
+            "Require 0 <= block_start_offset < 2**48, got %i" % block_start_offset
+        )
+    return (block_start_offset << 16) | within_block_offset
+
+
 # ==========================================================
 def split_virtual_offset(virtual_offset):
-	"""Divides a 64-bit BGZF virtual offset into block start & within block offsets.
+    """Divides a 64-bit BGZF virtual offset into block start & within block offsets.
 
 	>>> (100000, 0) == split_virtual_offset(_BLOCK_MAX_LEN00000)
 	True
@@ -47,11 +66,13 @@ def split_virtual_offset(virtual_offset):
 	True
 
 	"""
-	start = virtual_offset >> 16
-	return start, virtual_offset ^ (start << 16)
+    start = virtual_offset >> 16
+    return start, virtual_offset ^ (start << 16)
+
+
 # ==========================================================
 def SummaryBmzBlocks(handle):
-	"""Low level debugging function to inspect BGZF blocks.
+    """Low level debugging function to inspect BGZF blocks.
 
 	Expects a BGZF compressed file opened in binary read mode using
 	the builtin open function. Do not use a handle from this bgzf
@@ -120,57 +141,70 @@ def SummaryBmzBlocks(handle):
 	>>> handle.close()
 
 	"""
-	if isinstance(handle, Reader):
-		raise TypeError("Function BmzBlocks expects a binary handle")
-	data_start = 0
-	while True:
-		start_offset = handle.tell()
-		try:
-			block_length, data_len = _load_bmz_block(handle)
-		except StopIteration:
-			break
-		yield start_offset, block_length, data_start, data_len
-		data_start += data_len
+    if isinstance(handle, Reader):
+        raise TypeError("Function BmzBlocks expects a binary handle")
+    data_start = 0
+    while True:
+        start_offset = handle.tell()
+        try:
+            block_length, data_len = _load_bmz_block(handle)
+        except StopIteration:
+            break
+        yield start_offset, block_length, data_start, data_len
+        data_start += data_len
+
+
 # ==========================================================
 def _load_bmz_block(handle, decompress=False):
-	"""Load the next BGZF block of compressed data (PRIVATE).
+    """Load the next BGZF block of compressed data (PRIVATE).
 
 	Returns a tuple (block size and data), or at end of file
 	will raise StopIteration.
 	"""
-	magic = handle.read(2)
-	if not magic or magic != _block_magic: # next chunk or EOF
-		raise StopIteration
-	block_size = struct.unpack("<H", handle.read(2))[0]
-	# block size is the size of compressed data + 4 (header + tail)
-	"""
+    magic = handle.read(2)
+    if not magic or magic != _block_magic:  # next chunk or EOF
+        raise StopIteration
+    block_size = struct.unpack("<H", handle.read(2))[0]
+    # block size is the size of compressed data + 4 (header + tail)
+    """
 	2 bytes is the size of block_size
 	10 bytes for the GZIP header.
 	2 bytes for the block tail: block_data_len
 	1 byte for the empty GZIP trailer.
 	"""
-	if decompress:
-		"""
+    if decompress:
+        """
 		# there is no gzip header for deflate compressed format
 		to (de-)compress deflate format, use wbits = -zlib.MAX_WBITS (-15)
 		to (de-)compress zlib format, use wbits = zlib.MAX_WBITS
 		to (de-)compress gzip format, use wbits = zlib.MAX_WBITS | 16
 		"""
-		deflate_size = block_size - 6
-		d = zlib.decompressobj(-15)  # -zlib.MAX_WBITS, means no headers
-		data = d.decompress(handle.read(deflate_size)) + d.flush()
-		data_len = struct.unpack("<H", handle.read(2))[0]
-		# refer to: http://samtools.github.io/hts-specs/SAMv1.pdf
-		# data_len = len(data) #uncompressed data length
-		return block_size, data
-	else:
-		handle.seek(block_size-6, 1)
-		data_len = struct.unpack("<H", handle.read(2))[0]
-		return block_size, data_len
+        deflate_size = block_size - 6
+        d = zlib.decompressobj(-15)  # -zlib.MAX_WBITS, means no headers
+        data = d.decompress(handle.read(deflate_size)) + d.flush()
+        data_len = struct.unpack("<H", handle.read(2))[0]
+        # refer to: http://samtools.github.io/hts-specs/SAMv1.pdf
+        # data_len = len(data) #uncompressed data length
+        return block_size, data
+    else:
+        handle.seek(block_size - 6, 1)
+        data_len = struct.unpack("<H", handle.read(2))[0]
+        return block_size, data_len
+
+
+# ==========================================================
+def open1(infile):
+    if infile.endswith('.gz'):
+        f = gzip.open(infile, 'rb')
+    else:
+        f = open(infile, 'r')
+    return f
+
+
 # ==========================================================
 class Reader:
-	def __init__(self, Input=None, mode="rb", fileobj=None, max_cache=100):
-		r"""Initialize the class for reading a BGZF file.
+    def __init__(self, Input=None, mode="rb", fileobj=None, max_cache=100):
+        r"""Initialize the class for reading a BGZF file.
 		You would typically use the top level ``bgzf.open(...)`` function
 		which will call this class internally. Direct use is discouraged.
 		Either the ``filename`` (string) or ``fileobj`` (input file object in
@@ -191,612 +225,776 @@ class Reader:
 		could take up to 6MB of RAM. This is important for efficient random
 		access, a small value is fine for reading the file in one pass.
 		"""
-		if max_cache < 1:
-			raise ValueError("Use max_cache with a minimum of 1")
-		# Must open the BGZF file in binary mode, but we may want to
-		# treat the contents as either text or binary (unicode or
-		# bytes under Python 3)
-		if Input and fileobj:
-			raise ValueError("Supply either filename or fileobj, not both")
-		# Want to reject output modes like w, a, x, +
-		if mode.lower() not in ("r", "tr", "rt", "rb", "br"):
-			raise ValueError(
-				"Must use a read mode like 'r' (default), 'rt', or 'rb' for binary"
-			)
-		# If an open file was passed, make sure it was opened in binary mode.
-		if fileobj:
-			if fileobj.read(0) != b"":
-				raise ValueError("fileobj not opened in binary mode")
-			handle = fileobj
-		else:
-			handle = _open(Input, "rb")
-		self._handle = handle
-		self.max_cache = max_cache
-		self._block_start_offset = None
-		self._block_raw_length = None
-		self.read_header()
+        if max_cache < 1:
+            raise ValueError("Use max_cache with a minimum of 1")
+        # Must open the BGZF file in binary mode, but we may want to
+        # treat the contents as either text or binary (unicode or
+        # bytes under Python 3)
+        if Input and fileobj:
+            raise ValueError("Supply either filename or fileobj, not both")
+        # Want to reject output modes like w, a, x, +
+        if mode.lower() not in ("r", "tr", "rt", "rb", "br"):
+            raise ValueError(
+                "Must use a read mode like 'r' (default), 'rt', or 'rb' for binary"
+            )
+        # If an open file was passed, make sure it was opened in binary mode.
+        if fileobj:
+            if fileobj.read(0) != b"":
+                raise ValueError("fileobj not opened in binary mode")
+            handle = fileobj
+        else:
+            handle = _open(Input, "rb")
+        self._handle = handle
+        self.max_cache = max_cache
+        self._block_start_offset = None
+        self._block_raw_length = None
+        self.read_header()
 
-	def read_header(self):
-		# header: magic (5 bytes, 5s)  +
-		# format_len (1byte, B) + format (format_len bytes, s)
-		self.header = {}
-		f = self._handle
-		magic = struct.unpack("<5s", f.read(5))[0]
-		if magic != _bmz_magic:
-			raise ValueError("Not a right format?")
-		self.header['magic']=magic
-		self.header['version'] = struct.unpack("<f", f.read(4))[0]
-		total_size=struct.unpack("<Q", f.read(8))[0]
-		if total_size ==0:
-			raise ValueError("File not completed !")
-		self.header['total_size']=total_size
-		format_len = struct.unpack("<B", f.read(1))[0]
-		Formats=[]
-		for i in range(format_len):
-			n=struct.unpack("<B", f.read(1))[0]
-			format = struct.unpack(f"<{n}s", f.read(n))[0].decode()
-			Formats.append(format)
-		self.header['Formats'] = Formats
-		names=[]
-		for i in range(format_len):
-			n = struct.unpack("<B", f.read(1))[0]
-			name = struct.unpack(f"<{n}s", f.read(n))[0].decode()
-			names.append(name)
-		self.header['names'] = names
-		assert len(Formats) == len(names)
-		tags=[]
-		tag_len = struct.unpack("<B", f.read(1))[0]
-		for i in range(tag_len):
-			n = struct.unpack("<B", f.read(1))[0]
-			tag = struct.unpack(f"<{n}s", f.read(n))[0].decode()
-			tags.append(tag)
-		self.header['tags'] = tags
-		self.header['header_size'] = f.tell() #end of header, begin of 1st chunk
-		self.fmt=''.join(Formats)
-		self._unit_size=struct.calcsize(self.fmt)
+    def read_header(self):
+        # header: magic (5 bytes, 5s)  +
+        # format_len (1byte, B) + format (format_len bytes, s)
+        self.header = {}
+        f = self._handle
+        magic = struct.unpack("<5s", f.read(5))[0]
+        if magic != _bmz_magic:
+            raise ValueError("Not a right format?")
+        self.header['magic'] = magic
+        self.header['version'] = struct.unpack("<f", f.read(4))[0]
+        total_size = struct.unpack("<Q", f.read(8))[0]
+        if total_size == 0:
+            raise ValueError("File not completed !")
+        self.header['total_size'] = total_size
+        format_len = struct.unpack("<B", f.read(1))[0]
+        Formats = []
+        for i in range(format_len):
+            n = struct.unpack("<B", f.read(1))[0]
+            format = struct.unpack(f"<{n}s", f.read(n))[0].decode()
+            Formats.append(format)
+        self.header['Formats'] = Formats
+        names = []
+        for i in range(format_len):
+            n = struct.unpack("<B", f.read(1))[0]
+            name = struct.unpack(f"<{n}s", f.read(n))[0].decode()
+            names.append(name)
+        self.header['names'] = names
+        assert len(Formats) == len(names)
+        tags = []
+        tag_len = struct.unpack("<B", f.read(1))[0]
+        for i in range(tag_len):
+            n = struct.unpack("<B", f.read(1))[0]
+            tag = struct.unpack(f"<{n}s", f.read(n))[0].decode()
+            tags.append(tag)
+        self.header['tags'] = tags
+        self.header['header_size'] = f.tell()  # end of header, begin of 1st chunk
+        self.fmt = ''.join(Formats)
+        self._unit_size = struct.calcsize(self.fmt)
 
-	def print_header(self):
-		print(self.header)
+    def print_header(self):
+        print(self.header)
 
-	def _load_chunk(self, start_offset=None, view=True):
-		if start_offset is None: #this is another chunk, not the 1st one.
-			start_offset = self._chunk_tail_offset
-		if start_offset >= self.header['total_size']:
-			return False
-		self._handle.seek(start_offset)
-		self._chunk_start_offset = start_offset # real offset on disk.
-		magic = self._handle.read(2)
-		if magic != _chunk_magic:
-			raise StopIteration
-		self._chunk_size = struct.unpack('<Q',self._handle.read(8))[0]
-		self._chunk_tags=[]
-		for t in self.header['tags']:
-			n = struct.unpack("<B", self._handle.read(1))[0]
-			tag = struct.unpack(f"<{n}s", self._handle.read(n))[0].decode()
-			self._chunk_tags.append(tag)
-		self._chunk_body_offset=self._handle.tell()
-		# load chunk tail, jump CDATA part
-		chunk_tail_start_offset = self._chunk_start_offset + self._chunk_size
-		self._handle.seek(chunk_tail_start_offset)
-		self._chunk_data_len=struct.unpack("<Q", self._handle.read(8))[0]
-		self._chunk_nblocks=struct.unpack("<Q", self._handle.read(8))[0]
-		self._chunk_block_offsets = []
-		if view: # no need to load _chunk_block_offsets
-			self._handle.seek(self._chunk_nblocks * 8,1)
-			#_chunk_tail_offset = end position of this chunk
-			# = start position of next chunk.
-		else:
-			# read block_offset
-			for i in range(self._chunk_nblocks):
-				block_offset=struct.unpack("<Q", self._handle.read(8))[0]
-				self._chunk_block_offsets.append(block_offset)
-		self._chunk_tail_offset=self._handle.tell()
-		return True
+    def _load_chunk(self, start_offset=None, view=True):
+        if start_offset is None:  # this is another chunk, not the 1st one.
+            start_offset = self._chunk_tail_offset
+        if start_offset >= self.header['total_size']:
+            return False
+        self._handle.seek(start_offset)
+        self._chunk_start_offset = start_offset  # real offset on disk.
+        magic = self._handle.read(2)
+        if magic != _chunk_magic:
+            raise StopIteration
+        self._chunk_size = struct.unpack('<Q', self._handle.read(8))[0]
+        chunk_tags=[]
+        for t in self.header['tags']:
+            n = struct.unpack("<B", self._handle.read(1))[0]
+            tag = struct.unpack(f"<{n}s", self._handle.read(n))[0].decode()
+            chunk_tags.append(tag)
+        self._chunk_tags = tuple(chunk_tags)
+        self._chunk_body_offset = self._handle.tell()
+        # load chunk tail, jump CDATA part
+        chunk_tail_start_offset = self._chunk_start_offset + self._chunk_size
+        self._handle.seek(chunk_tail_start_offset)
+        self._chunk_data_len = struct.unpack("<Q", self._handle.read(8))[0]
+        self._chunk_nblocks = struct.unpack("<Q", self._handle.read(8))[0]
+        self._chunk_block_offsets = []
+        if view:  # no need to load _chunk_block_offsets
+            self._handle.seek(self._chunk_nblocks * 8, 1)
+        # _chunk_tail_offset = end position of this chunk
+        # = start position of next chunk.
+        else:
+            # read block_offset
+            for i in range(self._chunk_nblocks):
+                block_offset = struct.unpack("<Q", self._handle.read(8))[0]
+                self._chunk_block_offsets.append(block_offset)
+        self._chunk_tail_offset = self._handle.tell()
+        return True
 
-	def get_chunks(self):
-		r=self._load_chunk(self.header['header_size'],view=False)
-		while r:
-			yield [self._chunk_start_offset, self._chunk_size,
-				   self._chunk_tags, self._chunk_data_len, self._chunk_tail_offset,
-				   self._chunk_nblocks,self._chunk_block_offsets
-				   ]
-			r=self._load_chunk(view=False)
+    def get_chunks(self):
+        r = self._load_chunk(self.header['header_size'], view=False)
+        while r:
+            yield [self._chunk_start_offset, self._chunk_size,
+                   self._chunk_tags, self._chunk_data_len, self._chunk_tail_offset,
+                   self._chunk_nblocks, self._chunk_block_offsets
+                   ]
+            r = self._load_chunk(view=False)
 
-	def summary_blocks(self):
-		r = self._load_chunk(self.header['header_size'], view=True)
-		header=['chunk_start_offset','chunk_size','chunk_tags','chunk_data_len',
-				'chunk_tail_offset','chunk_nblocks']+['block_start_offset',
-			   'block_size', 'block_data_start', 'block_data_len']
-		sys.stdout.write('\t'.join(header) + '\n')
-		while r:
-			self._handle.seek(self._chunk_body_offset)
-			for block in SummaryBmzBlocks(self._handle):
-				chunk_info=[self._chunk_start_offset, self._chunk_size,
-				   self._chunk_tags, self._chunk_data_len, self._chunk_tail_offset,
-				   self._chunk_nblocks]
-				block=chunk_info+list(block)
-				# print(block)
-				#start_offset, block_length, data_start, data_len
-				try:
-					sys.stdout.write('\t'.join([str(v) for v in block])+'\n')
-				except:
-					sys.stdout.close()
-			r = self._load_chunk(view=True)
-		sys.stdout.close()
+    def summary_chunks(self,print=True):
+        r = self._load_chunk(self.header['header_size'], view=True)
+        header = ['chunk_start_offset', 'chunk_size', 'chunk_tags', 'chunk_data_len',
+                  'chunk_tail_offset', 'chunk_nblocks']
+        if print:
+            sys.stdout.write('\t'.join(header) + '\n')
+        else:
+            R = []
+        while r:
+            self._handle.seek(self._chunk_body_offset)
+            chunk_info = [self._chunk_start_offset, self._chunk_size,
+                          self._chunk_tags, self._chunk_data_len, self._chunk_tail_offset,
+                          self._chunk_nblocks]
+            try:
+                if print:
+                    sys.stdout.write('\t'.join([str(v) for v in chunk_info]) + '\n')
+                else:
+                    R.append(chunk_info)
+            except:
+                sys.stdout.close()
+            r = self._load_chunk(view=True)
+        if print:
+            sys.stdout.close()
+        else:
+            df = pd.DataFrame(R, columns=header)
+            return df
 
-	def _load_block(self, start_offset=None):
-		if start_offset is None:
-			# If the file is being read sequentially, then _handle.tell()
-			# should be pointing at the start of the next block.
-			# However, if seek has been used, we can't assume that.
-			start_offset = self._block_start_offset + self._block_raw_length
-		elif start_offset == self._block_start_offset:
-			self._within_block_offset = 0
-			return
-		# Now load the block
-		self._handle.seek(start_offset)
-		self._block_start_offset = start_offset
-		try:
-			block_size, self._buffer = _load_bmz_block(self._handle,True)
-		except StopIteration: # EOF
-			block_size = 0
-			self._buffer = b""
-		self._within_block_offset = 0
-		self._block_raw_length = block_size
+    def summary_blocks(self, print=True):
+        r = self._load_chunk(self.header['header_size'], view=True)
+        header = ['chunk_start_offset', 'chunk_size', 'chunk_tags', 'chunk_data_len',
+                  'chunk_tail_offset', 'chunk_nblocks'] + ['block_start_offset',
+                                                           'block_size', 'block_data_start', 'block_data_len']
+        if print:
+            sys.stdout.write('\t'.join(header) + '\n')
+        else:
+            R=[]
+        while r:
+            self._handle.seek(self._chunk_body_offset)
+            chunk_info = [self._chunk_start_offset, self._chunk_size,
+                          self._chunk_tags, self._chunk_data_len, self._chunk_tail_offset,
+                          self._chunk_nblocks]
+            for block in SummaryBmzBlocks(self._handle):
+                block = chunk_info + list(block)
+                if print:
+                    try:
+                        sys.stdout.write('\t'.join([str(v) for v in block]) + '\n')
+                    except:
+                        sys.stdout.close()
+                else:
+                    R.append(block)
+            r = self._load_chunk(view=True)
+        if print:
+            sys.stdout.close()
+        else:
+            df=pd.DataFrame(R,columns=header)
+            return df
 
-	def _print_cache(self):
-		self._cached_data += self._buffer
-		end_index = len(self._cached_data) - (len(self._cached_data) % self._unit_size)
-		for result in struct.iter_unpack(f"<{self.fmt}", self._cached_data[:end_index]):
-			line = '\t'.join([str(v) for v in result])
-			try:
-				sys.stdout.write(self.chunk_tag + line + '\n')
-			except:
-				sys.stdout.close()
-		self._cached_data = self._cached_data[end_index:]
+    def _load_block(self, start_offset=None):
+        if start_offset is None:
+            # If the file is being read sequentially, then _handle.tell()
+            # should be pointing at the start of the next block.
+            # However, if seek has been used, we can't assume that.
+            start_offset = self._block_start_offset + self._block_raw_length
+        elif start_offset == self._block_start_offset:
+            self._within_block_offset = 0
+            return
+        # Now load the block
+        self._handle.seek(start_offset)
+        self._block_start_offset = start_offset
+        try:
+            block_size, self._buffer = _load_bmz_block(self._handle, True)
+        except StopIteration:  # EOF
+            block_size = 0
+            self._buffer = b""
+        self._within_block_offset = 0
+        self._block_raw_length = block_size
 
-	def view(self, tag=None, header=True):
-		"""
+    def byte2str(self,values):
+        return [str(v,'utf-8') if f[-1] in ['s','c'] else str(v)
+                for v,f in zip(values,self.header['Formats'])]
+
+    def _print_cache(self):
+        self._cached_data += self._buffer
+        end_index = len(self._cached_data) - (len(self._cached_data) % self._unit_size)
+        for result in struct.iter_unpack(f"<{self.fmt}", self._cached_data[:end_index]):
+            line = '\t'.join(self.byte2str(result))
+            try:
+                sys.stdout.write(self.chunk_tag + line + '\n')
+            except:
+                sys.stdout.close()
+        self._cached_data = self._cached_data[end_index:]
+
+    def view(self, show_tag=None, header=True, Tag=None):
+        """
 		View .bmz file.
 
 		Parameters
 		----------
-		tag : str
+		show_tag : str
 			index of tags given to writer.write_chunk, separated by comma,
-			default is None, tag will be shown in each row (such as sampleID
+			default is None, tags[show_tag] will be shown in each row (such as sampleID
 			and chrom)
 		header : bool
 			whether to print the header.
+        Tag: None, bool, list or file path
+            None (default): use the default order in .mz file
+            bool (True): sort the tags and used as Tag
+            list: use this Tag (tags) as order and print records.
+            path: use the first len(tag) columns as tag order, there should be
+                no header in file path and use \t as separator.
+		Returns
+		-------
+
+		"""
+        if type(show_tag) == int:
+            show_tag = [show_tag]
+        elif type(show_tag)==str:
+            show_tag = [int(i) for i in show_tag.split(',')]
+
+        chunk_info = self.summary_chunks(print=False)
+        chunk_info.set_index('chunk_tags', inplace=True)
+        if not Tag is None:
+            if isinstance(Tag, str):
+                order_path=os.path.abspath(os.path.expanduser(Tag))
+                if os.path.exists(order_path):
+                    Tag = pd.read_csv(order_path,sep='\t', header=None,
+                                    usecols=show_tag)[show_tag].apply(lambda x:tuple(x.tolist()),
+                                                            axis=1).tolist()
+                else:
+                    Tag=Tag.split(',')
+                    if type(Tag[0])==str:
+                        Tag=[[o] for o in Tag]
+            if not isinstance(Tag, (list, tuple, np.ndarray)):  # Tag is a list
+                raise ValueError("input of order is not corrected !")
+            chunk_info=chunk_info.loc[Tag]
+
+        if not show_tag is None:
+            header_show_tag = "\t".join([self.header['tags'][t] for t in show_tag]) + '\t'
+        else:
+            header_tag = ''
+        if header:
+            line = "\t".join(self.header['names'])
+            sys.stdout.write(header_tag + line + '\n')
+
+        for start_pos in chunk_info.chunk_start_offset.tolist():
+            r = self._load_chunk(start_pos, view=True) #self.header['header_size']
+            # header_size is the start offset of 1st chunk
+            self._cached_data = b''
+            # here, we have already read the chunk header and tail but
+            # not the blocks, we need to jump to body start pos and read each block.
+            if not show_tag is None:
+                self.chunk_tag = "\t".join([self._chunk_tags[t] for t in show_tag]) + '\t'
+            else:
+                self.chunk_tag = ''
+            self._load_block(start_offset=self._chunk_body_offset)  #
+            while self._block_raw_length > 0:
+                # deal with such case: unit_size is 10, but data(_buffer) size is 18,
+                self._print_cache()
+                self._load_block()
+            # r = self._load_chunk(view=True)
+        sys.stdout.close()
+
+    def tell(self):
+        """Return a 64-bit unsigned BGZF virtual offset."""
+        if 0 < self._within_block_offset and self._within_block_offset == len(
+            self._buffer):
+            # Special case where we're right at the end of a (non empty) block.
+            # For non-maximal blocks could give two possible virtual offsets,
+            # but for a maximal block can't use _BLOCK_MAX_LEN as the within block
+            # offset. Therefore for consistency, use the next block and a
+            # within block offset of zero.
+            return (self._block_start_offset + self._block_raw_length) << 16
+        else:
+            return (self._block_start_offset << 16) | self._within_block_offset
+
+    def seek(self, virtual_offset):
+        """Seek to a 64-bit unsigned BGZF virtual offset."""
+        # Do this inline to avoid a function call,
+        # start_offset, within_block = split_virtual_offset(virtual_offset)
+        start_offset = virtual_offset >> 16
+        within_block = virtual_offset ^ (start_offset << 16)
+        if start_offset != self._block_start_offset:
+            # Don't need to load the block if already there
+            # (this avoids a function call since _load_block would do nothing)
+            self._load_block(start_offset)
+            if start_offset != self._block_start_offset:
+                raise ValueError("start_offset not loaded correctly")
+        if within_block > len(self._buffer):
+            if not (within_block == 0 and len(self._buffer) == 0):
+                raise ValueError(
+                    "Within offset %i but block size only %i"
+                    % (within_block, len(self._buffer))
+                )
+        self._within_block_offset = within_block
+        # assert virtual_offset == self.tell(), \
+        #    "Did seek to %i (%i, %i), but tell says %i (%i, %i)" \
+        #    % (virtual_offset, start_offset, within_block,
+        #       self.tell(), self._block_start_offset,
+        #       self._within_block_offset)
+        return virtual_offset
+
+    def read(self, size=-1):
+        """Read method for the BGZF module."""
+        if size < 0:
+            raise NotImplementedError("Don't be greedy, that could be massive!")
+
+        result = b""
+        while size and self._block_raw_length:
+            if self._within_block_offset + size <= len(self._buffer):
+                # This may leave us right at the end of a block
+                # (lazy loading, don't load the next block unless we have too)
+                data = self._buffer[
+                       self._within_block_offset: self._within_block_offset + size
+                       ]
+                self._within_block_offset += size
+                if not data:
+                    raise ValueError("Must be at least 1 byte")
+                result += data
+                break
+            else:
+                data = self._buffer[self._within_block_offset:]
+                size -= len(data)
+                self._load_block()  # will reset offsets
+                result += data
+
+        return result
+
+    def readline(self):
+        """Read a single line for the BGZF file."""
+        result = b""
+        while self._block_raw_length:
+            i = self._buffer.find(self._newline, self._within_block_offset)
+            # Three cases to consider,
+            if i == -1:
+                # No newline, need to read in more data
+                data = self._buffer[self._within_block_offset:]
+                self._load_block()  # will reset offsets
+                result += data
+            elif i + 1 == len(self._buffer):
+                # Found new line, but right at end of block (SPECIAL)
+                data = self._buffer[self._within_block_offset:]
+                # Must now load the next block to ensure tell() works
+                self._load_block()  # will reset offsets
+                if not data:
+                    raise ValueError("Must be at least 1 byte")
+                result += data
+                break
+            else:
+                # Found new line, not at end of block (easy case, no IO)
+                data = self._buffer[self._within_block_offset: i + 1]
+                self._within_block_offset = i + 1
+                # assert data.endswith(self._newline)
+                result += data
+                break
+
+        return result
+
+    def __next__(self):
+        """Return the next line."""
+        line = self.readline()
+        if not line:
+            raise StopIteration
+        return line
+
+    def __iter__(self):
+        """Iterate over the lines in the BGZF file."""
+        return self
+
+    def close(self):
+        """Close BGZF file."""
+        self._handle.close()
+        self._buffer = None
+        self._block_start_offset = None
+        self._buffers = None
+
+    def seekable(self):
+        """Return True indicating the BGZF supports random access."""
+        return True
+
+    def isatty(self):
+        """Return True if connected to a TTY device."""
+        return False
+
+    def fileno(self):
+        """Return integer file descriptor."""
+        return self._handle.fileno()
+
+    def __enter__(self):
+        """Open a file operable with WITH statement."""
+        return self
+
+    def __exit__(self, type, value, traceback):
+        """Close a file with WITH statement."""
+        self.close()
+
+
+# ==========================================================
+class Writer:
+    def __init__(self, Output=None, mode="wb", Formats=['H', 'H'],
+                 Names=['mc', 'cov'], Tags=['chrom'], fileobj=None,
+                 level=6, verbose=0):
+        if Output and fileobj:
+            raise ValueError("Supply either Output or fileobj, not both")
+        if fileobj:  # write to an existed openned file object
+            if fileobj.read(0) != b"":
+                raise ValueError("fileobj not opened in binary mode")
+            handle = fileobj
+        else:
+            if not Output is None:  # write output to a file
+                if "w" not in mode.lower() and "a" not in mode.lower():
+                    raise ValueError(f"Must use write or append mode, not {mode!r}")
+                handle = _open(Output, mode)
+            else:  # write to stdout buffer
+                handle = sys.stdout.buffer
+        self._handle = handle
+        self._buffer = b""
+        self._chunk_start_offset = None
+        self._chunk_tags = None
+        if type(Formats) == str and ',' not in Formats:
+            self.Formats = [Formats]
+        elif type(Formats) == str:
+            self.Formats = Formats.split(',')
+        else:
+            self.Formats = list(Formats)
+        self.fmts = ''.join(list(Formats))
+        self.level = level
+        if type(Names) == str:
+            self.Names = Names.split(',')
+        else:
+            self.Names = list(Names)
+        if type(Tags) == str:
+            self.Tags = Tags.split(',')
+        else:
+            self.Tags = list(Tags)
+        self.magic_size = len(_bmz_magic)
+        self.verbose = verbose
+        if self.verbose > 0:
+            print(self.Formats, self.Names, self.Tags)
+            print(type(self.Formats), type(self.Names), type(self.Tags))
+        self.write_header()
+
+    def write_header(self):
+        f = self._handle
+        f.write(struct.pack("<5s", _bmz_magic))  # Identifier: 5 bytes
+        f.write(struct.pack("<f", _version))  # 4 bytes, float
+        f.write(struct.pack("<Q", 0))  # 8 bytes, total size, including magic.
+        f.write(struct.pack("<B", len(self.Formats)))  # 1byte
+        assert len(self.Names) == len(self.Formats)
+        for format in self.Formats:
+            format_len = len(format)
+            f.write(struct.pack("<B", format_len))  # length of each format, 1 byte
+            f.write(struct.pack(f"<{format_len}s", bytes(format, 'utf-8')))
+        for name in self.Names:
+            name_len = len(name)
+            f.write(struct.pack("<B", name_len))  # length of each name, 1 byte
+            f.write(struct.pack(f"<{name_len}s", bytes(name, 'utf-8')))
+        f.write(struct.pack("<B", len(self.Tags)))  # 1byte
+        for tag in self.Tags:
+            tag_len = len(tag)
+            f.write(struct.pack("<B", tag_len))  # length of each name, 1 byte
+            f.write(struct.pack(f"<{tag_len}s", bytes(tag, 'utf-8')))
+
+    def _write_block(self, block):
+        if len(block) > _BLOCK_MAX_LEN:  # 65536 = 1 << 16 = 2**16
+            raise ValueError(f"{len(block)} Block length > {_BLOCK_MAX_LEN}")
+        c = zlib.compressobj(
+            self.level, zlib.DEFLATED, -15, zlib.DEF_MEM_LEVEL, 0
+        )
+        """
+		deflate_compress = zlib.compressobj(9, zlib.DEFLATED, -zlib.MAX_WBITS)
+		zlib_compress = zlib.compressobj(9, zlib.DEFLATED, zlib.MAX_WBITS)
+		gzip_compress = zlib.compressobj(9, zlib.DEFLATED, zlib.MAX_WBITS | 16)
+		"""
+        compressed = c.compress(block) + c.flush()
+        del c
+        if len(compressed) > _BLOCK_MAX_LEN:
+            raise RuntimeError(
+                "TODO - Didn't compress enough, try less data in this block"
+            )
+        bsize = struct.pack("<H", len(compressed) + 6)
+        # block size: magic (2 btyes) + block_size (2bytes) + compressed data +
+        # block_data_len (2 bytes)
+        uncompressed_length = struct.pack("<H", len(block))  # 2 bytes
+        data = _block_magic + bsize + compressed + uncompressed_length
+        self._block_offsets.append(self._handle.tell())
+        # _block_offsets are real position on disk, not a virtual offset
+        self._handle.write(data)
+        self._chunk_data_len += len(block)
+
+    def _write_chunk_tail(self):
+        # tail: chunk_data_len (Q,8bytes) + n_blocks (Q, 8bytes)
+        # + list of block start offsets (n_blocks * 8 bytes)
+        self._handle.write(struct.pack("<Q", self._chunk_data_len))
+        self._handle.write(struct.pack("<Q", len(self._block_offsets)))
+        for block_offset in self._block_offsets:
+            self._handle.write(struct.pack("<Q", block_offset))
+
+    def _chunk_finished(self):
+        # current position is the end of chunk.
+        cur_offset = self._handle.tell()  # before chunk tail, not a virtual offset
+        # go back and write the total chunk size
+        self._handle.seek(self._chunk_start_offset + 2)  # 2 bytes for magic
+        chunk_size = cur_offset - self._chunk_start_offset
+        # chunk_size including the chunk_size itself, but not including chunk tail.
+        self._handle.write(struct.pack("<Q", chunk_size))
+        # go back the current position
+        self._handle.seek(cur_offset)  # not a virtual offset
+        self._write_chunk_tail()
+
+    def write_chunk(self, data, tags):  # tags is a list.
+        if isinstance(data, str):
+            data = data.encode("latin-1")
+        if self._chunk_tags != tags:
+            # the first chunk or another new chunk
+            if self._chunk_tags is not None:
+                # this is another new chunk, current position is the end of chunk.
+                self.flush()  # finish_chunk in flush
+            # else: #the first chunk, no chunk was writen previously.
+            self._chunk_tags = tags
+            self._chunk_start_offset = self._handle.tell()
+            self._handle.write(_chunk_magic)
+            # chunk total size place holder: 0
+            self._handle.write(struct.pack("<Q", 0))  # 8 bytes; including this chunk_size
+            for tag in self._chunk_tags:
+                tag_len = len(tag)
+                self._handle.write(struct.pack("<B", tag_len))  # length of each name, 1 byte
+                self._handle.write(struct.pack(f"<{tag_len}s", bytes(tag, 'utf-8')))
+            self._chunk_data_len = 0
+            self._block_offsets = []
+            if self.verbose > 0:
+                print("Writing chunk with tags: ", self._chunk_tags)
+
+        data_len = len(data)
+        if len(self._buffer) + data_len < _BLOCK_MAX_LEN:
+            self._buffer += data
+        else:
+            self._buffer += data
+            while len(self._buffer) >= _BLOCK_MAX_LEN:
+                self._write_block(self._buffer[:_BLOCK_MAX_LEN])
+                self._buffer = self._buffer[_BLOCK_MAX_LEN:]
+
+    def parse_input_pd(self, input_handle):
+        if isinstance(input_handle, pd.DataFrame):
+            # usecols and tag_cols should be in the columns of this dataframe.
+            if self.chunksize is None:
+                for tag, df1 in input_handle.groupby(self.tag_cols)[self.usecols]:
+                    if type(tag) != list:
+                        tag = [tag]
+                    yield df1.apply(lambda x: struct.pack(self.fmts, *x.tolist()),
+                                    axis=1).sum(), tag
+            else:
+                while input_handle.shape[0] > 0:
+                    df = input_handle.iloc[:self.chunksize]
+                    for tag, df1 in df.groupby(self.tag_cols)[self.usecols]:
+                        if type(tag) != list:
+                            tag = [tag]
+                        yield df1.apply(lambda x: struct.pack(self.fmts, *x.tolist()),
+                                        axis=1).sum(), tag
+                    input_handle = input_handle.iloc[self.chunksize:]
+        else:  # stdin or read from file.
+            for df in pd.read_csv(input_handle, sep=self.sep,
+                                  usecols=self.tag_cols + self.usecols,
+                                  chunksize=self.chunksize, header=self.header,
+                                  skiprows=self.skiprows):
+                for tag, df1 in df.groupby(self.tag_cols)[self.usecols]:
+                    if type(tag) != list:
+                        tag = [tag]
+                    yield df1.apply(lambda x: struct.pack(self.fmts, *x.tolist()),
+                                    axis=1).sum(), tag
+
+    def parse_input(self, input_handle):
+        if isinstance(input_handle, pd.DataFrame):
+            # usecols and tag_cols should be in the columns of this dataframe.
+            if self.chunksize is None:
+                for tag, df1 in input_handle.groupby(self.tag_cols)[self.usecols]:
+                    if type(tag) != list:
+                        tag = [tag]
+                    yield df1.apply(lambda x: struct.pack(self.fmts, *x.tolist()),
+                                    axis=1).sum(), tag
+            else:
+                while input_handle.shape[0] > 0:
+                    df = input_handle.iloc[:self.chunksize]
+                    for tag, df1 in df.groupby(self.tag_cols)[self.usecols]:
+                        if type(tag) != list:
+                            tag = [tag]
+                        yield df1.apply(lambda x: struct.pack(self.fmts, *x.tolist()),
+                                        axis=1).sum(), tag
+                    input_handle = input_handle.iloc[self.chunksize:]
+        else:
+            if hasattr(input_handle, 'readline'):  # stdin or read from file.
+                f = input_handle
+            else:  # input_handle is a file path
+                f = open1(input_handle)
+            data, i, pre_tags = b'', 0, None
+            dtfuncs = get_dtfuncs(self.Formats)
+            line = f.readline()
+            while line:
+                if isinstance(line, bytes):
+                    line = line.decode('utf-8')
+                values = line.rstrip('\n').split(self.sep)
+                tags = [values[i] for i in self.tag_cols]
+                if tags != pre_tags:  # a new tag (chrom), for example, chr1 -> chr2
+                    if len(data) > 0:  # write rest data of chr1
+                        yield data, pre_tags
+                        data, i = b'', 0
+                    pre_tags = tags
+                if i >= self.chunksize:  # tags are the same, but reach chunksize
+                    yield data, pre_tags
+                    data, i = b'', 0
+                values_to_pack = [values[i] for i in self.usecols]
+                data += struct.pack(self.fmts,
+                                    *[func(v) for v, func in zip(values_to_pack, dtfuncs)]
+                                    )
+                line = f.readline()
+                i += 1
+            f.close()
+
+    def pack(self, Input=None, usecols=[1, 4, 5], tag_cols=[0],
+             sep='\t', chunksize=5000, header=None, skiprows=0):
+        self.sep = sep
+        if type(usecols) == int:
+            self.usecols = [int(usecols)]
+        elif type(usecols) == str:
+            self.usecols = [int(i) for i in usecols.split(',')]
+        else:
+            self.usecols = [int(i) for i in usecols]
+        if type(tag_cols) == int:
+            self.tag_cols = [int(tag_cols)]
+        elif type(tag_cols) == str:
+            self.tag_cols = [int(i) for i in tag_cols.split(',')]
+        else:
+            self.tag_cols = [int(i) for i in tag_cols]
+
+        assert len(self.usecols) == len(self.Formats)
+        assert len(self.tag_cols) == len(self.Tags)
+        self.chunksize = chunksize
+        self.header = header
+        self.skiprows = skiprows
+        if isinstance(Input, (list, tuple, np.ndarray)):
+            Input = pd.DataFrame(Input)
+        if Input is None or Input == 'stdin' or Input == '-':
+            data_generator = self.parse_input(sys.stdin.buffer)
+        elif isinstance(Input, str):
+            input_path = os.path.abspath(os.path.expanduser(Input))
+            data_generator = self.parse_input(input_path)
+        else:  # Input is a dataframe
+            data_generator = self.parse_input(Input)
+        if self.verbose > 0:
+            print(self.usecols, self.tag_cols)
+            print(type(self.usecols), type(self.tag_cols))
+        for data, tag in data_generator:
+            self.write_chunk(data, tag)
+        self.close()
+
+    def catmz(self, Input=None, order=None):
+        """
+		Cat multiple .mz files into one .mz file.
+
+		Parameters
+		----------
+		Input : str or list
+			Either a str (including *, as input for glob, should be inside the
+			double quotation marks if using fire) or a list.
+		order : None, list or path
+			If order=None, Input will be sorted using python sorted.
+			If order is a list, tuple or array of basename.rstrip(.mz), sorted as order.
+			If order is a file path (for example, chrom size path to order chroms
+			or only use selected chroms) will be sorted as
+			the 1st column of the input file path (without header, tab-separated).
+			default is None
 
 		Returns
 		-------
 
 		"""
-		if type(tag)==int:
-			tag=[tag]
-		elif not tag is None:
-			tag=[int(i) for i in tag.split(',')]
+        if type(Input) == str and '*' in Input:
+            Input = glob.glob(Input)
+        if type(Input) != list:
+            raise ValueError("Input should be either a list of a string including *.")
+        if order is None:
+            Input = sorted(Input)
+        else:
+            D = {os.path.basename(inp)[:-3]: inp for inp in Input}
+            if self.verbose > 0:
+                print(D)
+            if isinstance(order, str):
+                order = pd.read_csv(os.path.abspath(os.path.expanduser(order)),
+                                    sep='\t', header=None, usecols=[0])[0].tolist()
+            if isinstance(order, (list, tuple, np.ndarray)):  # order is a list
+                # Input=[str(i)+'.mz' for i in order]
+                Input = [D[str(i)] for i in order]
+            else:
+                raise ValueError("input of order is not corrected !")
+        if self.verbose > 0:
+            print(Input)
+        for file_path in Input:
+            reader = Reader(file_path)
+            data_size = reader.header['total_size'] - reader.header['header_size']
+            self._handle.write(reader._handle.read(data_size))
+            reader.close()
+        self.write_ts_eof_close()
 
-		if not tag is None:
-			header_tag = "\t".join([self.header['tags'][t] for t in tag]) + '\t'
-		else:
-			header_tag = ''
-		if header:
-			line = "\t".join(self.header['names'])
-			sys.stdout.write(header_tag + line + '\n')
+    def flush(self):
+        """Flush data explicitally."""
+        while len(self._buffer) >= _BLOCK_MAX_LEN:
+            # I don't think this is going to happen
+            self._write_block(self._buffer[:_BLOCK_MAX_LEN])
+            self._buffer = self._buffer[_BLOCK_MAX_LEN:]
+        self._write_block(self._buffer)
+        self._chunk_finished()
+        self._buffer = b""
+        self._handle.flush()
 
-		r = self._load_chunk(self.header['header_size'], view=True)
-		# header_size is the start offset of 1st chunk
-		while r: # chunk
-			self._cached_data=b''
-			# here, we have already read the chunk header and tail but
-			# not the blocks, we need to jump to body start pos and read each block.
-			self._load_block(start_offset = self._chunk_body_offset) #
-			if not tag is None:
-				self.chunk_tag="\t".join([self._chunk_tags[t] for t in tag])+'\t'
-			else:
-				self.chunk_tag=''
-			while self._block_raw_length > 0:
-				# deal with such case: unit_size is 10, but data(_buffer) size is 18,
-				self._print_cache()
-				self._load_block()
-			r = self._load_chunk(view=True)
-		sys.stdout.close()
+    def write_ts_eof_close(self):
+        cur_offset = self._handle.tell()
+        self._handle.seek(9)  # 5 is magic and version (5+4=9 bytes)
+        self._handle.write(struct.pack("<Q", cur_offset))  # real offset.
+        self._handle.seek(cur_offset)
+        self._handle.write(_bmz_eof)
+        self._handle.flush()
+        self._handle.close()
 
-	def tell(self):
-		"""Return a 64-bit unsigned BGZF virtual offset."""
-		if 0 < self._within_block_offset and self._within_block_offset == len(
-			self._buffer):
-			# Special case where we're right at the end of a (non empty) block.
-			# For non-maximal blocks could give two possible virtual offsets,
-			# but for a maximal block can't use _BLOCK_MAX_LEN as the within block
-			# offset. Therefore for consistency, use the next block and a
-			# within block offset of zero.
-			return (self._block_start_offset + self._block_raw_length) << 16
-		else:
-			return (self._block_start_offset << 16) | self._within_block_offset
-
-	def seek(self, virtual_offset):
-		"""Seek to a 64-bit unsigned BGZF virtual offset."""
-		# Do this inline to avoid a function call,
-		# start_offset, within_block = split_virtual_offset(virtual_offset)
-		start_offset = virtual_offset >> 16
-		within_block = virtual_offset ^ (start_offset << 16)
-		if start_offset != self._block_start_offset:
-			# Don't need to load the block if already there
-			# (this avoids a function call since _load_block would do nothing)
-			self._load_block(start_offset)
-			if start_offset != self._block_start_offset:
-				raise ValueError("start_offset not loaded correctly")
-		if within_block > len(self._buffer):
-			if not (within_block == 0 and len(self._buffer) == 0):
-				raise ValueError(
-					"Within offset %i but block size only %i"
-					% (within_block, len(self._buffer))
-				)
-		self._within_block_offset = within_block
-		# assert virtual_offset == self.tell(), \
-		#    "Did seek to %i (%i, %i), but tell says %i (%i, %i)" \
-		#    % (virtual_offset, start_offset, within_block,
-		#       self.tell(), self._block_start_offset,
-		#       self._within_block_offset)
-		return virtual_offset
-
-	def read(self, size=-1):
-		"""Read method for the BGZF module."""
-		if size < 0:
-			raise NotImplementedError("Don't be greedy, that could be massive!")
-
-		result =  b""
-		while size and self._block_raw_length:
-			if self._within_block_offset + size <= len(self._buffer):
-				# This may leave us right at the end of a block
-				# (lazy loading, don't load the next block unless we have too)
-				data = self._buffer[
-					   self._within_block_offset: self._within_block_offset + size
-					   ]
-				self._within_block_offset += size
-				if not data:
-					raise ValueError("Must be at least 1 byte")
-				result += data
-				break
-			else:
-				data = self._buffer[self._within_block_offset:]
-				size -= len(data)
-				self._load_block()  # will reset offsets
-				result += data
-
-		return result
-
-	def readline(self):
-		"""Read a single line for the BGZF file."""
-		result = b""
-		while self._block_raw_length:
-			i = self._buffer.find(self._newline, self._within_block_offset)
-			# Three cases to consider,
-			if i == -1:
-				# No newline, need to read in more data
-				data = self._buffer[self._within_block_offset:]
-				self._load_block()  # will reset offsets
-				result += data
-			elif i + 1 == len(self._buffer):
-				# Found new line, but right at end of block (SPECIAL)
-				data = self._buffer[self._within_block_offset:]
-				# Must now load the next block to ensure tell() works
-				self._load_block()  # will reset offsets
-				if not data:
-					raise ValueError("Must be at least 1 byte")
-				result += data
-				break
-			else:
-				# Found new line, not at end of block (easy case, no IO)
-				data = self._buffer[self._within_block_offset: i + 1]
-				self._within_block_offset = i + 1
-				# assert data.endswith(self._newline)
-				result += data
-				break
-
-		return result
-
-	def __next__(self):
-		"""Return the next line."""
-		line = self.readline()
-		if not line:
-			raise StopIteration
-		return line
-
-	def __iter__(self):
-		"""Iterate over the lines in the BGZF file."""
-		return self
-
-	def close(self):
-		"""Close BGZF file."""
-		self._handle.close()
-		self._buffer = None
-		self._block_start_offset = None
-		self._buffers = None
-
-	def seekable(self):
-		"""Return True indicating the BGZF supports random access."""
-		return True
-
-	def isatty(self):
-		"""Return True if connected to a TTY device."""
-		return False
-
-	def fileno(self):
-		"""Return integer file descriptor."""
-		return self._handle.fileno()
-
-	def __enter__(self):
-		"""Open a file operable with WITH statement."""
-		return self
-
-	def __exit__(self, type, value, traceback):
-		"""Close a file with WITH statement."""
-		self.close()
-# ==========================================================
-class Writer:
-	def __init__(self, Output=None, mode="wb", Formats=['H', 'H'],
-				 names=['mc', 'cov'], tags=['chrom'],fileobj=None,
-				 compresslevel=6,verbose=0):
-		if Output and fileobj:
-			raise ValueError("Supply either Output or fileobj, not both")
-		if fileobj: # write to an existed openned file object
-			if fileobj.read(0) != b"":
-				raise ValueError("fileobj not opened in binary mode")
-			handle = fileobj
-		else:
-			if not Output is None: #write output to a file
-				if "w" not in mode.lower() and "a" not in mode.lower():
-					raise ValueError(f"Must use write or append mode, not {mode!r}")
-				handle = _open(Output, mode)
-			else: # write to stdout buffer
-				handle = sys.stdout.buffer
-		self._handle = handle
-		self._buffer = b""
-		self._chunk_start_offset = None
-		self._chunk_tags = None
-		if type(Formats) == str and ',' not in Formats:
-			self.Formats = [Formats]
-		elif ',' in Formats:
-			self.Formats = Formats.split(',')
-		else:
-			self.Formats = Formats
-		self.fmts=''.join(list(Formats))
-		self.compresslevel = compresslevel
-		if type(names) == str and ',' not in names:
-			self.names = [names]
-		elif ',' in names:
-			self.names = names.split(',')
-		else:
-			self.names = names
-		if type(tags)==str and ',' not in tags:
-			self.tags = [tags]
-		elif ',' in tags:
-			self.tags=tags.split(',')
-		else:
-			self.tags=tags
-		self.magic_size = len(_bmz_magic)
-		self.verbose = verbose
-		self.write_header()
-
-	def write_header(self):
-		f=self._handle
-		f.write(struct.pack("<5s", _bmz_magic))  # Identifier: 5 bytes
-		f.write(struct.pack("<f", _version))  # 4 bytes, float
-		f.write(struct.pack("<Q", 0)) # 8 bytes, total size, including magic.
-		f.write(struct.pack("<B", len(self.Formats)))  # 1byte
-		assert len(self.names) == len(self.Formats)
-		for format in self.Formats:
-			format_len = len(format)
-			f.write(struct.pack("<B", format_len))  # length of each format, 1 byte
-			f.write(struct.pack(f"<{format_len}s", bytes(format, 'utf-8')))
-		for name in self.names:
-			name_len = len(name)
-			f.write(struct.pack("<B", name_len))  # length of each name, 1 byte
-			f.write(struct.pack(f"<{name_len}s", bytes(name, 'utf-8')))
-		f.write(struct.pack("<B", len(self.tags)))  # 1byte
-		for tag in self.tags:
-			tag_len = len(tag)
-			f.write(struct.pack("<B", tag_len))  # length of each name, 1 byte
-			f.write(struct.pack(f"<{tag_len}s", bytes(tag, 'utf-8')))
-
-	def _write_block(self, block):
-		if len(block) > _BLOCK_MAX_LEN: #65536 = 1 << 16 = 2**16
-			raise ValueError(f"{len(block)} Block length > {_BLOCK_MAX_LEN}")
-		c = zlib.compressobj(
-			self.compresslevel, zlib.DEFLATED, -15, zlib.DEF_MEM_LEVEL, 0
-		)
-		"""
-		deflate_compress = zlib.compressobj(9, zlib.DEFLATED, -zlib.MAX_WBITS)
-		zlib_compress = zlib.compressobj(9, zlib.DEFLATED, zlib.MAX_WBITS)
-		gzip_compress = zlib.compressobj(9, zlib.DEFLATED, zlib.MAX_WBITS | 16)
-		"""
-		compressed = c.compress(block) + c.flush()
-		del c
-		if len(compressed) > _BLOCK_MAX_LEN:
-			raise RuntimeError(
-				"TODO - Didn't compress enough, try less data in this block"
-			)
-		bsize = struct.pack("<H", len(compressed) + 6)
-		#block size: magic (2 btyes) + block_size (2bytes) + compressed data +
-		# block_data_len (2 bytes)
-		uncompressed_length = struct.pack("<H", len(block)) # 2 bytes
-		data = _block_magic + bsize + compressed + uncompressed_length
-		self._block_offsets.append(self._handle.tell())
-		# _block_offsets are real position on disk, not a virtual offset
-		self._handle.write(data)
-		self._chunk_data_len += len(block)
-
-	def _write_chunk_tail(self):
-		# tail: chunk_data_len (Q,8bytes) + n_blocks (Q, 8bytes)
-		# + list of block start offsets (n_blocks * 8 bytes)
-		self._handle.write(struct.pack("<Q", self._chunk_data_len))
-		self._handle.write(struct.pack("<Q", len(self._block_offsets)))
-		for block_offset in self._block_offsets:
-			self._handle.write(struct.pack("<Q", block_offset))
-
-	def _chunk_finished(self):
-		# current position is the end of chunk.
-		cur_offset = self._handle.tell() # before chunk tail, not a virtual offset
-		# go back and write the total chunk size
-		self._handle.seek(self._chunk_start_offset + 2) #2 bytes for magic
-		chunk_size = cur_offset - self._chunk_start_offset
-		# chunk_size including the chunk_size itself, but not including chunk tail.
-		self._handle.write(struct.pack("<Q", chunk_size))
-		# go back the current position
-		self._handle.seek(cur_offset) #not a virtual offset
-		self._write_chunk_tail()
-
-	def write_chunk(self, data, tags): # tags is a list.
-		if isinstance(data, str):
-			data = data.encode("latin-1")
-		if self._chunk_tags != tags:
-			# the first chunk or another new chunk
-			if self._chunk_tags is not None:
-				# this is another new chunk, current position is the end of chunk.
-				self.flush() # finish_chunk in flush
-			# else: #the first chunk, no chunk was writen previously.
-			self._chunk_tags = tags
-			self._chunk_start_offset = self._handle.tell()
-			self._handle.write(_chunk_magic)
-			# chunk total size place holder: 0
-			self._handle.write(struct.pack("<Q", 0)) #8 bytes; including this chunk_size
-			for tag in self._chunk_tags:
-				tag_len = len(tag)
-				self._handle.write(struct.pack("<B", tag_len))  # length of each name, 1 byte
-				self._handle.write(struct.pack(f"<{tag_len}s", bytes(tag, 'utf-8')))
-			self._chunk_data_len = 0
-			self._block_offsets = []
-			if self.verbose > 0:
-				print("Writing chunk with tags: ",self._chunk_tags)
-
-		data_len = len(data)
-		if len(self._buffer) + data_len < _BLOCK_MAX_LEN:
-			self._buffer += data
-		else:
-			self._buffer += data
-			while len(self._buffer) >= _BLOCK_MAX_LEN:
-				self._write_block(self._buffer[:_BLOCK_MAX_LEN])
-				self._buffer = self._buffer[_BLOCK_MAX_LEN:]
-
-	def parse_input(self,input_handle):
-		if isinstance(input_handle,pd.DataFrame):
-			# usecols and tag_cols should be in the columns of this dataframe.
-			if self.chunksize is None:
-				for tag, df1 in input_handle.groupby(self.tag_cols)[self.usecols]:
-					if type(tag) != list:
-						tag = [tag]
-					yield df1.apply(lambda x: struct.pack(self.fmts, *x.tolist()),
-									 axis=1).sum(),tag
-			else:
-				while input_handle.shape[0]>0:
-					df=input_handle.iloc[:self.chunksize]
-					for tag, df1 in df.groupby(self.tag_cols)[self.usecols]:
-						if type(tag) != list:
-							tag = [tag]
-						yield df1.apply(lambda x: struct.pack(self.fmts, *x.tolist()),
-										axis=1).sum(), tag
-					input_handle=input_handle.iloc[self.chunksize:]
-		else: # stdin or read from file.
-			for df in pd.read_csv(input_handle,sep=self.sep,
-								  usecols=self.tag_cols+self.usecols,
-								  chunksize=self.chunksize,header=self.header,
-								  skiprows=self.skiprows):
-				for tag, df1 in df.groupby(self.tag_cols)[self.usecols]:
-					if type(tag) != list:
-						tag = [tag]
-					yield df1.apply(lambda x: struct.pack(self.fmts, *x.tolist()),
-									 axis=1).sum(),tag
-
-	def pack(self, Input, usecols=[1,4,5],tag_cols=[0],
-			 sep='\t',chunksize=5000,header=None, skiprows=0):
-		self.sep = sep
-		if type(usecols)==int or (type(usecols)==str and ',' not in usecols):
-			self.usecols = [int(usecols)]
-		elif ',' in usecols:
-			self.usecols = [int(i) for i in usecols.split(',')]
-		else:
-			self.usecols = [int(i) for i in usecols]
-		if type(tag_cols)==int or (type(tag_cols)==str and ',' not in tag_cols):
-			self.tag_cols = [int(tag_cols)]
-		elif ',' in tag_cols:
-			self.tag_cols = [int(i) for i in tag_cols.split(',')]
-		else:
-			self.tag_cols = [int(i) for i in tag_cols]
-		self.chunksize = chunksize
-		self.header = header
-		self.skiprows = skiprows
-		if isinstance(Input,(list,tuple,np.ndarray)):
-			Input=pd.DataFrame(Input)
-		if Input=='stdin' or Input=='-':
-			data_generator=self.parse_input(sys.stdin.buffer)
-		elif isinstance(Input, str):
-			input_path = os.path.abspath(os.path.expanduser(Input))
-			data_generator = self.parse_input(input_path)
-		else:  # Input is a dataframe
-			data_generator = self.parse_input(Input)
-
-		for data,tag in data_generator:
-			self.write_chunk(data,tag)
-		self.close()
-
-	def flush(self):
-		"""Flush data explicitally."""
-		while len(self._buffer) >= _BLOCK_MAX_LEN:
-			# I don't think this is going to happen
-			self._write_block(self._buffer[:_BLOCK_MAX_LEN])
-			self._buffer = self._buffer[_BLOCK_MAX_LEN:]
-		self._write_block(self._buffer)
-		self._chunk_finished()
-		self._buffer = b""
-		self._handle.flush()
-
-	def save(self):
-		if self._buffer:
-			self.flush()
-		# write total size in the file header, just after magic (5 bytes)
-		cur_offset = self._handle.tell()
-		self._handle.seek(9) #5 is magic and version (5+4=9 bytes)
-		self._handle.write(struct.pack("<Q", cur_offset)) # real offset.
-		self._handle.seek(cur_offset)
-
-	def close(self):
-		"""Flush data, write 28 bytes BGZF EOF marker, and close BGZF file.
+    def close(self):
+        """Flush data, write 28 bytes BGZF EOF marker, and close BGZF file.
 
 		samtools will look for a magic EOF marker, just a 28 byte empty BGZF
 		block, and if it is missing warns the BAM file may be truncated. In
 		addition to samtools writing this block, so too does bgzip - so this
 		implementation does too.
 		"""
-		self.save()
-		self._handle.write(_bmz_eof)
-		self._handle.flush()
-		self._handle.close()
+        if self._buffer:
+            self.flush()
+        self.write_ts_eof_close()
 
-	def tell(self):
-		"""Return a BGZF 64-bit virtual offset."""
-		return make_virtual_offset(self._handle.tell(), len(self._buffer))
+    def tell(self):
+        """Return a BGZF 64-bit virtual offset."""
+        return make_virtual_offset(self._handle.tell(), len(self._buffer))
 
-	def seekable(self):
-		return False
+    def seekable(self):
+        return False
 
-	def isatty(self):
-		"""Return True if connected to a TTY device."""
-		return False
+    def isatty(self):
+        """Return True if connected to a TTY device."""
+        return False
 
-	def fileno(self):
-		"""Return integer file descriptor."""
-		return self._handle.fileno()
+    def fileno(self):
+        """Return integer file descriptor."""
+        return self._handle.fileno()
 
-	def __enter__(self):
-		"""Open a file operable with WITH statement."""
-		return self
+    def __enter__(self):
+        """Open a file operable with WITH statement."""
+        return self
 
-	def __exit__(self, type, value, traceback):
-		"""Close a file with WITH statement."""
-		self.close()
+    def __exit__(self, type, value, traceback):
+        """Close a file with WITH statement."""
+        self.close()
+
+
 # ==========================================================
 if __name__ == "__main__":
-	pass
+    pass

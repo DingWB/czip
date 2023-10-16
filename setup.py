@@ -2,12 +2,11 @@
 """
 @author: DingWB
 """
-
 try:
     from setuptools import setup, find_packages
 except ImportError:
     from distutils.core import setup, find_packages
-
+from Cython.Build import cythonize
 from pathlib import Path
 __version__=0.1
 this_directory = Path(__file__).parent
@@ -33,5 +32,7 @@ setup(
 			[
 				'bmzip=bmzip:main',
 			],
-		}
+		},
+
+	ext_modules=cythonize("bmzip/utils.pyx"), #python setup.py build_ext --inplace
 )

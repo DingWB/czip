@@ -7,27 +7,18 @@ Created on Tue Sep  8 17:34:38 2020
 """
 import sys
 import os
-import glob
 import struct
-
-import numpy as np
-import tabix
 import gzip
 import pandas as pd
-import fire
 from multiprocessing import Pool
 from Bio import SeqIO
-import pybedtools
 import pyximport
 pyximport.install(pyimport=True) #pyximport.install(pyimport=True)
-sys.path.insert(0,"/anvil/scratch/x-wding2/Projects/Github/bmzip/bmzip")
-from utils import extractC
-# from . import bmz
-
+from .utils import WriteC
 # =============================================================================
 class AllC:
-	def __init__(self, Genome=None, Output="hg38_allc.bed",
-				 pattern="C", n_jobs=4):
+	def __init__(self, Genome=None, Output="hg38_allc.mz",
+				 pattern="C", jobs=4):
 		"""
 		Extract position of specific pattern in the reference genome, for example C.
 			Example: python ~/Scripts/python/tbmate.py AllC -g ~/genome/hg38/hg38.fa --n_jobs 10 run
@@ -45,11 +36,14 @@ class AllC:
 		"""
 		self.genome=os.path.abspath(os.path.expanduser(Genome))
 		self.Output=os.path.abspath(os.path.expanduser(Output))
+		self.outdir=self.Output+'.tmp'
+		if not os.path.exists(self.outdir):
+			os.mkdir(self.outdir)
 		self.pattern=pattern
 		self.records = SeqIO.parse(self.genome, "fasta")
-		self.n_jobs=n_jobs if not n_jobs is None else os.cpu_count()
+		self.n_jobs=jobs if not jobs is None else os.cpu_count()
 		if pattern=='C':
-			self.func=extractC
+			self.func=WriteC
 
 	def writePattern(self):
 		pool = Pool(self.n_jobs)
@@ -328,12 +322,6 @@ def read1(f,start,fmt):
 	r = f.read(struct.calcsize(fmt))
 	return struct.unpack(fmt,r)[0]
 
-# def create_index(Input):
-# 	index = []
-# 	reader = BgzfReader(Input, 'rb')
-# 	for block in BgzfBlocks(reader._handle):
-# 		index.append(block)
-# 	return index
 
-if __name__=="__main__":
-	fire.Fire()
+if __name__ == "__main__":
+	pass

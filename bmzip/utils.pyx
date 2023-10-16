@@ -1,13 +1,22 @@
 import os,sys
+import struct
+from .bmz import Writer,get_dtfuncs
 
-def extractChr(record, outdir):
-	cdef int i,N
+def WriteC(record, outdir,chunksize=5000):
+	cdef int i, N
 	# cdef char* chrom, base, context, strand
 	chrom = record.id
-	outfile = os.path.join(outdir, chrom + ".bed")
+	outfile = os.path.join(outdir, chrom + ".mz")
+	if os.path.exists(outfile):
+		print(f"{outfile} existed, skip.")
+		return None
 	print(chrom)
-	N=record.seq.__len__() - 1
-	R=[]
+	writer=Writer(outfile,Formats=['Q','c','3s'],
+				  Names=['pos', 'strand','context'],
+				  Tags=['chrom'])
+	dtfuncs = get_dtfuncs(writer.Formats)
+	N = record.seq.__len__() - 1
+	data=b''
 	for i in range(N):  # 0-based
 		base = record.seq[i:i + 1].upper()
 		if base.__str__() == 'C':  # forward strand
@@ -18,8 +27,16 @@ def extractChr(record, outdir):
 			strand = '-'
 		else:
 			continue
-		R.append([i + 1,context,strand])
-	# position is 0-based (start) 1-based (end position, i+1)
-	return chrom,R
+		# f.write(f"{chrom}\t{i}\t{i + 1}\t{context}\t{strand}\n")
+		values=[func(v) for v,func in zip([i+1,strand,context],dtfuncs)]
+		data+=struct.pack(writer.fmts,*values)
+		# position is 0-based (start) 1-based (end position, i+1)
+		if i % chunksize == 0 and len(data) > 0:
+			writer.write_chunk(data, [chrom])
+			data=b''
+	if len(data) > 0:
+		writer.write_chunk(data, [chrom])
+	writer.close()
 
-def extractC():
+if __name__ == "__main__":
+	pass
