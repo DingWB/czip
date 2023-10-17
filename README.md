@@ -1,23 +1,24 @@
-# Installation
+# Block Methylation ZIP
+
+## Installation
 ```shell
 pip install git+http://github.com/DingWB/bmzip
 
 python setup.py install
 ```
 
-# Implementation
+## Implementation
 ![docs/images/img.png](docs/images/img.png)
 
-# Usage
+## Usage
 
-## generate ALLC coordinates (.mz file was created by ALLC class)
+### generate ALLC coordinates (.mz file was created by ALLC class)
 ```shell
 bmzip AllC -G ~/Ref/mm10/mm10_ucsc_with_chrL.fa -O mm10_with_chrL.allc.mz -j 20 run
-# 10:48 started -> 23:03
-# took 15 minutes with 20 cpu
+# took 15 minutes using 20 cpus
 ```
 
-## Create .mz using bmz Writer
+### Create .mz using `bmzip Writer`
 ```shell
 /usr/bin/time -f "%e\t%M\t%P" bmzip Writer  -O test.bmzip -F H,H -C mc,cov -D chrom -v 1 pack -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 4,5 -d 0 -c 5000
 
@@ -27,21 +28,21 @@ bmzip Reader -I test_bed.bmzip summary_blocks
 bmzip Reader -I test_bed.bmzip view -s 0
 ```
 
-### cat multiple .mz files into one .mz file
+#### cat multiple .mz files into one .mz file
 ```shell
 bmzip Writer -O mm10_with_chrL.mz -F Q,3s,c -N pos,context,strand -T chrom catmz -I "mm10_with_chrL.mz.tmp/*.mz"
 
 bmzip Writer -O mm10_with_chrL.mz -F Q,3s,c -N pos,context,strand -T chrom catmz -I "mm10_with_chrL.mz.tmp/*.mz" -o ~/Ref/mm10/mm10_ucsc_with_chrL.chrom.sizes
 ```
 
-## View
-### print_header
+### View
+#### print_header
 ```shell
 bmzip Reader -I mm10_with_chrL.mz print_header
 # {'magic': b'BMZIP', 'version': 1.0, 'total_size': 3160879498, 'Formats': ['Q', '3s', 'c'], 'names': ['pos', 'context', 'strand'], 'tags': ['chrom'], 'header_size': 51}
 ```
 
-### view
+#### view
 ```shell
 bmzip Reader -I test_bed.bmzip view --help
 ```
