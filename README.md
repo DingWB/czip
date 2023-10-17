@@ -12,45 +12,6 @@ bmzip AllC -G ~/Ref/mm10/mm10_ucsc_with_chrL.fa -O mm10_with_chrL.allc.mz -j 20 
 # 10:48 started -> 23:03
 # took 15 minutes with 20 cpu
 ```
-### build index for allc coordinates
-```shell
-bmzip Reader -I mm10_with_chrL.allc.mz print_header
-# {'magic': b'BMZIP', 'version': 1.0, 'total_size': 3074591415, 'message': '/home/x-wding2/Ref/mm10/mm10_ucsc_with_chrL.fa', 'Formats': ['Q', 'c', '3s'], 'names': ['pos', 'strand', 'context'], 'tags': ['chrom'], 'header_size': 99}
-
-bmzip Reader -I mm10_with_chrL.allc.mz build_index --help
-```
-```text
-INFO: Showing help with the command 'bmzip Reader -I mm10_with_chrL.allc.mz build_index -- --help'.
-
-NAME
-    bmzip Reader -I mm10_with_chrL.allc.mz build_index - create index for the .mz file passed to the Reader.
-
-SYNOPSIS
-    bmzip Reader -I mm10_with_chrL.allc.mz build_index <flags>
-
-DESCRIPTION
-    create index for the .mz file passed to the Reader.
-
-FLAGS
-    -n, --name_cols=NAME_COLS
-        Default: [0]
-        name_cols (default is [0]) should be the index in the names list ( see self.header['names'], or bmzip Reader -I test.mz print_header) if a int given, build index for only one name, if a list give, build index for multiple names, if a str give, the string will be convert to list (split by comma
-```
-```shell
-# build index (.bmi), -n 0 means build index for the col with index=0, this is
-# ['pos', 'strand', 'context'][0] = pos, build index for position.
-bmzip Reader -I mm10_with_chrL.allc.mz build_index -n 0 
-
-# view index (actually, index is also a .mz file)
-bmzip Reader -I mm10_with_chrL.allc.mz.bmi view -s 0 |head
-#chrom   pos     1st_record_virtual_offset
-#chr1    3000003 7471104
-#chr1    3015471 1002242057
-#chr1    3029240 1996881926
-
-# In the index .bmi file, we created index for position,  1st_record_virtual_offset
-# means the virtual offset on the binary file to the 1st record in each block. 
-```
 
 ## Create .mz
 ```shell
