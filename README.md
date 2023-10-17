@@ -4,6 +4,10 @@ pip install git+http://github.com/DingWB/bmzip
 
 python setup.py install
 ```
+
+# Implementation
+![docs/images/img.png](docs/images/img.png)
+
 # Usage
 
 ## generate ALLC coordinates (.mz file was created by ALLC class)
@@ -13,7 +17,7 @@ bmzip AllC -G ~/Ref/mm10/mm10_ucsc_with_chrL.fa -O mm10_with_chrL.allc.mz -j 20 
 # took 15 minutes with 20 cpu
 ```
 
-## Create .mz
+## Create .mz using bmz Writer
 ```shell
 /usr/bin/time -f "%e\t%M\t%P" bmzip Writer  -O test.bmzip -F H,H -C mc,cov -D chrom -v 1 pack -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 4,5 -d 0 -c 5000
 

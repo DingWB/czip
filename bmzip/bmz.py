@@ -475,7 +475,7 @@ class Reader:
             if type(dim[0]) == str: # each element of dim should be a tuple
                 dim = [tuple([o]) for o in dim]
             if not isinstance(dim, (list, tuple, np.ndarray)):  # dim is a list
-                raise ValueError("input of order is not corrected !")
+                raise ValueError("input of dim_order is not corrected !")
             chunk_info=chunk_info.loc[dim]
 
         if not show_dim is None:
@@ -1155,7 +1155,15 @@ class Writer:
             self.write_chunk(data, dim)
         self.close()
 
-    def catmz(self, Input=None, order=None):
+    @staticmethod
+    def create_new_dim(filename):
+        basename=os.path.basename(filename)
+        if basename.endswith('.mz'):
+            return basename[-3:]
+        return basename
+
+    def catmz(self, Input=None, dim_order=None,add_dim=False,
+              title="filename"):
         """
 		Cat multiple .mz files into one .mz file.
 
@@ -1164,14 +1172,32 @@ class Writer:
 		Input : str or list
 			Either a str (including *, as input for glob, should be inside the
 			double quotation marks if using fire) or a list.
-		order : None, list or path
-			If order=None, Input will be sorted using python sorted.
-			If order is a list, tuple or array of basename.rstrip(.mz), sorted as order.
-			If order is a file path (for example, chrom size path to order chroms
+		dim_order : None, list or path
+			If dim_order=None, Input will be sorted using python sorted.
+			If dim_order is a list, tuple or array of basename.rstrip(.mz), sorted as dim_order.
+			If dim_order is a file path (for example, chrom size path to dim_order chroms
 			or only use selected chroms) will be sorted as
 			the 1st column of the input file path (without header, tab-separated).
 			default is None
+        add_dim: bool or function
+            whether to add .mz file names as an new dimension to the merged
+            .mz file. For example, we have multiple .mz files for many cells, in
+            each .mz file, the dimensions are ['chrom'], after merged, we would
+            like to add file name of .mz as a new dimension ['cell_id']. In this case,
+            the dimensions in the merged header would be ["chrom","cell_id"], and
+            in each chunk, in addition to the previous dim ['chr1'] or ['chr22'].., a
+            new dim would also be append to the previous dim, like ['chr1','cell_1'],
+            ['chr22','cell_100'].
 
+            However, if add_dim is a function, the input to this function is the .mz
+            file basename, the returned value from this funcion would be used
+            as new dim and added into the chunk_dims. The default function to
+            convert filename to dim name is self.create_new_dim.
+        title: str
+            if add_dim is True or a python function, title would be append to
+            the header['Dimensions'] of the merged .mz file's header. If the title of
+            new dimension had already given in Writer parameter Dimension,
+            title can be None, otherwise, title should be provided.
 		Returns
 		-------
 
@@ -1180,22 +1206,31 @@ class Writer:
             Input = glob.glob(Input)
         if type(Input) != list:
             raise ValueError("Input should be either a list of a string including *.")
-        if order is None:
+        if dim_order is None:
             Input = sorted(Input)
         else:
             D = {os.path.basename(inp)[:-3]: inp for inp in Input}
             if self.verbose > 0:
                 print(D)
-            if isinstance(order, str):
-                order = pd.read_csv(os.path.abspath(os.path.expanduser(order)),
+            if isinstance(dim_order, str):
+                dim_order = pd.read_csv(os.path.abspath(os.path.expanduser(dim_order)),
                                     sep='\t', header=None, usecols=[0])[0].tolist()
-            if isinstance(order, (list, tuple, np.ndarray)):  # order is a list
-                # Input=[str(i)+'.mz' for i in order]
-                Input = [D[str(i)] for i in order]
+            if isinstance(dim_order, (list, tuple, np.ndarray)):  # dim_order is a list
+                # Input=[str(i)+'.mz' for i in dim_order]
+                Input = [D[str(i)] for i in dim_order]
             else:
-                raise ValueError("input of order is not corrected !")
+                raise ValueError("input of dim_order is not corrected !")
         if self.verbose > 0:
             print(Input)
+        self.new_dim_creator = None
+        if not add_dim==False: # add filename as another dimension.
+            if add_dim==True:
+                self.new_dim_creator=self.create_new_dim
+            elif callable(add_dim): #is a function
+                self.new_dim_creator = add_dim
+            else:
+                raise ValueError("add_dim should either be True,False or a function")
+
         for file_path in Input:
             reader = Reader(file_path)
             data_size = reader.header['total_size'] - reader.header['header_size']
