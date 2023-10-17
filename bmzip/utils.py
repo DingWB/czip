@@ -1,9 +1,9 @@
 import os,sys
 import struct
 from .bmz import Writer,get_dtfuncs
-
+# ==========================================================
 def WriteC(record, outdir,chunksize=5000):
-	cdef int i, N
+	# cdef int i, N
 	# cdef char* chrom, base, context, strand
 	chrom = record.id
 	outfile = os.path.join(outdir, chrom + ".mz")
@@ -12,8 +12,8 @@ def WriteC(record, outdir,chunksize=5000):
 		return None
 	print(chrom)
 	writer=Writer(outfile,Formats=['Q','c','3s'],
-				  Names=['pos', 'strand','context'],
-				  Tags=['chrom'])
+				  Columns=['pos', 'strand','context'],
+				  Dimensions=['chrom'])
 	dtfuncs = get_dtfuncs(writer.Formats)
 	N = record.seq.__len__() - 1
 	data=b''
@@ -37,6 +37,6 @@ def WriteC(record, outdir,chunksize=5000):
 	if len(data) > 0:
 		writer.write_chunk(data, [chrom])
 	writer.close()
-
+# ==========================================================
 if __name__ == "__main__":
 	pass

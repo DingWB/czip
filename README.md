@@ -5,6 +5,8 @@
 pip install git+http://github.com/DingWB/bmzip
 
 python setup.py install
+
+conda install -c "intel/label/test" libfabric ?
 ```
 
 ## Implementation
@@ -22,6 +24,9 @@ bmzip AllC -G ~/Ref/mm10/mm10_ucsc_with_chrL.fa -O mm10_with_chrL.allc.mz -j 20 
 ```shell
 /usr/bin/time -f "%e\t%M\t%P" bmzip Writer  -O test.bmzip -F H,H -C mc,cov -D chrom -v 1 pack -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 4,5 -d 0 -c 5000
 
+# pack from stdin
+zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |cut -f 1,5,6 | bmzip Writer  -O test.bmzip -F H,H -C mc,cov -D chrom -v 1 pack -I - -u 2,3 -d 0
+
 /usr/bin/time -f "%e\t%M\t%P" bmzip Writer -O test_bed.bmzip -F Q,H,H -C pos,mc,cov -D chrom pack -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 1,4,5 -d 0
 
 bmzip Reader -I test_bed.bmzip summary_blocks
@@ -30,15 +35,20 @@ bmzip Reader -I test_bed.bmzip view -s 0
 
 #### cat multiple .mz files into one .mz file
 ```shell
-bmzip Writer -O mm10_with_chrL.mz -F Q,3s,c -N pos,context,strand -T chrom catmz -I "mm10_with_chrL.mz.tmp/*.mz"
+bmzip Writer -O mm10_with_chrL.allc.mz -F Q,c,3s -C pos,strand,context -D chrom catmz -I "mm10_with_chrL.allc.mz.tmp/*.mz"
 
-bmzip Writer -O mm10_with_chrL.mz -F Q,3s,c -N pos,context,strand -T chrom catmz -I "mm10_with_chrL.mz.tmp/*.mz" -o ~/Ref/mm10/mm10_ucsc_with_chrL.chrom.sizes
+bmzip Writer -O mm10_with_chrL.allc.mz -F Q,c,3s -C pos,strand,context -D chrom catmz -I "mm10_with_chrL.allc.mz.tmp/*.mz" --dim_order ~/Ref/mm10/mm10_ucsc_with_chrL.chrom.sizes
 ```
 
+### Using reference coordinates when create .mz file (without coordinates)
+For single cell DNA methylation datasets, we can create .mz files only contain mv and cov, no coordinates, cause all cells share the same set of coordinates, which can be created using  bmzip AllC.
+```shell
+bmzip Writer  -O test.mz -F H,H -C mc,cov -D chrom -v 1 pack -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u '[4,5]' -d '[0]' -r mm10_with_chrL.allc.mz -pr "['pos']" -p '[1]' -j 8
+```
 ### View
 #### print_header
 ```shell
-bmzip Reader -I mm10_with_chrL.mz print_header
+bmzip Reader -I mm10_with_chrL.allc.mz print_header
 # {'magic': b'BMZIP', 'version': 1.0, 'total_size': 3160879498, 'Formats': ['Q', '3s', 'c'], 'names': ['pos', 'context', 'strand'], 'tags': ['chrom'], 'header_size': 51}
 ```
 
@@ -59,27 +69,31 @@ DESCRIPTION
     View .bmz file.
 
 FLAGS
-    -s, --show_tag=SHOW_TAG
+    -s, --show_dim=SHOW_DIM
         Type: Optional[]
         Default: None
-        index of tags given to writer.write_chunk, separated by comma, default is None, tags[show_tag] will be shown in each row (such as sampleID and chrom)
+        index of dims given to writer.write_chunk, separated by comma, default is None, dims[show_dim] will be shown in each row (such as sampleID and chrom)
     -h, --header=HEADER
         Default: True
         whether to print the header.
-    -T, --Tag=TAG
+    -d, --dim=DIM
         Type: Optional[]
         Default: None
-        None (default): use the default order in .mz file bool (True): sort the tags and used as Tag
+        None (default): use the default order in .mz file;
+
+        bool (True): sort the dims and used as dim
 ```
 ```shell
-bmzip Reader -I mm10_with_chrL.mz view |head
-#pos     context strand
-#3000003 CTG     +
-#3000005 CAG     -
-#3000009 CTA     +
+bmzip Reader -I mm10_with_chrL.allc.mz view |head
+#pos     strand  context
+#3000003 +       CTG
+#3000005 -       CAG
+#3000009 +       CTA
+#3000016 -       CAA
+#3000018 -       CAC
 
 # add tags[0] (the first tag) to the output using parameter `--show_tag`
-bmzip Reader -I mm10_with_chrL.mz view -s 0 |head
+bmzip Reader -I mm10_with_chrL.allc.mz view -s 0 |head
 #chrom   pos     context strand
 #chr1    3000003 CTG     +
 #chr1    3000005 CAG     -
@@ -87,7 +101,7 @@ bmzip Reader -I mm10_with_chrL.mz view -s 0 |head
 #chr1    3000016 CAA     -
 
 # don't print header
-bmzip Reader -I mm10_with_chrL.mz view -s 0 -h False |head 
+bmzip Reader -I mm10_with_chrL.allc.mz view -s 0 -h False |head 
 chr1    3000003 CTG     +
 chr1    3000005 CAG     -
 chr1    3000009 CTA     +
@@ -129,9 +143,9 @@ bmzip Reader -I test_bed.bmzip view -s 0 -h False  |cut -f 1 |uniq
 #chrUn_GL456385
 #chrL
 
-# provide parameter `Tag` will get a different order
-# use the tag (chrom) order from chrom size file (first columns).
-bmzip Reader -I test_bed.bmzip view -s 0 -h False -T ~/Ref/mm10/mm10_ucsc.main.chrom.sizes |cut -f 1 |uniq
+# provide parameter `dim` will get a different order
+# use the dim (chrom) order from chrom size file (first columns).
+bmzip Reader -I test_bed.bmzip view -s 0 -h False -d ~/Ref/mm10/mm10_ucsc.main.chrom.sizes |cut -f 1 |uniq
 #chr1
 #chr10
 #chr11
@@ -258,3 +272,4 @@ zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |awk '$5 >=100' |head
 #chr12   3110041 263     398
 #0.98    238200  90%, only took 0.98 s
 ```
+

@@ -34,5 +34,5 @@ setup(
 			],
 		},
 
-	ext_modules=cythonize("bmzip/utils.pyx"), #python setup.py build_ext --inplace
+	# ext_modules=cythonize("bmzip/utils.py"), #python setup.py build_ext --inplace
 )
