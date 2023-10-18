@@ -51,8 +51,10 @@ bmzip Writer  -O test.mz -F H,H -C mc,cov -D chrom -v 1 pack -I /anvil/scratch/x
 # with reference
 bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -r mm10_with_chrL.allc.mz -v 1
 
-
+# without reference
+bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -v 1
 ```
+
 ### View
 #### print_header
 ```shell

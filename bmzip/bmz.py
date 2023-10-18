@@ -234,6 +234,30 @@ def _gz_input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
 
 def _text_input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
                  chunksize=5000):
+    """
+    Parse text input file (txt, csv, tsv and so on.) into chunks, every chunk has
+    the same dim_cols (for example, chromosomes).
+
+    Parameters
+    ----------
+    infile : path
+        input file path or sys.stdin.buffer
+    formats : list
+        list of formats to pack into .mz file.
+    sep :str
+    usecols :list
+        columns index in input file to be packed into .mz file.
+    dim_cols : list
+        dimensions column index, default is [0]
+    chunksize :int
+
+    Returns
+    -------
+    a generator, each element is a tuple, first element of tuple is a dataframe
+     (header names is usecols),second element is the dims,
+    in each dataframe, the dim are the same.
+
+    """
     # cdef int i, N
     f = open1(infile)
     data, i, pre_dims = [], 0, None
@@ -268,7 +292,8 @@ def _input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
 def allc2mz_worker_with_ref(allc_path,outfile,reference,chrom,verbose=0,
                              formats=['H', 'H'], columns=['mc', 'cov'],
                              dimensions=['chrom'],usecols=[4,5],
-                            na_value=[0,0],chunksize=5000):
+                            na_value=[0,0],chunksize=5000,
+                            pos_ref=0,pos_allc=1):
     """
     Pack allc to .mz file for one chrom, allc_path must has already been indexed
     using tabix.
@@ -325,14 +350,14 @@ def allc2mz_worker_with_ref(allc_path,outfile,reference,chrom,verbose=0,
         except:
             break
         row_ref = df_ref.__next__()
-        while row_ref[0] < int(row_query[1]):
+        while row_ref[pos_ref] < int(row_query[1]):
             data+=na_value_bytes
             i+=1
             try:
                 row_ref = df_ref.__next__()
             except:
                 break
-        if row_ref[0] == int(row_query[1]):  # match
+        if row_ref[0] == int(row_query[pos_allc]):  # match
             values = [func(row_query[i]) for i,func in zip(usecols,dtfuncs)]
             data += struct.pack(f"<{writer.fmts}", *values)
             i+=1
@@ -770,7 +795,7 @@ class Reader:
             self._cached_data += self._buffer
             end_index = len(self._cached_data) - (len(self._cached_data) % self._unit_size)
             for result in struct.iter_unpack(f"<{self.fmts}", self._cached_data[:end_index]):
-                yield self._byte2real(result)
+                yield self._byte2real(result) # a list
             self._cached_data = self._cached_data[end_index:]
             self._load_block()
 
@@ -785,53 +810,6 @@ class Reader:
             i+=1
         if len(data) > 0:
             yield data
-
-    def _left_joint(self,df_querys,p=0,pr=0,
-                   na_value=[0,0]):
-        data=[]
-        df_query,dim=df_querys.__next__()
-        pre_dim=None
-        while True:
-            if dim != pre_dim: # for each df_query, dim is the same
-                df_ref=self.fetch(tuple(dim))
-                if len(data) > 0:
-                    yield pd.DataFrame(data),pre_dim
-                    data=[]
-                pre_dim = dim
-            for row_query in df_query.values.tolist():
-                try:
-                    row_ref=df_ref.__next__()
-                except:
-                    break
-                while row_ref[pr] < row_query[p]:
-                    data.append(na_value)
-                    try:
-                        row_ref = df_ref.__next__()
-                    except:
-                        break
-                if row_ref[pr] == row_query[p]: #match
-                    data.append(row_query[p+1:])
-            yield pd.DataFrame(data),pre_dim
-            data=[]
-            try:
-                df_query,dim=df_querys.__next__()
-            except:
-                break
-
-    def left_joint(self,query, formats=['Q','H','H'],sep='\t',usecols=[1,4,5],
-                   dim_cols=[0],p=0,pr=0,chunksize=5000,
-                   na_value=[0,0]):
-        if type(query)==str:
-            if query == "stdin":
-                query_path = sys.stdin.buffer
-            else:
-                query_path=os.path.abspath(os.path.expanduser(query))
-                if not os.path.exists(query_path):
-                    raise ValueError(f"path {query_path} not existed")
-            df_querys=_input_parser(query_path,formats,sep,usecols,dim_cols,
-                 chunksize)
-        return self._left_joint(df_querys,p=p,pr=pr,
-                   na_value=na_value) #return a generator
 
     def _read_1record(self):
         tmp=self._buffer1[:self._unit_size]
