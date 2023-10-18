@@ -25,7 +25,7 @@ bmzip AllC -G ~/Ref/mm10/mm10_ucsc_with_chrL.fa -O mm10_with_chrL.allc.mz -j 20 
 /usr/bin/time -f "%e\t%M\t%P" bmzip Writer  -O test.bmzip -F H,H -C mc,cov -D chrom -v 1 pack -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 4,5 -d 0 -c 5000
 
 # pack from stdin
-zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |cut -f 1,5,6 | bmzip Writer  -O test.bmzip -F H,H -C mc,cov -D chrom -v 1 pack -I - -u 2,3 -d 0
+zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |cut -f 1,5,6 | python /home/x-wding2/Projects/Github/bmzip/bmzip/bmz.py Writer -O test.bmzip -F H,H -C mc,cov -D chrom -v 1 pack -I stdin -u 1,2 -d 0
 
 /usr/bin/time -f "%e\t%M\t%P" bmzip Writer -O test_bed.bmzip -F Q,H,H -C pos,mc,cov -D chrom pack -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 1,4,5 -d 0
 
@@ -44,6 +44,14 @@ bmzip Writer -O mm10_with_chrL.allc.mz -F Q,c,3s -C pos,strand,context -D chrom 
 For single cell DNA methylation datasets, we can create .mz files only contain mv and cov, no coordinates, cause all cells share the same set of coordinates, which can be created using  bmzip AllC.
 ```shell
 bmzip Writer  -O test.mz -F H,H -C mc,cov -D chrom -v 1 pack -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u '[4,5]' -d '[0]' -r mm10_with_chrL.allc.mz -pr "['pos']" -p '[1]' -j 8
+```
+
+### convert allc to .mz
+```shell
+# with reference
+bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -r mm10_with_chrL.allc.mz -v 1
+
+
 ```
 ### View
 #### print_header

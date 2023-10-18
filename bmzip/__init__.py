@@ -3,7 +3,7 @@ from .bmz import (
 	Reader,
 	Writer
 )
-from .ballc import AllC
+from .allc import AllC,allc2mz
 
 def main():
 	fire.core.Display = lambda lines, out: print(*lines, file=out)
@@ -12,6 +12,7 @@ def main():
 			"Writer": Writer,
 			'Reader': Reader,
 			'AllC':AllC,
+            'allc2mz':allc2mz,
 		}
 	)
 

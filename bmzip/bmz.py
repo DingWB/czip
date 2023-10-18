@@ -28,8 +28,12 @@ dtype_func = {
     's': str2byte, 'c': str2byte
 }
 # ==========================================================
-def get_dtfuncs(formats):
-    return [dtype_func[t[-1]] for t in formats]
+def get_dtfuncs(formats,tobytes=True):
+    D=dtype_func
+    if not tobytes:
+        D['s']=str
+        D['c']=str
+    return [D[t[-1]] for t in formats]
 
 
 # ==========================================================
@@ -190,7 +194,7 @@ def _load_bmz_block(handle, decompress=False):
         handle.seek(block_size - 6, 1)
         data_len = struct.unpack("<H", handle.read(2))[0]
         return block_size, data_len
-
+# ==========================================================
 def open1(infile):
     if hasattr(infile, 'readline'):
         return infile
@@ -199,10 +203,217 @@ def open1(infile):
     else:
         f = open(infile, 'r')
     return f
+# ==========================================================
+def _gz_input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
+                 chunksize=5000):
+    f = open1(infile)
+    data, i, pre_dims = [], 0, None
+    dtfuncs = get_dtfuncs(formats,tobytes=False)
+    line = f.readline()
+    while line:
+        line = line.decode('utf-8')
+        values = line.rstrip('\n').split(sep)
+        dims = [values[i] for i in dim_cols]
+        if dims != pre_dims:  # a new dim (chrom), for example, chr1 -> chr2
+            if len(data) > 0:  # write rest data of chr1
+                yield pd.DataFrame(data,columns=usecols), pre_dims
+                data, i = [], 0
+            pre_dims = dims
+        if i >= chunksize:  # dims are the same, but reach chunksize
+            yield pd.DataFrame(data,columns=usecols), pre_dims
+            data, i = [], 0
+        data.append([func(v) for v, func in zip([values[i] for i in usecols],
+                                                dtfuncs)])
+        line = f.readline()
+        i += 1
+    f.close()
+    if len(data)>0:
+        yield pd.DataFrame(data, columns=usecols), pre_dims
 
 # ==========================================================
+
+def _text_input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
+                 chunksize=5000):
+    # cdef int i, N
+    f = open1(infile)
+    data, i, pre_dims = [], 0, None
+    dtfuncs = get_dtfuncs(formats,tobytes=False)
+    line = f.readline()
+    while line:
+        values = line.rstrip('\n').split(sep)
+        dims = [values[i] for i in dim_cols]
+        if dims != pre_dims:  # a new dim (chrom), for example, chr1 -> chr2
+            if len(data) > 0:  # write rest data of chr1
+                yield pd.DataFrame(data,columns=usecols), pre_dims
+                data, i = [], 0
+            pre_dims = dims
+        if i >= chunksize:  # dims are the same, but reach chunksize
+            yield pd.DataFrame(data,columns=usecols), pre_dims
+            data, i = [], 0
+        data.append([func(v) for v, func in zip([values[i] for i in usecols],
+                                                dtfuncs)])
+        line = f.readline()
+        i += 1
+    f.close()
+    if len(data)>0:
+        yield pd.DataFrame(data, columns=usecols), pre_dims
+# ==========================================================
+def _input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
+                 chunksize=5000):
+    if infile.endswith('.gz'):
+        return _gz_input_parser(infile,formats,sep,usecols,dim_cols,chunksize)
+    else:
+        return _text_input_parser(infile, formats, sep, usecols, dim_cols, chunksize)
+# ==========================================================
+def allc2mz_worker_with_ref(allc_path,outfile,reference,chrom,verbose=0,
+                             formats=['H', 'H'], columns=['mc', 'cov'],
+                             dimensions=['chrom'],usecols=[4,5],
+                            na_value=[0,0],chunksize=5000):
+    """
+    Pack allc to .mz file for one chrom, allc_path must has already been indexed
+    using tabix.
+
+    Parameters
+    ----------
+    allc_path :path
+        path to allc file.
+    outfile : path
+        temporary .mz file, should be merged together after the Pool finished.
+    reference: path
+        path to reference .mz file. By providing reference, the pos in allc file will
+        not be saved into .mz file, instead, we will align the position to the allc
+        coordinates from the reference allc coordinates.
+    chrom : chrom
+        chrom, will be used as dimension to write chunk.
+    verbose : int
+        whether print debug information
+    formats : list
+        For allc file, default is ['Q','H', 'H'] for pos, mc, cov respectively.
+    columns : list
+        columsn names, default is [pos, mc, cov]
+    dimensions : list
+        For allc file, default dimension is ['chrom'].
+    na_value: list
+        when the methylation record for a C is missing in allc file, then na_value
+        would be written into .mz file, default is [0,0] for mc and cov respectively.
+    chunksize : int
+        default is 5000
+    usecols : list
+        list of column index in the input file columns, in default, for allc file,
+        usecols = [1,4,5], means [pos, mc, cov], 0-based.
+    sep : str
+        separator for the input file ['\t']
+
+    Returns
+    -------
+
+    """
+    import pysam
+    tbi = pysam.TabixFile(allc_path)
+    records = tbi.fetch(chrom)
+    dtfuncs = get_dtfuncs(formats,tobytes=False)
+    writer = Writer(outfile, Formats=formats,
+                    Columns=columns,Dimensions=dimensions)
+    ref_reader=Reader(reference)
+    df_ref = ref_reader.fetch(tuple([chrom]))
+    data = b''
+    na_value_bytes=struct.pack(f"<{writer.fmts}",*na_value)
+    i=0
+    while True:
+        try:
+            row_query=records.__next__().rstrip('\n').split('\t')
+        except:
+            break
+        row_ref = df_ref.__next__()
+        while row_ref[0] < int(row_query[1]):
+            data+=na_value_bytes
+            i+=1
+            try:
+                row_ref = df_ref.__next__()
+            except:
+                break
+        if row_ref[0] == int(row_query[1]):  # match
+            values = [func(row_query[i]) for i,func in zip(usecols,dtfuncs)]
+            data += struct.pack(f"<{writer.fmts}", *values)
+            i+=1
+
+        if i>= chunksize:
+            writer.write_chunk(data, [chrom])
+            data = b''
+            i=0
+    if len(data) > 0:
+        writer.write_chunk(data, [chrom])
+    writer.close()
+    ref_reader.close()
+    tbi.close()
+    if verbose:
+        print(f"{chrom} done.")
+    return chrom
+# ==========================================================
+def allc2mz_worker_without_ref(allc_path,outfile,chrom,verbose=0,
+                               formats=['Q','H', 'H'], columns=['pos','mc', 'cov'],
+                               dimensions=['chrom'],usecols=[1,4,5],
+                               chunksize=5000,sep='\t'):
+    """
+    Pack allc to .mz file for one chrom, allc_path must has already been indexed
+    using tabix.
+
+    Parameters
+    ----------
+    allc_path :path
+        path to allc file.
+    outfile : path
+        temporary .mz file, should be merged together after the Pool finished.
+    chrom : chrom
+        chrom, will be used as dimension to write chunk.
+    verbose : int
+        whether print debug information
+    formats : list
+        For allc file, default is ['Q','H', 'H'] for pos, mc, cov respectively.
+    columns : list
+        columsn names, default is [pos, mc, cov]
+    dimensions : list
+        For allc file, default dimension is ['chrom'].
+    chunksize : int
+        default is 5000
+    usecols : list
+        list of column index in the input file columns, in default, for allc file,
+        usecols = [1,4,5], means [pos, mc, cov], 0-based.
+    sep : str
+        separator for the input file ['\t']
+
+    Returns
+    -------
+
+    """
+    import pysam
+    dtfuncs = get_dtfuncs(formats, tobytes=False)
+    tbi = pysam.TabixFile(allc_path)
+    records = tbi.fetch(chrom)
+    writer = Writer(outfile, Formats=formats,
+                    Columns=columns,Dimensions=dimensions)
+    data, i = b'', 0
+    while True:
+        try:
+            values = records.__next__().rstrip('\n').split(sep)
+        except:
+            break
+        if i >= chunksize:  # dims are the same, but reach chunksize
+            writer.write_chunk(data, [chrom])
+            data, i = b'', 0
+        values = [func(values[i]) for i,func in zip(usecols,dtfuncs)]
+        data += struct.pack(f"<{writer.fmts}", *values)
+        i += 1
+    if len(data) > 0:
+        writer.write_chunk(data, [chrom])
+    writer.close()
+    tbi.close()
+    if verbose:
+        print(f"{chrom} done.")
+    return chrom
+# ==========================================================
 class Reader:
-    def __init__(self, Input=None, mode="rb", fileobj=None, max_cache=100):
+    def __init__(self, Input, mode="rb", fileobj=None, max_cache=100):
         r"""Initialize the class for reading a BGZF file.
 		You would typically use the top level ``bgzf.open(...)`` function
 		which will call this class internally. Direct use is discouraged.
@@ -427,7 +638,6 @@ class Reader:
                 df = pd.DataFrame(R, columns=self.header['Columns'])
                 yield df
 
-
     def _load_block(self, start_offset=None):
         if start_offset is None:
             # If the file is being read sequentially, then _handle.tell()
@@ -497,7 +707,7 @@ class Reader:
         elif type(show_dim)==str:
             show_dim = [int(i) for i in show_dim.split(',')]
 
-        chunk_info = self.chunk_info.set_index('chunk_dims', inplace=True)
+        chunk_info = self.chunk_info.set_index('chunk_dims')
         if not dim is None:
             # equal to query chromosome if self.header['dimensions'][0]==chrom
             if isinstance(dim, str):
@@ -563,6 +773,65 @@ class Reader:
                 yield self._byte2real(result)
             self._cached_data = self._cached_data[end_index:]
             self._load_block()
+
+    def batch_fetch(self,dims,chunksize=5000):
+        i=0
+        data=[]
+        for row in self.fetch(dims):
+            data.append(row)
+            if i >= chunksize:
+                yield data
+                data,i=[],0
+            i+=1
+        if len(data) > 0:
+            yield data
+
+    def _left_joint(self,df_querys,p=0,pr=0,
+                   na_value=[0,0]):
+        data=[]
+        df_query,dim=df_querys.__next__()
+        pre_dim=None
+        while True:
+            if dim != pre_dim: # for each df_query, dim is the same
+                df_ref=self.fetch(tuple(dim))
+                if len(data) > 0:
+                    yield pd.DataFrame(data),pre_dim
+                    data=[]
+                pre_dim = dim
+            for row_query in df_query.values.tolist():
+                try:
+                    row_ref=df_ref.__next__()
+                except:
+                    break
+                while row_ref[pr] < row_query[p]:
+                    data.append(na_value)
+                    try:
+                        row_ref = df_ref.__next__()
+                    except:
+                        break
+                if row_ref[pr] == row_query[p]: #match
+                    data.append(row_query[p+1:])
+            yield pd.DataFrame(data),pre_dim
+            data=[]
+            try:
+                df_query,dim=df_querys.__next__()
+            except:
+                break
+
+    def left_joint(self,query, formats=['Q','H','H'],sep='\t',usecols=[1,4,5],
+                   dim_cols=[0],p=0,pr=0,chunksize=5000,
+                   na_value=[0,0]):
+        if type(query)==str:
+            if query == "stdin":
+                query_path = sys.stdin.buffer
+            else:
+                query_path=os.path.abspath(os.path.expanduser(query))
+                if not os.path.exists(query_path):
+                    raise ValueError(f"path {query_path} not existed")
+            df_querys=_input_parser(query_path,formats,sep,usecols,dim_cols,
+                 chunksize)
+        return self._left_joint(df_querys,p=p,pr=pr,
+                   na_value=na_value) #return a generator
 
     def _read_1record(self):
         tmp=self._buffer1[:self._unit_size]
@@ -1111,30 +1380,9 @@ class Writer:
                         yield df1, dim
                     input_handle = input_handle.iloc[self.chunksize:]
         else:
-            f = open1(input_handle)
-            data, i, pre_dims = [], 0, None
-            dtfuncs = get_dtfuncs(self.Formats)
-            line = f.readline()
-            while line:
-                if isinstance(line, bytes):
-                    line = line.decode('utf-8')
-                values = line.rstrip('\n').split(self.sep)
-                dims = [values[i] for i in self.dim_cols]
-                print(values,dims)
-                if dims != pre_dims:  # a new dim (chrom), for example, chr1 -> chr2
-                    if len(data) > 0:  # write rest data of chr1
-                        yield pd.DataFrame(data), pre_dims
-                        data, i = [], 0
-                    pre_dims = dims
-                if i >= self.chunksize:  # dims are the same, but reach chunksize
-                    yield pd.DataFrame(data), pre_dims
-                    data, i = [], 0
-                values_to_pack = [values[i] for i in self.usecols]
-                data.append([func(v) for v, func in zip(values_to_pack, dtfuncs)])
-                print(len(data), dims)
-                line = f.readline()
-                i += 1
-            f.close()
+            return _input_parser(input_handle, self.Formats, self.sep,
+                                 self.usecols, self.dim_cols,
+                                 self.chunksize)
 
     def pack(self, Input=None, usecols=[4, 5], dim_cols=[0],
              sep='\t', chunksize=5000, header=None, skiprows=0,
@@ -1230,7 +1478,6 @@ class Writer:
             if self.verbose > 0:
                 print(self.usecols, self.dim_cols)
                 print(type(self.usecols), type(self.dim_cols))
-            print(data_generator.__next__())
             for df, dim in data_generator:
                 data=df.apply(lambda x: struct.pack(f"<{self.fmts}", *x.tolist()),
                        axis=1).sum()
@@ -1273,8 +1520,7 @@ class Writer:
         self.close()
 
     @staticmethod
-    def create_new_dim(file_path):
-        basename=os.path.basename(file_path)
+    def create_new_dim(basename):
         if basename.endswith('.mz'):
             return basename[:-3]
         return basename
@@ -1356,7 +1602,7 @@ class Writer:
              end_offset,nblocks,_) =chunks.__next__()
             # check whether new dim has already been added to header
             if not self.new_dim_creator is None:
-                new_dim=self.new_dim_creator(file_path)
+                new_dim=self.new_dim_creator(os.path.basename(file_path))
                 dims=dims+tuple([new_dim])
             if len(dims) > len(self.Dimensions):
                 # new_dim title should be also added to header Dimensions
@@ -1441,7 +1687,7 @@ class Writer:
     def __exit__(self, type, value, traceback):
         """Close a file with WITH statement."""
         self.close()
-
+# ==========================================================
 def pack_mp_worker(outdir,reference,df_query,dim,usecols,
                    formats,columns,dimensions,p,pr):
     if type(dim) == str:
@@ -1477,3 +1723,7 @@ def pack_mp_worker(outdir,reference,df_query,dim,usecols,
 
 # ==========================================================
 
+if __name__=="__main__":
+    import fire
+    fire.core.Display = lambda lines, out: print(*lines, file=out)
+    fire.Fire()

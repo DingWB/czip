@@ -14,11 +14,16 @@ from Bio import SeqIO
 # import pyximport
 # pyximport.install(pyimport=True) #pyximport.install(pyimport=True)
 from .utils import WriteC
-from .bmz import Writer
+from .bmz import (
+    Writer,
+    allc2mz_worker_with_ref,
+    allc2mz_worker_without_ref
+)
+import pysam
 # ==========================================================
 class AllC:
     def __init__(self, Genome=None, Output="hg38_allc.mz",
-                 pattern="C", jobs=4):
+                 pattern="C", jobs=12):
         """
         Extract position of specific pattern in the reference genome, for example C.
             Example: python ~/Scripts/python/tbmate.py AllC -g ~/genome/hg38/hg38.fa --n_jobs 10 run
@@ -66,46 +71,47 @@ class AllC:
         self.writePattern()
         self.merge()
         os.system(f"rm -rf {self.outdir}")
-# =============================================================================
-def print_allc(genome=None):
-    """
-    Print positions for all c in the reference genome. Example:
-        python ~/Scripts/python/tbmate.py print_allc -g ~/genome/hg38/hg38.fa > hg38_allc.bed
-    Parameters
-    ----------
-    genome: path
-        reference genome.
-    """
-    genome = os.path.abspath(os.path.expanduser(genome))
-    records = SeqIO.parse(genome, "fasta")
-    ID = 0
-    for record in records:
-        chrom = record.id
-        for i in range(record.seq.__len__() - 1):  # 0-based
-            base = record.seq[i:i + 1].upper()
-            if base.__str__() == 'C':  # forward strand
-                context = record.seq[i: i + 3].upper().__str__()  # pos, left l1 base pair and right l2 base pair
-                strand = '+'
-            elif base.reverse_complement().__str__() == 'C':  # reverse strand
-                context = record.seq[i - 2:i + 1].reverse_complement().upper().__str__()
-                strand = '-'
-            else:
-                continue
-            try:
-                sys.stdout.write(f"{chrom}\t{i}\t{i + 1}\t{context}\t{ID}\t{strand}\n")
-            except:
-                sys.stdout.close()
-                sys.exit()
-            # position is 0-based (start) 1-based (end position, i+1)
-            ID += 1
-# =============================================================================
-def view(Input="test_bed.bmzip"):
-    reader = BmzReader(Input, 'rb')
-    while reader._block_raw_length > 0:
-        for r in struct.iter_unpack(reader.format, reader._buffer):
-            yield r
-        reader._load_block()
-    reader.close()
-# =============================================================================
+# ==========================================================
+def allc2mz(allc_path,output,reference=None,jobs=12,verbose=0):
+    allc_path=os.path.abspath(os.path.expanduser(allc_path))
+    if not os.path.exists(allc_path+'.tbi'):
+        raise ValueError(f"allc file {allc_path} not found, please create .tbi index.")
+    output=os.path.abspath(os.path.expanduser(output))
+    outdir=output+'.tmp'
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
+    if not reference is None:
+        reference=os.path.abspath(os.path.expanduser(reference))
+        formats,columns,dimensions = ['H', 'H'], ['mc', 'cov'], ['chrom']
+        message=os.path.basename(reference)
+    else:
+        formats, columns, dimensions = ['Q','H', 'H'], ['pos','mc', 'cov'], ['chrom']
+        message = ""
+    # tbi=tabix.open(allc_path)
+    pool = Pool(jobs)
+    jobs = []
+    tbi=pysam.TabixFile(allc_path)
+    chroms=tbi.contigs
+    tbi.close()
+    for chrom in chroms:
+        outfile=os.path.join(outdir,chrom+'.mz')
+        if not reference is None:
+            job = pool.apply_async(allc2mz_worker_with_ref,
+                               (allc_path,outfile, reference,chrom,verbose,))
+        else:
+            job = pool.apply_async(allc2mz_worker_without_ref,
+                                   (allc_path,outfile,chrom,verbose,))
+        jobs.append(job)
+    for job in jobs:
+        r=job.get()
+    pool.close()
+    pool.join()
+    # merge
+    writer = Writer(Output=output, Formats=formats,
+                    Columns=columns,Dimensions=dimensions,
+                    message=message)
+    writer.catmz(Input=f"{outdir}/*.mz")
+    os.system(f"rm -rf {outdir}")
+# ==========================================================
 if __name__ == "__main__":
     pass
