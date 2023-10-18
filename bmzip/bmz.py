@@ -949,64 +949,6 @@ class Reader:
         self.seek(virtual_offset)
         return struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
 
-    def build_index(self, cols=[0]):
-        """
-        create index for the .mz file passed to the Reader.
-
-        Parameters
-        ----------
-        name_cols : int, list, or str
-            name_cols (default is [0]) should be the index in the names list (
-            see self.header['names'], or bmzip Reader -I test.mz print_header)
-            if a int given, build index for only one name,
-            if a list give, build index for multiple names,
-            if a str give, the string will be convert to list (split by comma)
-
-        Returns
-        -------
-
-        """
-        if type(cols) == int:
-            cols=[cols]
-        elif type(cols) ==str:
-            cols = [int(i) for i in cols.split(',')]
-        else:
-            cols=[int(i) for i in cols]
-
-        block_info=self.summary_blocks(print=False)
-        n_chunk_dims=len(block_info.chunk_dims.iloc[0])
-        Dimensions=[]
-        for i,dim in zip(range(n_chunk_dims),self.header['Dimensions']):
-            # print(i,dim)
-            Dimensions.append(dim)
-            block_info[dim]=block_info.chunk_dims.apply(lambda x:x[i])
-        block_info['within_block_offset'] = (
-            np.ceil(block_info.block_data_start / self._unit_size) * self._unit_size
-            - block_info.block_data_start
-        ).map(int)
-        block_info['1st_record_virtual_offset'] = (
-            block_info.apply(lambda x:
-                make_virtual_offset(x.block_start_offset, x.within_block_offset),
-                             axis=1)
-        )
-
-        block_info['1st_record']=block_info['1st_record_virtual_offset'].apply(
-            self._seek_and_read_1record)
-
-        columns = []
-        for col in cols:
-            Col = self.header['Columns'][col]
-            block_info[Col] = block_info['1st_record'].apply(lambda x:x[col])
-            columns.append(Col)
-        formats=[self.header['Formats'][i] for i in cols]
-        self.bmi=self.Input + '.bmi'
-        Columns = columns+['1st_record_virtual_offset']
-        self.bmi_writer=Writer(Output=self.bmi, Formats=formats+['Q'],
-                               Columns=Columns,Dimensions=Dimensions)
-        self.bmi_writer.pack(Input=block_info.loc[:,Dimensions+Columns],
-                             usecols=Columns,dim_cols=Dimensions,
-                             chunksize=None)
-
     def tell(self):
         """Return a 64-bit unsigned BGZF virtual offset."""
         if 0 < self._within_block_offset and self._within_block_offset == len(
