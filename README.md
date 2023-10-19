@@ -22,15 +22,15 @@ bmzip AllC -G ~/Ref/mm10/mm10_ucsc_with_chrL.fa -O mm10_with_chrL.allc.mz -j 20 
 
 ### Create .mz using `bmzip Writer`
 ```shell
-/usr/bin/time -f "%e\t%M\t%P" bmzip Writer  -O test.bmzip -F H,H -C mc,cov -D chrom -v 1 pack -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 4,5 -d 0 -c 5000
+/usr/bin/time -f "%e\t%M\t%P" bmzip Writer  -O test.mz -F H,H -C mc,cov -D chrom -v 1 tomz -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 4,5 -d 0 -c 5000
 
 # pack from stdin
-zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |cut -f 1,5,6 | python /home/x-wding2/Projects/Github/bmzip/bmzip/bmz.py Writer -O test.bmzip -F H,H -C mc,cov -D chrom -v 1 pack -I stdin -u 1,2 -d 0
+zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |cut -f 1,5,6 | bmzip Writer -O test.mz -F H,H -C mc,cov -D chrom -v 1 tomz -I stdin -u 1,2 -d 0
 
-/usr/bin/time -f "%e\t%M\t%P" bmzip Writer -O test_bed.bmzip -F Q,H,H -C pos,mc,cov -D chrom pack -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 1,4,5 -d 0
+/usr/bin/time -f "%e\t%M\t%P" bmzip Writer -O test_bed.mz -F Q,H,H -C pos,mc,cov -D chrom tomz -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 1,4,5 -d 0
 
-bmzip Reader -I test_bed.bmzip summary_blocks
-bmzip Reader -I test_bed.bmzip view -s 0
+bmzip Reader -I test_bed.mz summary_blocks
+bmzip Reader -I test_bed.mz view -s 0
 ```
 
 #### cat multiple .mz files into one .mz file
@@ -43,10 +43,11 @@ bmzip Writer -O mm10_with_chrL.allc.mz -F Q,c,3s -C pos,strand,context -D chrom 
 ### Using reference coordinates when create .mz file (without coordinates)
 For single cell DNA methylation datasets, we can create .mz files only contain mv and cov, no coordinates, cause all cells share the same set of coordinates, which can be created using  bmzip AllC.
 ```shell
-bmzip Writer  -O test.mz -F H,H -C mc,cov -D chrom -v 1 pack -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u '[4,5]' -d '[0]' -r mm10_with_chrL.allc.mz -pr "['pos']" -p '[1]' -j 8
+bmzip Writer  -O test.mz -F H,H -C mc,cov -D chrom -v 1 tomz -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u '[4,5]' -d '[0]' -r mm10_with_chrL.allc.mz -pr "['pos']" -p '[1]' -j 8
 ```
 
 ### convert allc to .mz
+
 ```shell
 # with reference
 bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -r mm10_with_chrL.allc.mz -v 1
@@ -55,25 +56,46 @@ bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -r mm10_with_chrL.allc.m
 bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -v 1
 ```
 
+### test difference
+
+```shell
+# Test difference between original allc.tsv.gz against .mz with position
+bmzip Writer  -O test_bed1.mz -F Q,H,H -C pos,mc,cov -D chrom -v 1 tomz -I FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 1,4,5 -d 0
+bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test_bed2.mz -v 1
+bmzip test_diff --file1 FC_E17a_3C_1-1-I3-F13.allc.tsv.gz --usecols1 "[0,1,4,5]" --header1 0 --file2 test_bed1.tsv --usecols2 "[0,1,2,3]" --header2 1
+bmzip test_diff --file1 FC_E17a_3C_1-1-I3-F13.allc.tsv.gz --usecols1 "[0,1,4,5]" --header1 0 --file2 test_bed2.tsv --usecols2 "[0,1,2,3]" --header2 1
+
+# Test difference between original allc.tsv.gz against .mz without position (using reference)
+bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test_bed3.mz -v 1 -r mm10_with_chrL.allc.mz
+
+# pack from stdin
+zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |cut -f 1,5,6 | bmzip Writer -O test.mz -F H,H -C mc,cov -D chrom -v 1 tomz -I stdin -u 1,2 -d 0
+
+bmzip Writer -O test_bed.mz -F Q,H,H -C pos,mc,cov -D chrom tomz -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 1,4,5 -d 0
+```
+
 ### View
+
 #### print_header
+
 ```shell
 bmzip Reader -I mm10_with_chrL.allc.mz print_header
 # {'magic': b'BMZIP', 'version': 1.0, 'total_size': 3160879498, 'Formats': ['Q', '3s', 'c'], 'names': ['pos', 'context', 'strand'], 'tags': ['chrom'], 'header_size': 51}
 ```
 
 #### view
+
 ```shell
-bmzip Reader -I test_bed.bmzip view --help
+bmzip Reader -I test_bed.mz view --help
 ```
 ```text
-INFO: Showing help with the command 'bmzip Reader -I test_bed.bmzip view -- --help'.
+INFO: Showing help with the command 'bmzip Reader -I test_bed.mz view -- --help'.
 
 NAME
-    bmzip Reader -I test_bed.bmzip view - View .bmz file.
+    bmzip Reader -I test_bed.mz view - View .bmz file.
 
 SYNOPSIS
-    bmzip Reader -I test_bed.bmzip view <flags>
+    bmzip Reader -I test_bed.mz view <flags>
 
 DESCRIPTION
     View .bmz file.
@@ -118,7 +140,7 @@ chr1    3000009 CTA     +
 
 # view .mz data using a different chromosomes order
 # default tags order
-bmzip Reader -I test_bed.bmzip view -s 0 -h False  |cut -f 1 |uniq
+bmzip Reader -I test_bed.mz view -s 0 -h False  |cut -f 1 |uniq
 #chr1
 #chr10
 #chr11
@@ -155,7 +177,7 @@ bmzip Reader -I test_bed.bmzip view -s 0 -h False  |cut -f 1 |uniq
 
 # provide parameter `dim` will get a different order
 # use the dim (chrom) order from chrom size file (first columns).
-bmzip Reader -I test_bed.bmzip view -s 0 -h False -d ~/Ref/mm10/mm10_ucsc.main.chrom.sizes |cut -f 1 |uniq
+bmzip Reader -I test_bed.mz view -s 0 -h False -d ~/Ref/mm10/mm10_ucsc.main.chrom.sizes |cut -f 1 |uniq
 #chr1
 #chr10
 #chr11
@@ -181,17 +203,17 @@ bmzip Reader -I test_bed.bmzip view -s 0 -h False -d ~/Ref/mm10/mm10_ucsc.main.c
 
 # only show selected chromosomes using parameter `dim`
 # this can also be done using query
-bmzip Reader -I test_bed.bmzip view -s 0 -h False -d chr1,chr2 |cut -f 1 |uniq
+bmzip Reader -I test_bed.mz view -s 0 -h False -d chr1,chr2 |cut -f 1 |uniq
 # chr1
 #chr2
 
 # only view 1 chrom
-bmzip Reader -I test_bed.bmzip view -s 0 -h False -d chr1 |head
+bmzip Reader -I test_bed.mz view -s 0 -h False -d chr1 |head
 ```
 
 ### Query
 ```shell
-/usr/bin/time -f "%e\t%M\t%P" bmzip Reader -I test_bed.bmzip query -d chr8 -s 129300305 -e 129300362
+/usr/bin/time -f "%e\t%M\t%P" bmzip Reader -I test_bed.mz query -d chr8 -s 129300305 -e 129300362
 #chrom   pos     mc      cov
 #chr8    129300305       0       1
 #chr8    129300317       0       1
@@ -220,7 +242,7 @@ zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |awk '$5 >=100' |head
 #chr12   3110027 -       CGT     1218    1356    1
 #chr12   3110041 +       CAA     263     398     1
 
-/usr/bin/time -f "%e\t%M\t%P" bmzip Reader -I test_bed.bmzip query -d chr12 -s 3109883 -e 3110041
+/usr/bin/time -f "%e\t%M\t%P" bmzip Reader -I test_bed.mz query -d chr12 -s 3109883 -e 3110041
 #chrom   pos     mc      cov
 #chr12   3109883 224     255
 #chr12   3109884 590     690
@@ -283,3 +305,10 @@ zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |awk '$5 >=100' |head
 #0.98    238200  90%, only took 0.98 s
 ```
 
+#### Query with reference
+
+```shell
+bmzip1 Reader -I test_bed3.mz query -d chr12 -s 3109911 -e 3109913 -r mm10_with_chrL.allc.mz |head
+
+bmzip1 Reader -I mm10_with_chrL.allc.mz query -d chr12 -s 3109911 -e 3109913  |head
+```

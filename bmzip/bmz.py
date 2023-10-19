@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import gzip
 from multiprocessing import Pool
+import pysam
 
 _bmz_magic = b'BMZIP'
 _block_magic = b"MB"
@@ -289,11 +290,11 @@ def _input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
     else:
         return _text_input_parser(infile, formats, sep, usecols, dim_cols, chunksize)
 # ==========================================================
-def allc2mz_worker_with_ref(allc_path,outfile,reference,chrom,verbose=0,
-                             formats=['H', 'H'], columns=['mc', 'cov'],
-                             dimensions=['chrom'],usecols=[4,5],
-                            na_value=[0,0],chunksize=5000,
-                            pos_ref=0,pos_allc=1):
+def allc2mz_worker_with_ref(allc_path, outfile, reference, chrom, verbose=0,
+                            formats=['H', 'H'], columns=['mc', 'cov'],
+                            dimensions=['chrom'], usecols=[4, 5],
+                            na_value=[0, 0], chunksize=5000,
+                            pos_ref=0, pos_allc=1, sep='\t'):
     """
     Pack allc to .mz file for one chrom, allc_path must has already been indexed
     using tabix.
@@ -333,7 +334,6 @@ def allc2mz_worker_with_ref(allc_path,outfile,reference,chrom,verbose=0,
     -------
 
     """
-    import pysam
     tbi = pysam.TabixFile(allc_path)
     records = tbi.fetch(chrom)
     dtfuncs = get_dtfuncs(formats,tobytes=False)
@@ -346,21 +346,21 @@ def allc2mz_worker_with_ref(allc_path,outfile,reference,chrom,verbose=0,
     i=0
     while True:
         try:
-            row_query=records.__next__().rstrip('\n').split('\t')
+            row_query = records.__next__().rstrip('\n').split(sep)
         except:
             break
         row_ref = df_ref.__next__()
-        while row_ref[pos_ref] < int(row_query[1]):
-            data+=na_value_bytes
-            i+=1
+        while row_ref[pos_ref] < int(row_query[pos_allc]):
+            data += na_value_bytes
+            i += 1
             try:
                 row_ref = df_ref.__next__()
             except:
                 break
-        if row_ref[0] == int(row_query[pos_allc]):  # match
-            values = [func(row_query[i]) for i,func in zip(usecols,dtfuncs)]
+        if row_ref[pos_ref] == int(row_query[pos_allc]):  # match
+            values = [func(row_query[i]) for i, func in zip(usecols, dtfuncs)]
             data += struct.pack(f"<{writer.fmts}", *values)
-            i+=1
+            i += 1
 
         if i>= chunksize:
             writer.write_chunk(data, [chrom])
@@ -411,7 +411,6 @@ def allc2mz_worker_without_ref(allc_path,outfile,chrom,verbose=0,
     -------
 
     """
-    import pysam
     dtfuncs = get_dtfuncs(formats, tobytes=False)
     tbi = pysam.TabixFile(allc_path)
     records = tbi.fetch(chrom)
@@ -436,7 +435,52 @@ def allc2mz_worker_without_ref(allc_path,outfile,chrom,verbose=0,
     if verbose:
         print(f"{chrom} done.")
     return chrom
+
+
 # ==========================================================
+def allc2mz_mp(allc_path, output, reference, message,
+               formats, columns, dimensions, usecols, na_value,
+               chunksize, pos_ref, pos_allc, jobs, sep, verbose,
+               writer=None):
+    output = os.path.abspath(os.path.expanduser(output))
+    if not reference is None:
+        reference = os.path.abspath(os.path.expanduser(reference))
+    outdir = output + '.tmp'
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
+    if verbose:
+        print(f"Using {jobs} cpus")
+    pool = Pool(jobs)
+    jobs = []
+    tbi = pysam.TabixFile(allc_path)
+    chroms = tbi.contigs
+    tbi.close()
+    for chrom in chroms:
+        outfile = os.path.join(outdir, chrom + '.mz')
+        if not reference is None:
+            job = pool.apply_async(allc2mz_worker_with_ref,
+                                   (allc_path, outfile, reference, chrom, verbose,
+                                    formats, columns, dimensions, usecols,
+                                    na_value, chunksize, pos_ref, pos_allc, sep,))
+        else:
+            job = pool.apply_async(allc2mz_worker_without_ref,
+                                   (allc_path, outfile, chrom, verbose,
+                                    formats, columns, dimensions,
+                                    usecols, chunksize, sep))
+        jobs.append(job)
+    for job in jobs:
+        r = job.get()
+    pool.close()
+    pool.join()
+    # merge
+    if writer is None:
+        writer = Writer(Output=output, Formats=formats,
+                        Columns=columns, Dimensions=dimensions,
+                        message=message)
+    writer.catmz(Input=f"{outdir}/*.mz")
+    os.system(f"rm -rf {outdir}")
+
+
 class Reader:
     def __init__(self, Input, mode="rb", fileobj=None, max_cache=100):
         r"""Initialize the class for reading a BGZF file.
@@ -527,7 +571,7 @@ class Reader:
         self.header['header_size'] = f.tell()  # end of header, begin of 1st chunk
         self.fmts = ''.join(Formats)
         self._unit_size = struct.calcsize(self.fmts)
-        self.chunk_info = self.summary_chunks(print=False)
+        self.chunk_info = self.summary_chunks(printout=False)
         self.dim2chunk_start = self.chunk_info.set_index(
             'chunk_dims').chunk_start_offset.to_dict()
 
@@ -535,7 +579,7 @@ class Reader:
         for k in self.header:
             print(k," : ",self.header[k])
 
-    def _load_chunk(self, start_offset=None, view=True):
+    def _load_chunk(self, start_offset=None, jump=True):
         if start_offset is None:  # this is another chunk, not the 1st one.
             start_offset = self._chunk_end_offset
         if start_offset >= self.header['total_size']:
@@ -551,11 +595,11 @@ class Reader:
         self._chunk_data_len = struct.unpack("<Q", self._handle.read(8))[0]
         self._chunk_nblocks = struct.unpack("<Q", self._handle.read(8))[0]
         self._chunk_block_1st_record_virtual_offsets = []
-        if view:  # no need to load _chunk_block_1st_record_virtual_offsets
+        if jump:  # no need to load _chunk_block_1st_record_virtual_offsets
             self._handle.seek(self._chunk_nblocks * 8, 1)
         # _chunk_tail_offset = end position of this chunk
         # = start position of next chunk.
-        else:
+        else:  # query,need to load block 1st record offset
             # read block_offset
             for i in range(self._chunk_nblocks):
                 block_offset = struct.unpack("<Q", self._handle.read(8))[0]
@@ -570,16 +614,16 @@ class Reader:
         return True
 
     def get_chunks(self):
-        r = self._load_chunk(self.header['header_size'], view=False)
+        r = self._load_chunk(self.header['header_size'], jump=False)
         while r:
             yield [self._chunk_start_offset, self._chunk_size,
                    self._chunk_dims, self._chunk_data_len, self._chunk_end_offset,
                    self._chunk_nblocks, self._chunk_block_1st_record_virtual_offsets
                    ]
-            r = self._load_chunk(view=False)
+            r = self._load_chunk(jump=False)
 
-    def summary_chunks(self,print=True):
-        r = self._load_chunk(self.header['header_size'], view=True)
+    def summary_chunks(self, printout=True):
+        r = self._load_chunk(self.header['header_size'], jump=True)
         header = ['chunk_start_offset', 'chunk_size', 'chunk_dims', 'chunk_data_len',
                   'chunk_tail_offset', 'chunk_nblocks']
         R = []
@@ -589,48 +633,52 @@ class Reader:
                           self._chunk_dims, self._chunk_data_len, self._chunk_end_offset,
                           self._chunk_nblocks]
             R.append(chunk_info)
-            r = self._load_chunk(view=True)
-        if print:
+            r = self._load_chunk(jump=True)
+        if printout:
             sys.stdout.write('\t'.join(header) + '\n')
             for chunk_info in R:
                 try:
                     sys.stdout.write('\t'.join([str(v) for v in chunk_info]) + '\n')
                 except:
                     sys.stdout.close()
+                    self.close()
+                    return
             sys.stdout.close()
         else:
             df = pd.DataFrame(R, columns=header)
             return df
 
-    def summary_blocks(self, print=True):
-        r = self._load_chunk(self.header['header_size'], view=True)
-        header = ['chunk_dims'] + ['block_start_offset','block_size',
+    def summary_blocks(self, printout=True):
+        r = self._load_chunk(self.header['header_size'], jump=True)
+        header = ['chunk_dims'] + ['block_start_offset', 'block_size',
                                    'block_data_start']
-        if print:
+        if printout:
             sys.stdout.write('\t'.join(header) + '\n')
         else:
-            R=[]
+            R = []
         while r:
             self._handle.seek(self._chunk_start_offset + 10)
             chunk_info = [self._chunk_dims]
             for block in SummaryBmzBlocks(self._handle):
                 block = chunk_info + list(block)[:-1]
-                if print:
+                if printout:
                     try:
                         sys.stdout.write('\t'.join([str(v) for v in block]) + '\n')
                     except:
                         sys.stdout.close()
+                        self.close()
+                        return
                 else:
                     R.append(block)
-            r = self._load_chunk(view=True)
-        if print:
+            r = self._load_chunk(jump=True)
+        if printout:
             sys.stdout.close()
         else:
-            df=pd.DataFrame(R,columns=header)
+            df = pd.DataFrame(R, columns=header)
             return df
 
     def chunk2df(self, dims,reformat=False,chunksize=None):
-        r = self._load_chunk(self.dim2chunk_start[dims], view=False)
+        r = self._load_chunk(self.dim2chunk_start[dims], jump=False)
         self._cached_data = b''
         self._load_block(start_offset=self._chunk_start_offset + 10)  #
         R=[]
@@ -654,7 +702,7 @@ class Reader:
             if not reformat:
                 return df
             for col,format in zip(df.columns.tolist(),self.header['Formats']):
-                print(col,format)
+                # print(col,format)
                 if format[-1] in ['c','s']:
                     df[col]=df[col].apply(lambda x:str(x,'utf-8'))
             return df
@@ -683,26 +731,19 @@ class Reader:
         self._within_block_offset = 0
         self._block_raw_length = block_size
 
-    def _byte2str(self,values):
-        return [str(v,'utf-8') if f[-1] in ['s','c'] else str(v)
-                for v,f in zip(values,self.header['Formats'])]
+    def _byte2str(self, values):
+        return [str(v, 'utf-8') if f[-1] in ['s', 'c'] else str(v)
+                for v, f in zip(values, self.header['Formats'])]
 
-    def _byte2real(self,values):
-        return [str(v,'utf-8') if f[-1] in ['s','c'] else v
-                for v,f in zip(values,self.header['Formats'])]
+    def _byte2real(self, values):
+        return [str(v, 'utf-8') if f[-1] in ['s', 'c'] else v
+                for v, f in zip(values, self.header['Formats'])]
 
-    def _print_cache(self):
-        self._cached_data += self._buffer
-        end_index = len(self._cached_data) - (len(self._cached_data) % self._unit_size)
-        for result in struct.iter_unpack(f"<{self.fmts}", self._cached_data[:end_index]):
-            line = '\t'.join(self._byte2str(result))
-            try:
-                sys.stdout.write(self.chunk_dim + line + '\n')
-            except:
-                sys.stdout.close()
-        self._cached_data = self._cached_data[end_index:]
+    def __empty_generator(self):
+        while True:
+            yield []
 
-    def view(self, show_dim=None, header=True, dim=None):
+    def view(self, show_dim=None, header=True, dim=None, reference=None):
         """
 		View .bmz file.
 
@@ -732,48 +773,66 @@ class Reader:
         elif type(show_dim)==str:
             show_dim = [int(i) for i in show_dim.split(',')]
 
-        chunk_info = self.chunk_info.set_index('chunk_dims')
         if not dim is None:
             # equal to query chromosome if self.header['dimensions'][0]==chrom
             if isinstance(dim, str):
                 order_path=os.path.abspath(os.path.expanduser(dim))
                 if os.path.exists(order_path):
-                    dim = pd.read_csv(order_path,sep='\t', header=None,
-                                    usecols=show_dim)[show_dim].apply(lambda x:tuple(x.tolist()),
-                                                            axis=1).tolist()
+                    dim = pd.read_csv(order_path, sep='\t', header=None,
+                                      usecols=show_dim)[show_dim].apply(lambda x: tuple(x.tolist()),
+                                                                        axis=1).tolist()
                 else:
-                    dim=dim.split(',')
-            if type(dim[0]) == str: # each element of dim should be a tuple
+                    dim = dim.split(',')
+            if type(dim[0]) == str:  # each element of dim should be a tuple
                 dim = [tuple([o]) for o in dim]
             if not isinstance(dim, (list, tuple, np.ndarray)):  # dim is a list
                 raise ValueError("input of dim_order is not corrected !")
-            chunk_info=chunk_info.loc[dim]
-
-        if not show_dim is None:
-            header_dim = "\t".join([self.header['Dimensions'][t] for t in show_dim]) + '\t'
         else:
-            header_dim = ''
-        if header: #show header
-            line = "\t".join(self.header['Columns'])
-            sys.stdout.write(header_dim + line + '\n')
+            dim = list(self.dim2chunk_start.keys())
 
-        for start_pos in chunk_info.chunk_start_offset.tolist():
-            r = self._load_chunk(start_pos, view=True) #self.header['header_size']
-            # header_size is the start offset of 1st chunk
-            self._cached_data = b''
-            # here, we have already read the chunk header and tail but
-            # not the blocks, we need to jump to body start pos and read each block.
-            if not show_dim is None:
-                self.chunk_dim = "\t".join([self._chunk_dims[t] for t in show_dim]) + '\t'
+        if not reference is None:
+            reference = os.path.abspath(os.path.expanduser(reference))
+            ref_reader = Reader(reference)
+        if not show_dim is None:
+            header_columns = [self.header['Dimensions'][t] for t in show_dim]
+            dim_header = "\t".join(header_columns) + '\t'
+        else:
+            dim_header = ''
+        if header:  # show header
+            if not reference is None:
+                columns = ref_reader.header['Columns'] + self.header['Columns']
             else:
-                self.chunk_dim = ''
-            self._load_block(start_offset=self._chunk_start_offset + 10)  #
-            while self._block_raw_length > 0:
-                # deal with such case: unit_size is 10, but data(_buffer) size is 18,
-                self._print_cache()
-                self._load_block()
-            # r = self._load_chunk(view=True)
+                columns = self.header['Columns']
+            line = "\t".join(columns)
+            sys.stdout.write(dim_header + line + '\n')
+
+        for d in dim:
+            if not show_dim is None:
+                dim_stdout = "\t".join([d[t] for t in show_dim]) + '\t'
+            else:
+                dim_stdout = ''
+            records = self.fetch(d)
+            if not reference is None:
+                ref_records = ref_reader.fetch(d)
+            else:
+                ref_records = self.__empty_generator()
+            try:
+                for record, ref_record in zip(records, ref_records):
+                    line = '\t'.join([str(i) for i in ref_record + record])
+                    try:
+                        sys.stdout.write(dim_stdout + line + '\n')
+                    except:
+                        sys.stdout.close()
+                        if not reference is None:
+                            ref_reader.close()
+                        self.close()
+                        return
+            except:
+                raise ValueError(f"reference {reference} not matched.")
         sys.stdout.close()
+        self.close()
+        if not reference is None:
+            ref_reader.close()
 
     def fetch(self, dims):
         """
@@ -788,7 +847,7 @@ class Reader:
         -------
 
         """
-        r = self._load_chunk(self.dim2chunk_start[dims], view=False)
+        r = self._load_chunk(self.dim2chunk_start[dims], jump=True)
         self._cached_data = b''
         self._load_block(start_offset=self._chunk_start_offset + 10)  #
         while self._block_raw_length > 0:
@@ -800,32 +859,62 @@ class Reader:
             self._load_block()
 
     def batch_fetch(self,dims,chunksize=5000):
-        i=0
-        data=[]
+        i= 0
+        data = []
         for row in self.fetch(dims):
             data.append(row)
             if i >= chunksize:
                 yield data
-                data,i=[],0
-            i+=1
+                data, i = [], 0
+            i += 1
         if len(data) > 0:
             yield data
 
+    def fetchByID(self, dims, n=None):  # n is 1-based, n >=1
+        if type(dims) == str:
+            dims = tuple([dims])
+        r = self._load_chunk(self.dim2chunk_start[dims], jump=False)
+        if not n is None:  # seek to the position of the n rows
+            block_index = ((n - 1) * self._unit_size) // (_BLOCK_MAX_LEN)
+            first_record_vos = self._chunk_block_1st_record_virtual_offsets[block_index]
+            within_block_offset = ((n - 1) * self._unit_size) % (_BLOCK_MAX_LEN)
+            block_start_offset = (first_record_vos >> 16)
+            virtual_start_offset = (block_start_offset << 16) | within_block_offset
+            self.seek(virtual_start_offset)  # load_block is inside sek
+        while self._within_block_offset + self._unit_size <= len(self._buffer):
+            yield self._read_1record()
+
     def _read_1record(self):
-        tmp=self._buffer1[:self._unit_size]
-        self._buffer1 = self._buffer1[self._unit_size: ]
+        tmp = self._buffer[
+              self._within_block_offset:self._within_block_offset + self._unit_size]
+        self._within_block_offset += self._unit_size
         return struct.unpack(f"<{self.fmts}", tmp)
 
-    def _query(self, regions,s,e):
-        for dim,start,end in regions:
-            r = self._load_chunk(self.dim2chunk_start[dim], view=False)
+    def _query_regions(self, regions, s, e):
+        """
+        query given regions, start and end index to the columns of data columns.
+
+        Parameters
+        ----------
+        regions : list
+            list of list, first element is a tuple (dims), second is start, third is end,.
+        s : int
+        e : int
+
+        Returns
+        -------
+        Return a generator, the first element of generator is start offset of the
+        1st record.
+        """
+        for dim, start, end in regions:
+            r = self._load_chunk(self.dim2chunk_start[dim], jump=False)
             # find the closest block to a given start position
-            block_1st_records=[
+            block_1st_records = [
                 self._seek_and_read_1record(offset)
                 for offset in self._chunk_block_1st_record_virtual_offsets
             ]
-            block_1st_starts=[r[s] for r in block_1st_records]
-            start_block_index=0
+            block_1st_starts = [r[s] for r in block_1st_records]
+            start_block_index = 0  # 0-based
             while True:
                 if start_block_index+1 >= self._chunk_nblocks:
                     break
@@ -836,7 +925,7 @@ class Reader:
                 end_block_index = start_block_index
             else:
                 block_1st_ends = [r[e] for r in block_1st_records]
-                end_block_index = 0
+                end_block_index = 0  #0-based
                 while True:
                     if end_block_index +1 >= self._chunk_nblocks:
                         break
@@ -844,24 +933,29 @@ class Reader:
                         break
                     end_block_index += 1
             for block_index in range(start_block_index,end_block_index+1):
-                # print(block_index)
-                virtual_offset=self._chunk_block_1st_record_virtual_offsets[block_index]
-                self.seek(virtual_offset) #seek to the target block, self._buffer
-                self._buffer1=self._buffer[self._within_block_offset:]
-                record=self._read_1record()
+                # print(block_index) #0-based
+                virtual_offset = self._chunk_block_1st_record_virtual_offsets[block_index]
+                self.seek(virtual_offset)  # seek to the target block, self._buffer
+                record = self._read_1record()
                 while record[s] < start:
-                    if len(self._buffer1) < self._unit_size:
+                    if self._within_block_offset + self._unit_size > len(self._buffer):
                         break
                     record = self._read_1record()
+                # here we got the 1st record, return the id (row number) of 1st record.
+                # size of each block is 65535 (2**16-1=_BLOCK_MAX_LEN)
+                primary_id = int((_BLOCK_MAX_LEN * block_index +
+                                  self._within_block_offset) / self._unit_size)
+                # 1-based, primary_id >=1, cause _within_block_offset >= self._unit_size
+                yield "primary_id_&_dim:", primary_id, dim
                 while record[e] <= end:
                     # print(list(dim) + list(record))
-                    yield dim,record
-                    if len(self._buffer1) < self._unit_size:
+                    yield dim, record
+                    if self._within_block_offset + self._unit_size > len(self._buffer):
                         break
                     record = self._read_1record()
 
-    def query(self, dim=None,start=None,end=None,regions=None,
-               query_col=[0],print=True):
+    def query(self, dim=None, start=None, end=None, Regions=None,
+              query_col=[0], reference=None, printout=True):
         """
         query .mz file by dim, start and end, if regions provided, dim, start and
         end should be None, regions should be a list, each element of regions
@@ -898,52 +992,130 @@ class Reader:
         -------
 
         """
-        # dim,start,end=('chr12',),3109883,3110041
-        if dim is None and regions is None:
+        if dim is None and Regions is None:
             raise ValueError("Please provide either dim,start,end or regions")
-        if (not dim is None) and (not regions is None):
+        if (not dim is None) and (not Regions is None):
             raise ValueError("Please query by dim,start,end or by regions, "
                              "not both !")
         if not dim is None:
-            if type(dim)==str:
-                dim=tuple([dim])
-            regions=[[dim,start,end]]
+            if type(dim) == str:
+                dim = tuple([dim])
+            Regions = [[dim, start, end]]
         else:
-            if isinstance(regions,str):
-                region_path=os.path.abspath(os.path.expanduser(regions))
+            if isinstance(Regions, str):
+                region_path = os.path.abspath(os.path.expanduser(Regions))
                 if os.path.exists(region_path):
-                    n_dim=self.header['Dimensions']
-                    usecols=list(range(n_dim+2))
-                    df=pd.read_csv(region_path,sep='\t',header=None,
-                                   usecols=usecols)
-                    regions=df.apply(lambda x:[
+                    n_dim = self.header['Dimensions']
+                    usecols = list(range(n_dim + 2))
+                    df = pd.read_csv(region_path, sep='\t', header=None,
+                                     usecols=usecols)
+                    Regions = df.apply(lambda x: [
                         tuple(x[:n_dim]),
                         x[n_dim],
-                        x[n_dim+1]
-                    ],axis=1).tolist()
+                        x[n_dim + 1]
+                    ], axis=1).tolist()
                 else:
                     raise ValueError(f"path {region_path} not existed.")
             else: #check format of regions
-                if type(regions[0][0]) != tuple:
+                if type(Regions[0][0]) != tuple:
                     raise ValueError("The first element of first region is not a tuple:"
-                                     f"{type(regions[0][0])}")
+                                     f"{type(Regions[0][0])}")
 
-        if len(query_col)==1:
+        if len(query_col) == 1:
             s = e = query_col[0]
-        elif len(query_col)==2:
-            s,e=query_col
+        elif len(query_col) == 2:
+            s, e = query_col
         else:
             raise ValueError("length of query_col can not be greater then 2.")
 
-        header=self.header['Dimensions'] + self.header['Columns']
-        if print:
-            sys.stdout.write('\t'.join(header)+'\n')
-            for dims,row in self._query(regions,s,e):
-                sys.stdout.write('\t'.join([str(d) for d in dims]+self._byte2str(row))+'\n')
-            sys.stdout.close()
+        if reference is None:  # query position in this .mz file.
+            header = self.header['Dimensions'] + self.header['Columns']
+            if printout:
+                sys.stdout.write('\t'.join(header) + '\n')
+                records = self._query_regions(Regions, s, e)
+                record = records.__next__()
+                while True:
+                    try:
+                        record = records.__next__()
+                    except:
+                        break
+                    try:
+                        dims, row = record
+                        try:
+                            sys.stdout.write('\t'.join([str(d) for d in dims] +
+                                                       self._byte2str(row)) + '\n')
+                        except:
+                            sys.stdout.close()
+                            self.close()
+                            return
+                    except ValueError:  # len(record) ==3: #"primary_id_&_dim:", primary_id, dim
+                        flag, primary_id, dim = record
+                sys.stdout.close()
+                self.close()
+            else:
+                records = self._query_regions(Regions, s, e)
+                record = records.__next__()
+                while True:
+                    try:
+                        record = records.__next__()
+                    except:
+                        break
+                    try:
+                        dims, row = record
+                        yield list(dims) + list(self._byte2real(row))
+                    except ValueError:
+                        flag, primary_id, dim = record
         else:
-            for dims,row in self._query(regions,s,e):
-                yield list(dims)+list(row)
+            reference = os.path.abspath(os.path.expanduser(reference))
+            ref_reader = Reader(reference)
+            header = (self.header['Dimensions'] + ref_reader.header['Columns']
+                      + self.header['Columns'])
+            if printout:
+                sys.stdout.write('\t'.join(header) + '\n')
+                # query reference first
+                ref_records = ref_reader._query_regions(Regions, s, e)
+                ref_record = ref_records.__next__()  # 1st should contain primary_id
+                flag, primary_id, dim = ref_record
+                records = self.fetchByID(dim, n=primary_id)
+                while True:
+                    try:
+                        ref_record = ref_records.__next__()
+                        record = self._byte2str(records.__next__())
+                    except:
+                        break
+                    try:
+                        dims, row = ref_record
+                        rows = ref_reader._byte2str(row) + record
+                        try:
+                            sys.stdout.write('\t'.join([str(d) for d in dims] + rows) + '\n')
+                        except:
+                            sys.stdout.close()
+                            self.close()
+                            return
+                    except ValueError:  # len(record) ==3: #"primary_id_&_dim:", primary_id, dim
+                        flag, primary_id, dim = ref_record  # next block or next dim
+                        records = self.fetchByID(dim, n=primary_id)
+                sys.stdout.close()
+                self.close()
+            else:
+                ref_records = ref_reader._query_regions(Regions, s, e)
+                ref_record = ref_records.__next__()  # 1st should contain primary_id
+                flag, primary_id, dim = ref_record
+                records = self.fetchByID(dim, n=primary_id)
+                while True:
+                    try:
+                        ref_record = ref_records.__next__()
+                        record = self._byte2str(records.__next__())
+                    except:
+                        break
+                    try:
+                        dims, row = ref_record
+                        rows = ref_reader._byte2str(row) + record
+                        yield list(dims) + rows
+                    except ValueError:  # len(record) ==3: #"primary_id_&_dim:", primary_id, dim
+                        flag, primary_id, dim = ref_record  # next block or next dim
+                        records = self.fetchByID(dim, n=primary_id)
+            ref_reader.close()
 
     def _seek_and_read_1record(self,virtual_offset):
         self.seek(virtual_offset)
@@ -982,7 +1154,7 @@ class Reader:
         self._within_block_offset = within_block
         return virtual_offset
 
-    def read(self, size=-1):
+    def read(self, size=1):
         """Read method for the BGZF module."""
         result = b""
         while size and self._block_raw_length:
@@ -1304,9 +1476,9 @@ class Writer:
                                  self.usecols, self.dim_cols,
                                  self.chunksize)
 
-    def pack(self, Input=None, usecols=[4, 5], dim_cols=[0],
+    def tomz(self, Input=None, usecols=[4, 5], dim_cols=[0],
              sep='\t', chunksize=5000, header=None, skiprows=0,
-             reference=None, pr=['pos'], p=[],jobs=1):
+             reference=None, pos_ref=0, pos_allc=0, jobs=12):
         """
         Pack dataframe, stdin or a file path into .mz file with or without reference
         coordinates file.
@@ -1372,71 +1544,52 @@ class Writer:
             else:
                 self.dim_cols = [int(i) for i in dim_cols]
         else:
-            self.usecols=usecols
-            self.dim_cols=dim_cols
+            self.usecols = usecols
+            self.dim_cols = dim_cols
 
         assert len(self.usecols) == len(self.Formats)
         assert len(self.dim_cols) == len(self.Dimensions)
         self.chunksize = chunksize
         self.header = header
         self.skiprows = skiprows
-        if self.verbose > 0 :
-            print("Input: ",type(Input),Input)
-        if reference is None and jobs==1:
-            if Input is None or Input == 'stdin':
-                data_generator = self._parse_input_no_ref(sys.stdin.buffer)
-            else:
-                if isinstance(Input, (list, tuple, np.ndarray)):
-                    Input = pd.DataFrame(Input)
-                if isinstance(Input, str):
-                    input_path = os.path.abspath(os.path.expanduser(Input))
-                    data_generator = self._parse_input_no_ref(input_path)
-                elif isinstance(Input,pd.DataFrame):  # Input is a dataframe
-                    data_generator = self._parse_input_no_ref(Input)
-                else:
-                    raise ValueError(f"Unknown format for Input: {type(Input)}")
-            if self.verbose > 0:
-                print(self.usecols, self.dim_cols)
-                print(type(self.usecols), type(self.dim_cols))
-            for df, dim in data_generator:
-                data=df.apply(lambda x: struct.pack(f"<{self.fmts}", *x.tolist()),
-                       axis=1).sum()
-                self.write_chunk(data, dim)
-        else: #multiprocessing
-            if isinstance(Input, (list, tuple, np.ndarray)):
-                Input = pd.DataFrame(Input)
-            if isinstance(Input, str) or Input is None or Input == 'stdin' or Input == '-':
-                if isinstance(Input,str):
-                    input_path = os.path.abspath(os.path.expanduser(Input))
-                else:
-                    input_path=sys.stdin.buffer
-                Input=pd.read_csv(input_path, sep=sep,
-                                  usecols=dim_cols + p +usecols,
-                                  chunksize=None, header=header,
-                                  skiprows=skiprows)
-                Input.columns=dim_cols + p +usecols
-            elif isinstance(Input,pd.DataFrame):  # Input is a dataframe
-                pass
-            else:
-                raise ValueError(f"Unknown format for Input: {type(Input)}")
+        if self.verbose > 0:
+            print("Input: ", type(Input), Input)
 
-            outdir=self.Output+'.tmp'
-            if not os.path.exists(outdir):
-                os.mkdir(outdir)
-            pool = Pool(jobs)
-            jobs = []
-            for dim, df_query in Input.groupby(dim_cols)[p+usecols]:
-                job = pool.apply_async(pack_mp_worker,
-                                       (outdir,reference,df_query,dim,
-                                        usecols,self.Formats,self.Columns,
-                                        self.Dimensions,p,pr,))
-                jobs.append(job)
-            for job in jobs:
-                job.get()
-            pool.close()
-            pool.join()
-            self.catmz(Input=f"{outdir}/*.mz")
-            os.system(f"rm -rf {outdir}")
+        if isinstance(Input, str):
+            input_path = os.path.abspath(os.path.expanduser(Input))
+            if not os.path.exists(input_path):
+                raise ValueError(f"Unknown format for Input: {type(Input)}")
+            if os.path.exists(input_path + '.tbi'):
+                if self.verbose > 0:
+                    print(".tbi identified, use .tbi to speed up")
+                message = '' if reference is None else reference
+                na_value = [0] * len(usecols)
+                allc2mz_mp(input_path, self.Output, reference, message,
+                           self.Formats, self.Columns, self.Dimensions,
+                           usecols, na_value, chunksize, pos_ref, pos_allc,
+                           jobs, sep, self.verbose, self)
+                return True
+            else:
+                if not reference is None:
+                    raise ValueError("Please build .tbi index for input file and try again")
+                data_generator = self._parse_input_no_ref(input_path)
+        elif Input is None or Input == 'stdin':
+            data_generator = self._parse_input_no_ref(sys.stdin.buffer)
+        elif isinstance(Input, (list, tuple, np.ndarray)):
+            Input = pd.DataFrame(Input)
+
+        if isinstance(Input, pd.DataFrame):  # Input is a dataframe
+            data_generator = self._parse_input_no_ref(Input)
+        else:
+            raise ValueError(f"Unknow input type {type(Input)}")
+
+        if self.verbose > 0:
+            print(self.usecols, self.dim_cols)
+            print(type(self.usecols), type(self.dim_cols))
+        for df, dim in data_generator:
+            data = df.apply(lambda x: struct.pack(f"<{self.fmts}", *x.tolist()),
+                            axis=1).sum()
+            self.write_chunk(data, dim)
         self.close()
 
     @staticmethod
@@ -1492,10 +1645,12 @@ class Writer:
         if dim_order is None:
             Input = sorted(Input)
         else:
+            # creating a dict, keys are file base name, value are full path
             D = {os.path.basename(inp)[:-3]: inp for inp in Input}
             if self.verbose > 0:
                 print(D)
             if isinstance(dim_order, str):
+                # read each file from path containing file basename
                 dim_order = pd.read_csv(os.path.abspath(os.path.expanduser(dim_order)),
                                     sep='\t', header=None, usecols=[0])[0].tolist()
             if isinstance(dim_order, (list, tuple, np.ndarray)):  # dim_order is a list
@@ -1516,10 +1671,10 @@ class Writer:
 
         for file_path in Input:
             reader = Reader(file_path)
-            data_size = reader.header['total_size'] - reader.header['header_size']
-            chunks=reader.get_chunks()
-            (start_offset,chunk_size,dims,data_len,
-             end_offset,nblocks,_) =chunks.__next__()
+            # data_size = reader.header['total_size'] - reader.header['header_size']
+            chunks = reader.get_chunks()
+            (start_offset, chunk_size, dims, data_len,
+             end_offset, nblocks, b1str_virtual_offsets) = chunks.__next__()
             # check whether new dim has already been added to header
             if not self.new_dim_creator is None:
                 new_dim=self.new_dim_creator(os.path.basename(file_path))
@@ -1531,23 +1686,38 @@ class Writer:
                 # when a new dim is added, go back here and rewrite the n_dim (1byte)
                 self._handle.write(struct.pack("<B", len(self.Dimensions)))  # 1byte
                 self._handle.seek(self._header_size)
+                # write new dim to the end of header
                 dname_len = len(title)
                 self._handle.write(struct.pack("<B", dname_len))  # length of each name, 1 byte
                 self._handle.write(struct.pack(f"<{dname_len}s", bytes(title, 'utf-8')))
                 self._header_size = self._handle.tell()
-            while True:
-                reader._handle.seek(start_offset) #chunk start offset
+            while True:  # process each file (chunk)
+                reader._handle.seek(start_offset)  # chunk start offset
                 # write the enrire chunk
-                self._handle.write(reader._handle.read(end_offset - start_offset))
-                # write the new dim onto the tail of chunk
-                if not self.new_dim_creator is None:
-                    dim_len = len(new_dim)
+                new_chunk_start_offset = self._handle.tell()
+                delta_offset = new_chunk_start_offset - start_offset
+                # self._handle.write(reader._handle.read(end_offset - start_offset))
+                self._handle.write(reader._handle.read(chunk_size + 16))
+                # modify the chunk_black_1st_record_virtual_offsets
+                new_block_1st_record_vof = []
+                for offset in b1str_virtual_offsets:
+                    block_offset, within_block_offset = split_virtual_offset(offset)
+                    new_block_offset = delta_offset + block_offset
+                    new_1st_rd_vof = make_virtual_offset(new_block_offset,
+                                                         within_block_offset)
+                    new_block_1st_record_vof.append(new_1st_rd_vof)
+                # write new_block_1st_record_vof
+                for block_offset in new_block_1st_record_vof:
+                    self._handle.write(struct.pack("<Q", block_offset))
+                # rewrite the new dim onto the tail of chunk
+                for dim in dims:
+                    dim_len = len(dim)
                     self._handle.write(struct.pack("<B", dim_len))  # length of each dim, 1 byte
-                    self._handle.write(struct.pack(f"<{dim_len}s", bytes(new_dim, 'utf-8')))
+                    self._handle.write(struct.pack(f"<{dim_len}s", bytes(dim, 'utf-8')))
                 # read next chunk
                 try:
                     (start_offset, chunk_size, dims, data_len,
-                     end_offset, nblocks, _) = chunks.__next__()
+                     end_offset, nblocks, b1str_virtual_offsets) = chunks.__next__()
                 except:
                     break
             reader.close()
@@ -1608,38 +1778,24 @@ class Writer:
         """Close a file with WITH statement."""
         self.close()
 # ==========================================================
-def pack_mp_worker(outdir,reference,df_query,dim,usecols,
-                   formats,columns,dimensions,p,pr):
-    if type(dim) == str:
-        dim = [dim]
-    fmts=''.join(formats)
-    outfile=os.path.join(outdir,'_'.join(dim)+'.mz')
-    writer = Writer(outfile, Formats=formats,
-                    Columns=columns,Dimensions=dimensions)
-    print(dim)
-    if len(p) > 0 and len(pr) > 0: #use reference coordinate
-        df_query.set_index(p, inplace=True)
-        ref_reader = Reader(reference)
-        for df_ref in ref_reader.chunk2df(tuple(dim),chunksize=100):
-            if len(p) == len(pr) == 1:
-                idx = df_ref[pr[0]].tolist()
-            else:
-                idx = np.array(df_ref[pr].to_records(index=False))
-            del df_ref
-            df_query1 = df_query.reindex(index=idx).fillna(0)
-
-            for col, format in zip(usecols, formats):
-                func = dtype_func[format[-1]]
-                df_query1[col] = df_query1[col].map(func)
-            data = df_query1.apply(lambda x: struct.pack(f"<{fmts}", *x.tolist()),
-                                  axis=1).sum()
-            writer.write_chunk(data, dim)
-        ref_reader.close()
+def test_difference(file1, file2, usecols1, usecols2, sep='\t', header1=None,
+                    header2=None, intersect=False, index_cols=[0, 1]):
+    df1 = pd.read_csv(file1, usecols=usecols1, sep=sep, header=header1)
+    df2 = pd.read_csv(file2, usecols=usecols2, sep=sep, header=header2)
+    df1.columns = list(range(df1.shape[1]))
+    df2.columns = list(range(df2.shape[1]))
+    if intersect:
+        df1.set_index(index_cols, inplace=True)
+        df2.set_index(index_cols, inplace=True)
+        common_index = list(set(df1.index.tolist()) & set(df2.index.tolist()))
+        df1 = df1.loc[common_index]
+        df2 = df2.loc[common_index]
     else:
-        data = df_query.apply(lambda x: struct.pack(f"<{fmts}", *x.tolist()),
-                              axis=1).sum()
-        writer.write_chunk(data, dim)
-    writer.close()
+        df1.sort_values(usecols1, inplace=True)
+        df2.sort_values(usecols2, inplace=True)
+    for i in range(min(len(usecols1), len(usecols2))):
+        print(i)
+        print(df1.iloc[:, i].tolist() == df2.iloc[:,i].tolist())
 
 # ==========================================================
 
