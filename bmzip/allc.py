@@ -12,6 +12,7 @@ import pandas as pd
 import pysam
 from multiprocessing import Pool
 from Bio import SeqIO
+from collections import defaultdict
 # import pyximport
 # pyximport.install(pyimport=True) #pyximport.install(pyimport=True)
 from .utils import WriteC
@@ -146,15 +147,12 @@ def __allcs2mzs_worker_ref(allc_path, outfile, path_to_chrom=None,
     """
     global PosDict
     print(allc_path)
-
-    def parse_record(line, cols):
-        values = line.rstrip('\n').split(sep)
-        return [values[i] for i in cols]
-
     if not os.path.exists(allc_path + '.tbi'):
         raise ValueError(f"allc file {allc_path} not found, please create .tbi index.")
+    default_values = [0] * (len(cols) - 1)
     writer = Writer(outfile, Formats=['H', 'H'],
                     Columns=columns[1:], Dimensions=['chrom'])
+    default_bytes = struct.pack(f"<{writer.fmts}", *default_values)
     tbi = pysam.TabixFile(allc_path)
     chroms = tbi.contigs
     if not path_to_chrom is None:
@@ -163,23 +161,21 @@ def __allcs2mzs_worker_ref(allc_path, outfile, path_to_chrom=None,
         chroms = df.iloc[:, 0].tolist()
     for chrom in chroms:
         print(chrom, '\t' * 5, end='\r')
-        df = pd.DataFrame([
-            parse_record(line, cols) for line in tbi.fetch(chrom)],
-            columns=columns
-        )
-        for col, dt in zip(columns, dtypes):
-            df[col] = df[col].map(dt)
-        df.set_index(columns[0], inplace=True)
-        df = df.reindex(index=PosDict[tuple([chrom])], fill_value=0)
-        while df.shape[0] > 0:
-            data = df.iloc[:chunksize].apply(
-                lambda x: struct.pack(f"<{writer.fmts}", *x.tolist()),
-                axis=1).sum()
+        D = defaultdict(lambda: default_bytes)
+        for line in tbi.fetch(chrom):
+            values = line.rstrip('\n').split(sep)
+            colValues = [func(v) for v, func in zip([values[i] for i in cols], dtypes)]
+            D.update({
+                colValues[0]: struct.pack(f"<{writer.fmts}", *colValues[1:])
+            })
+        data = b''
+        for i, pos in enumerate(PosDict[tuple([chrom])]):
+            data += D[pos]
+            if (i + 1) % chunksize == 0:
+                writer.write_chunk(data, [chrom])
+                data = b''
+        if len(data) > 0:
             writer.write_chunk(data, [chrom])
-            try:
-                df = df.iloc[chunksize:]
-            except:
-                break
     writer.close()
     tbi.close()
 
