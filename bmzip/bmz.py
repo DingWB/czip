@@ -339,8 +339,8 @@ def allc2mz_worker_with_ref(allc_path, outfile, reference, chrom, verbose=0,
     dtfuncs = get_dtfuncs(formats,tobytes=False)
     writer = Writer(outfile, Formats=formats,
                     Columns=columns,Dimensions=dimensions)
-    ref_reader=Reader(reference)
-    df_ref = ref_reader.fetch(tuple([chrom]))
+    ref_reader = Reader(reference)
+    ref_records = ref_reader.fetch(tuple([chrom]))
     data = b''
     na_value_bytes=struct.pack(f"<{writer.fmts}",*na_value)
     i=0
@@ -349,12 +349,12 @@ def allc2mz_worker_with_ref(allc_path, outfile, reference, chrom, verbose=0,
             row_query = records.__next__().rstrip('\n').split(sep)
         except:
             break
-        row_ref = df_ref.__next__()
+        row_ref = ref_records.__next__()
         while row_ref[pos_ref] < int(row_query[pos_allc]):
             data += na_value_bytes
             i += 1
             try:
-                row_ref = df_ref.__next__()
+                row_ref = ref_records.__next__()
             except:
                 break
         if row_ref[pos_ref] == int(row_query[pos_allc]):  # match
@@ -870,7 +870,7 @@ class Reader:
         if len(data) > 0:
             yield data
 
-    def fetchByID(self, dims, n=None):  # n is 1-based, n >=1
+    def fetchByDimID(self, dims, n=None):  # n is 1-based, n >=1
         if type(dims) == str:
             dims = tuple([dims])
         r = self._load_chunk(self.dim2chunk_start[dims], jump=False)
@@ -945,6 +945,8 @@ class Reader:
                 # size of each block is 65535 (2**16-1=_BLOCK_MAX_LEN)
                 primary_id = int((_BLOCK_MAX_LEN * block_index +
                                   self._within_block_offset) / self._unit_size)
+                # primary_id is the current record (record[s] == start),
+                # with_block_offset is the end of current record
                 # 1-based, primary_id >=1, cause _within_block_offset >= self._unit_size
                 yield "primary_id_&_dim:", primary_id, dim
                 while record[e] <= end:
@@ -1076,7 +1078,7 @@ class Reader:
                 ref_records = ref_reader._query_regions(Regions, s, e)
                 ref_record = ref_records.__next__()  # 1st should contain primary_id
                 flag, primary_id, dim = ref_record
-                records = self.fetchByID(dim, n=primary_id)
+                records = self.fetchByDimID(dim, n=primary_id)
                 while True:
                     try:
                         ref_record = ref_records.__next__()
@@ -1094,14 +1096,14 @@ class Reader:
                             return
                     except ValueError:  # len(record) ==3: #"primary_id_&_dim:", primary_id, dim
                         flag, primary_id, dim = ref_record  # next block or next dim
-                        records = self.fetchByID(dim, n=primary_id)
+                        records = self.fetchByDimID(dim, n=primary_id)
                 sys.stdout.close()
                 self.close()
             else:
                 ref_records = ref_reader._query_regions(Regions, s, e)
                 ref_record = ref_records.__next__()  # 1st should contain primary_id
                 flag, primary_id, dim = ref_record
-                records = self.fetchByID(dim, n=primary_id)
+                records = self.fetchByDimID(dim, n=primary_id)
                 while True:
                     try:
                         ref_record = ref_records.__next__()
@@ -1114,7 +1116,7 @@ class Reader:
                         yield list(dims) + rows
                     except ValueError:  # len(record) ==3: #"primary_id_&_dim:", primary_id, dim
                         flag, primary_id, dim = ref_record  # next block or next dim
-                        records = self.fetchByID(dim, n=primary_id)
+                        records = self.fetchByDimID(dim, n=primary_id)
             ref_reader.close()
 
     def _seek_and_read_1record(self,virtual_offset):
