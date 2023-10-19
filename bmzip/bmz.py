@@ -441,7 +441,7 @@ def allc2mz_worker_without_ref(allc_path,outfile,chrom,verbose=0,
 def allc2mz_mp(allc_path, output, reference, message,
                formats, columns, dimensions, usecols, na_value,
                chunksize, pos_ref, pos_allc, jobs, sep, verbose,
-               writer=None):
+               writer=None, path_to_chrom=None):
     output = os.path.abspath(os.path.expanduser(output))
     if not reference is None:
         reference = os.path.abspath(os.path.expanduser(reference))
@@ -455,6 +455,10 @@ def allc2mz_mp(allc_path, output, reference, message,
     tbi = pysam.TabixFile(allc_path)
     chroms = tbi.contigs
     tbi.close()
+    if not path_to_chrom is None:
+        path_to_chrom = os.path.abspath(os.path.expanduser(path_to_chrom))
+        df = pd.read_csv(path_to_chrom, sep='\t', header=None, usecols=[0])
+        chroms = df.iloc[:, 0].tolist()
     for chrom in chroms:
         outfile = os.path.join(outdir, chrom + '.mz')
         if not reference is None:

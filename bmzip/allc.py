@@ -68,7 +68,31 @@ class AllC:
         os.system(f"rm -rf {self.outdir}")
 # ==========================================================
 def allc2mz(allc_path, output, reference=None, jobs=12,
-            chunksize=5000, verbose=0):
+            chunksize=5000, verbose=0, path_to_chrom=None):
+    """
+    convert allc.tsv.gz to .mz file.
+
+    Parameters
+    ----------
+    allc_path : path
+        path to allc.tsv.gz, should has .tbi index.
+    output : path
+        path to .mz file
+    reference : path
+        path to reference coordinates.
+    jobs : int
+        number of cpu to process each allc file
+    chunksize : int
+        default is 5000
+    verbose : int
+    path_to_chrom : path
+        path to chrom_size path or similar file containing chromosomes order,
+        the first columns should be chromosomes, tab separated and no header.
+
+    Returns
+    -------
+
+    """
     allc_path = os.path.abspath(os.path.expanduser(allc_path))
     if not os.path.exists(allc_path + '.tbi'):
         raise ValueError(f"allc file {allc_path} not found, please create .tbi index.")
@@ -87,7 +111,7 @@ def allc2mz(allc_path, output, reference=None, jobs=12,
         usecols = [1, 4, 5]
     allc2mz_mp(allc_path, output, reference, message,
                formats, columns, dimensions, usecols, [0, 0],
-               chunksize, 0, 1, jobs, '\t', verbose)
+               chunksize, 0, 1, jobs, '\t', verbose, None, path_to_chrom)
 # ==========================================================
 if __name__ == "__main__":
     pass
