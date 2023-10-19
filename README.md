@@ -47,13 +47,18 @@ bmzip Writer  -O test.mz -F H,H -C mc,cov -D chrom -v 1 tomz -I /anvil/scratch/x
 ```
 
 ### convert allc to .mz
-
 ```shell
 # with reference
 bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -r mm10_with_chrL.allc.mz -v 1
 
 # without reference
 bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -v 1
+
+# with coordinates
+bmzip Writer -O test_bed.mz -F Q,H,H -C pos,mc,cov -D chrom tomz -I FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 1,4,5 -d 0
+
+# allc2mz in parallel
+bmzip allcs2mzs -r mm10_with_chrL.allc.mz -j 2 allc_path.txt test
 ```
 
 ### test difference
@@ -311,4 +316,10 @@ zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |awk '$5 >=100' |head
 bmzip1 Reader -I test_bed3.mz query -d chr12 -s 3109911 -e 3109913 -r mm10_with_chrL.allc.mz |head
 
 bmzip1 Reader -I mm10_with_chrL.allc.mz query -d chr12 -s 3109911 -e 3109913  |head
+```
+
+### SubSet Index (.ssi)
+
+```shell
+bmzip1 Reader -I mm10_with_chrL.allc.mz generate_context_ssi -p CGN
 ```

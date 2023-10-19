@@ -232,7 +232,6 @@ def _gz_input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
         yield pd.DataFrame(data, columns=usecols), pre_dims
 
 # ==========================================================
-
 def _text_input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
                  chunksize=5000):
     """
@@ -286,9 +285,9 @@ def _text_input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
 def _input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
                  chunksize=5000):
     if infile.endswith('.gz'):
-        return _gz_input_parser(infile,formats,sep,usecols,dim_cols,chunksize)
+        yield from _gz_input_parser(infile, formats, sep, usecols, dim_cols, chunksize)
     else:
-        return _text_input_parser(infile, formats, sep, usecols, dim_cols, chunksize)
+        yield from _text_input_parser(infile, formats, sep, usecols, dim_cols, chunksize)
 # ==========================================================
 def allc2mz_worker_with_ref(allc_path, outfile, reference, chrom, verbose=0,
                             formats=['H', 'H'], columns=['mc', 'cov'],
@@ -441,7 +440,7 @@ def allc2mz_worker_without_ref(allc_path,outfile,chrom,verbose=0,
 def allc2mz_mp(allc_path, output, reference, message,
                formats, columns, dimensions, usecols, na_value,
                chunksize, pos_ref, pos_allc, jobs, sep, verbose,
-               writer=None, path_to_chrom=None):
+               writer=None, path_to_chrom=None, ext='.mz'):
     output = os.path.abspath(os.path.expanduser(output))
     if not reference is None:
         reference = os.path.abspath(os.path.expanduser(reference))
@@ -460,7 +459,7 @@ def allc2mz_mp(allc_path, output, reference, message,
         df = pd.read_csv(path_to_chrom, sep='\t', header=None, usecols=[0])
         chroms = df.iloc[:, 0].tolist()
     for chrom in chroms:
-        outfile = os.path.join(outdir, chrom + '.mz')
+        outfile = os.path.join(outdir, chrom + ext)
         if not reference is None:
             job = pool.apply_async(allc2mz_worker_with_ref,
                                    (allc_path, outfile, reference, chrom, verbose,
@@ -481,7 +480,7 @@ def allc2mz_mp(allc_path, output, reference, message,
         writer = Writer(Output=output, Formats=formats,
                         Columns=columns, Dimensions=dimensions,
                         message=message)
-    writer.catmz(Input=f"{outdir}/*.mz")
+    writer.catmz(Input=f"{outdir}/*{ext}")
     os.system(f"rm -rf {outdir}")
 
 
@@ -626,16 +625,17 @@ class Reader:
                    ]
             r = self._load_chunk(jump=False)
 
-    def summary_chunks(self, printout=True):
+    def summary_chunks(self, printout=True, returnN=True):
         r = self._load_chunk(self.header['header_size'], jump=True)
         header = ['chunk_start_offset', 'chunk_size', 'chunk_dims', 'chunk_data_len',
-                  'chunk_tail_offset', 'chunk_nblocks']
+                  'chunk_tail_offset', 'chunk_nblocks', 'chunk_nrows']
         R = []
         while r:
             self._handle.seek(self._chunk_start_offset + 10)
+            nrow = int(self._chunk_data_len / self._unit_size)
             chunk_info = [self._chunk_start_offset, self._chunk_size,
                           self._chunk_dims, self._chunk_data_len, self._chunk_end_offset,
-                          self._chunk_nblocks]
+                          self._chunk_nblocks, nrow]
             R.append(chunk_info)
             r = self._load_chunk(jump=True)
         if printout:
@@ -1478,13 +1478,13 @@ class Writer:
                         yield df1, dim
                     input_handle = input_handle.iloc[self.chunksize:]
         else:
-            return _input_parser(input_handle, self.Formats, self.sep,
-                                 self.usecols, self.dim_cols,
-                                 self.chunksize)
+            yield from _input_parser(input_handle, self.Formats, self.sep,
+                                     self.usecols, self.dim_cols,
+                                     self.chunksize)
 
     def tomz(self, Input=None, usecols=[4, 5], dim_cols=[0],
              sep='\t', chunksize=5000, header=None, skiprows=0,
-             reference=None, pos_ref=0, pos_allc=0, jobs=12):
+             reference=None, pos_ref=0, pos_allc=0, jobs=10):
         """
         Pack dataframe, stdin or a file path into .mz file with or without reference
         coordinates file.
@@ -1574,7 +1574,7 @@ class Writer:
                            self.Formats, self.Columns, self.Dimensions,
                            usecols, na_value, chunksize, pos_ref, pos_allc,
                            jobs, sep, self.verbose, self)
-                return True
+                return
             else:
                 if not reference is None:
                     raise ValueError("Please build .tbi index for input file and try again")
@@ -1583,8 +1583,8 @@ class Writer:
             data_generator = self._parse_input_no_ref(sys.stdin.buffer)
         elif isinstance(Input, (list, tuple, np.ndarray)):
             Input = pd.DataFrame(Input)
-
-        if isinstance(Input, pd.DataFrame):  # Input is a dataframe
+            data_generator = self._parse_input_no_ref(Input)
+        elif isinstance(Input, pd.DataFrame):
             data_generator = self._parse_input_no_ref(Input)
         else:
             raise ValueError(f"Unknow input type {type(Input)}")
