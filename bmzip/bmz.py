@@ -7,8 +7,6 @@ from builtins import open as _open
 import numpy as np
 import pandas as pd
 import gzip
-from multiprocessing import Pool
-import pysam
 
 _bmz_magic = b'BMZIP'
 _block_magic = b"MB"
@@ -289,201 +287,6 @@ def _input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
     else:
         yield from _text_input_parser(infile, formats, sep, usecols, dim_cols, chunksize)
 # ==========================================================
-def allc2mz_worker_with_ref(allc_path, outfile, reference, chrom, verbose=0,
-                            formats=['H', 'H'], columns=['mc', 'cov'],
-                            dimensions=['chrom'], usecols=[4, 5],
-                            na_value=[0, 0], chunksize=5000,
-                            pos_ref=0, pos_allc=1, sep='\t'):
-    """
-    Pack allc to .mz file for one chrom, allc_path must has already been indexed
-    using tabix.
-
-    Parameters
-    ----------
-    allc_path :path
-        path to allc file.
-    outfile : path
-        temporary .mz file, should be merged together after the Pool finished.
-    reference: path
-        path to reference .mz file. By providing reference, the pos in allc file will
-        not be saved into .mz file, instead, we will align the position to the allc
-        coordinates from the reference allc coordinates.
-    chrom : chrom
-        chrom, will be used as dimension to write chunk.
-    verbose : int
-        whether print debug information
-    formats : list
-        For allc file, default is ['Q','H', 'H'] for pos, mc, cov respectively.
-    columns : list
-        columsn names, default is [pos, mc, cov]
-    dimensions : list
-        For allc file, default dimension is ['chrom'].
-    na_value: list
-        when the methylation record for a C is missing in allc file, then na_value
-        would be written into .mz file, default is [0,0] for mc and cov respectively.
-    chunksize : int
-        default is 5000
-    usecols : list
-        list of column index in the input file columns, in default, for allc file,
-        usecols = [1,4,5], means [pos, mc, cov], 0-based.
-    sep : str
-        separator for the input file ['\t']
-
-    Returns
-    -------
-
-    """
-    tbi = pysam.TabixFile(allc_path)
-    records = tbi.fetch(chrom)
-    dtfuncs = get_dtfuncs(formats,tobytes=False)
-    writer = Writer(outfile, Formats=formats,
-                    Columns=columns,Dimensions=dimensions)
-    ref_reader = Reader(reference)
-    ref_records = ref_reader.fetch(tuple([chrom]))
-    data = b''
-    na_value_bytes=struct.pack(f"<{writer.fmts}",*na_value)
-    i=0
-    while True:
-        try:
-            row_query = records.__next__().rstrip('\n').split(sep)
-        except:
-            break
-        row_ref = ref_records.__next__()
-        while row_ref[pos_ref] < int(row_query[pos_allc]):
-            data += na_value_bytes
-            i += 1
-            try:
-                row_ref = ref_records.__next__()
-            except:
-                break
-        if row_ref[pos_ref] == int(row_query[pos_allc]):  # match
-            values = [func(row_query[i]) for i, func in zip(usecols, dtfuncs)]
-            data += struct.pack(f"<{writer.fmts}", *values)
-            i += 1
-
-        if i>= chunksize:
-            writer.write_chunk(data, [chrom])
-            data = b''
-            i=0
-    if len(data) > 0:
-        writer.write_chunk(data, [chrom])
-    writer.close()
-    ref_reader.close()
-    tbi.close()
-    if verbose:
-        print(f"{chrom} done.")
-    return chrom
-# ==========================================================
-def allc2mz_worker_without_ref(allc_path,outfile,chrom,verbose=0,
-                               formats=['Q','H', 'H'], columns=['pos','mc', 'cov'],
-                               dimensions=['chrom'],usecols=[1,4,5],
-                               chunksize=5000,sep='\t'):
-    """
-    Pack allc to .mz file for one chrom, allc_path must has already been indexed
-    using tabix.
-
-    Parameters
-    ----------
-    allc_path :path
-        path to allc file.
-    outfile : path
-        temporary .mz file, should be merged together after the Pool finished.
-    chrom : chrom
-        chrom, will be used as dimension to write chunk.
-    verbose : int
-        whether print debug information
-    formats : list
-        For allc file, default is ['Q','H', 'H'] for pos, mc, cov respectively.
-    columns : list
-        columsn names, default is [pos, mc, cov]
-    dimensions : list
-        For allc file, default dimension is ['chrom'].
-    chunksize : int
-        default is 5000
-    usecols : list
-        list of column index in the input file columns, in default, for allc file,
-        usecols = [1,4,5], means [pos, mc, cov], 0-based.
-    sep : str
-        separator for the input file ['\t']
-
-    Returns
-    -------
-
-    """
-    dtfuncs = get_dtfuncs(formats, tobytes=False)
-    tbi = pysam.TabixFile(allc_path)
-    records = tbi.fetch(chrom)
-    writer = Writer(outfile, Formats=formats,
-                    Columns=columns,Dimensions=dimensions)
-    data, i = b'', 0
-    while True:
-        try:
-            values = records.__next__().rstrip('\n').split(sep)
-        except:
-            break
-        if i >= chunksize:  # dims are the same, but reach chunksize
-            writer.write_chunk(data, [chrom])
-            data, i = b'', 0
-        values = [func(values[i]) for i,func in zip(usecols,dtfuncs)]
-        data += struct.pack(f"<{writer.fmts}", *values)
-        i += 1
-    if len(data) > 0:
-        writer.write_chunk(data, [chrom])
-    writer.close()
-    tbi.close()
-    if verbose:
-        print(f"{chrom} done.")
-    return chrom
-
-
-# ==========================================================
-def allc2mz_mp(allc_path, output, reference, message,
-               formats, columns, dimensions, usecols, na_value,
-               chunksize, pos_ref, pos_allc, jobs, sep, verbose,
-               writer=None, path_to_chrom=None, ext='.mz'):
-    output = os.path.abspath(os.path.expanduser(output))
-    if not reference is None:
-        reference = os.path.abspath(os.path.expanduser(reference))
-    outdir = output + '.tmp'
-    if not os.path.exists(outdir):
-        os.mkdir(outdir)
-    if verbose:
-        print(f"Using {jobs} cpus")
-    pool = Pool(jobs)
-    jobs = []
-    tbi = pysam.TabixFile(allc_path)
-    chroms = tbi.contigs
-    tbi.close()
-    if not path_to_chrom is None:
-        path_to_chrom = os.path.abspath(os.path.expanduser(path_to_chrom))
-        df = pd.read_csv(path_to_chrom, sep='\t', header=None, usecols=[0])
-        chroms = df.iloc[:, 0].tolist()
-    for chrom in chroms:
-        outfile = os.path.join(outdir, chrom + ext)
-        if not reference is None:
-            job = pool.apply_async(allc2mz_worker_with_ref,
-                                   (allc_path, outfile, reference, chrom, verbose,
-                                    formats, columns, dimensions, usecols,
-                                    na_value, chunksize, pos_ref, pos_allc, sep,))
-        else:
-            job = pool.apply_async(allc2mz_worker_without_ref,
-                                   (allc_path, outfile, chrom, verbose,
-                                    formats, columns, dimensions,
-                                    usecols, chunksize, sep))
-        jobs.append(job)
-    for job in jobs:
-        r = job.get()
-    pool.close()
-    pool.join()
-    # merge
-    if writer is None:
-        writer = Writer(Output=output, Formats=formats,
-                        Columns=columns, Dimensions=dimensions,
-                        message=message)
-    writer.catmz(Input=f"{outdir}/*{ext}")
-    os.system(f"rm -rf {outdir}")
-
-
 class Reader:
     def __init__(self, Input, mode="rb", fileobj=None, max_cache=100):
         r"""Initialize the class for reading a BGZF file.
@@ -625,16 +428,16 @@ class Reader:
                    ]
             r = self._load_chunk(jump=False)
 
-    def summary_chunks(self, printout=True, returnN=True):
+    def summary_chunks(self, printout=True):
         r = self._load_chunk(self.header['header_size'], jump=True)
-        header = ['chunk_start_offset', 'chunk_size', 'chunk_dims', 'chunk_data_len',
+        header = ['chunk_start_offset', 'chunk_size', 'chunk_dims',
                   'chunk_tail_offset', 'chunk_nblocks', 'chunk_nrows']
         R = []
         while r:
             self._handle.seek(self._chunk_start_offset + 10)
             nrow = int(self._chunk_data_len / self._unit_size)
             chunk_info = [self._chunk_start_offset, self._chunk_size,
-                          self._chunk_dims, self._chunk_data_len, self._chunk_end_offset,
+                          self._chunk_dims, self._chunk_end_offset,
                           self._chunk_nblocks, nrow]
             R.append(chunk_info)
             r = self._load_chunk(jump=True)
@@ -1566,14 +1369,7 @@ class Writer:
             if not os.path.exists(input_path):
                 raise ValueError(f"Unknown format for Input: {type(Input)}")
             if os.path.exists(input_path + '.tbi'):
-                if self.verbose > 0:
-                    print(".tbi identified, use .tbi to speed up")
-                message = '' if reference is None else reference
-                na_value = [0] * len(usecols)
-                allc2mz_mp(input_path, self.Output, reference, message,
-                           self.Formats, self.Columns, self.Dimensions,
-                           usecols, na_value, chunksize, pos_ref, pos_allc,
-                           jobs, sep, self.verbose, self)
+                print("Please use allc2mz command to convert input to .mz.")
                 return
             else:
                 if not reference is None:
