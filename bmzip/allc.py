@@ -123,7 +123,7 @@ def allc2mz_worker_with_ref(allc_path, outdir, reference, chrom,
     writer = Writer(outfile, Formats=formats,
                     Columns=columns, Dimensions=dimensions)
     ref_reader = Reader(reference)
-    ref_records = ref_reader.fetch(tuple([chrom]))
+    ref_positions = ref_reader.__fetch__(tuple([chrom]), s=pr, e=pr + 1)
     data = b''
     na_value_bytes = struct.pack(f"<{writer.fmts}", *missing_value)
     i = 0
@@ -132,15 +132,15 @@ def allc2mz_worker_with_ref(allc_path, outdir, reference, chrom,
             row_query = records.__next__().rstrip('\n').split(sep)
         except:
             break
-        row_ref = ref_records.__next__()
-        while row_ref[pr] < int(row_query[pa]):
+        ref_pos = ref_positions.__next__()[0]
+        while ref_pos < int(row_query[pa]):
             data += na_value_bytes
             i += 1
             try:
-                row_ref = ref_records.__next__()
+                ref_pos = ref_positions.__next__()[0]
             except:
                 break
-        if row_ref[pr] == int(row_query[pa]):  # match
+        if ref_pos == int(row_query[pa]):  # match
             values = [func(row_query[i]) for i, func in zip(usecols, dtfuncs)]
             data += struct.pack(f"<{writer.fmts}", *values)
             i += 1
@@ -254,7 +254,7 @@ def mzs_merger(chroms, formats, columns, dimensions, message, q):
     return
 
 # ==========================================================
-def allc2mz(allc_paths, outdir, reference, missing_value=[0, 0],
+def allc2mz(allc_paths, outdir, reference=None, missing_value=[0, 0],
             chunksize=2000, pr=0, pa=1, n_jobs=8, sep='\t',
             Path_to_chrom=None, ext='.allc.tsv.gz'):
     """
@@ -317,6 +317,9 @@ def allc2mz(allc_paths, outdir, reference, missing_value=[0, 0],
     jobs = []
     for allc_path in allc_paths:
         outfile = os.path.join(outdir, os.path.basename(allc_path).replace(ext, '.mz'))
+        if os.path.exists(outfile):
+            print(f"{outfile} existed, skip.")
+            continue
         outdir1 = outfile + '.tmp'
         if not os.path.exists(outdir1):
             os.mkdir(outdir1)
@@ -343,7 +346,7 @@ def allc2mz(allc_paths, outdir, reference, missing_value=[0, 0],
     manager.shutdown()
 # ==========================================================
 def _isCG(context):
-    return context[:2] == 'CG'
+    return context[:2] == b'CG'
 
 
 # ==========================================================
@@ -369,8 +372,8 @@ def generate_context_ssi(Input, output=None, formats=['I'], columns=['ID'],
                     message=Input)
     data = b''
     for dim in reader.dim2chunk_start:
-        for i, record in enumerate(reader.fetch(dim)):
-            if judge_func(record[col]):
+        for i, record in enumerate(reader.__fetch__(dim, s=col, e=col + 1)):
+            if judge_func(record[0]):
                 data += struct.pack(f"<{writer.fmts}", i + 1)
             if ((i + 1) % chunksize) == 0 and len(data) > 0:
                 writer.write_chunk(data, dim)

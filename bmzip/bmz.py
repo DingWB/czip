@@ -641,7 +641,7 @@ class Reader:
         if not reference is None:
             ref_reader.close()
 
-    def fetch(self, dims):
+    def __fetch__(self, dims, s=None, e=None):
         """
         Generator for a given dims
 
@@ -654,6 +654,8 @@ class Reader:
         -------
 
         """
+        s = 0 if s is None else s  # 0-based
+        e = len(self.header['Columns']) if e is None else e  # 1-based
         r = self._load_chunk(self.dim2chunk_start[dims], jump=True)
         self._cached_data = b''
         self._load_block(start_offset=self._chunk_start_offset + 10)  #
@@ -661,12 +663,16 @@ class Reader:
             self._cached_data += self._buffer
             end_index = len(self._cached_data) - (len(self._cached_data) % self._unit_size)
             for result in struct.iter_unpack(f"<{self.fmts}", self._cached_data[:end_index]):
-                yield self._byte2real(result) # a list
+                yield result[s:e]  # a tuple
             self._cached_data = self._cached_data[end_index:]
             self._load_block()
 
-    def batch_fetch(self,dims,chunksize=5000):
-        i= 0
+    def fetch(self, dims):
+        for record in self.__fetch__(dims):
+            yield self._byte2real(record)  # all columns of each row
+
+    def batch_fetch(self, dims, chunksize=5000):
+        i = 0
         data = []
         for row in self.fetch(dims):
             data.append(row)
@@ -838,6 +844,12 @@ class Reader:
             raise ValueError("length of query_col can not be greater then 2.")
 
         if reference is None:  # query position in this .mz file.
+            for i in set([s, e]):
+                if self.header['Formats'][i][-1] in ['s', 'c']:
+                    raise ValueError("The query_col of Columns is not int or float",
+                                     "Can not perform querying without reference!",
+                                     f"Columns: {self.header['Columns']}",
+                                     f"Formats: {self.header['Formats']}")
             header = self.header['Dimensions'] + self.header['Columns']
             if printout:
                 sys.stdout.write('\t'.join(header) + '\n')
@@ -1015,17 +1027,6 @@ class Reader:
                 break
 
         return result
-
-    def __next__(self):
-        """Return the next line."""
-        line = self.readline()
-        if not line:
-            raise StopIteration
-        return line
-
-    def __iter__(self):
-        """Iterate over the lines in the BGZF file."""
-        return self
 
     def close(self):
         """Close BGZF file."""
@@ -1373,7 +1374,8 @@ class Writer:
                 return
             else:
                 if not reference is None:
-                    raise ValueError("Please build .tbi index for input file and try again")
+                    raise ValueError("Please build .tbi index for input file and"
+                                     "use allc2mz to convert input to .mz")
                 data_generator = self._parse_input_no_ref(input_path)
         elif Input is None or Input == 'stdin':
             data_generator = self._parse_input_no_ref(sys.stdin.buffer)
