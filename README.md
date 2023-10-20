@@ -58,7 +58,7 @@ bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -v 1
 bmzip Writer -O test_bed.mz -F Q,H,H -C pos,mc,cov -D chrom tomz -I FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 1,4,5 -d 0
 
 # allc2mz in parallel
-time bmzip allc2mz -r mm10_with_chrL.allc.mz -j 24 --path_to_chrom ~/Ref/mm10/mm10_ucsc_with_chrL.main.chrom.sizes.txt allc_path.txt test
+time bmzip allc2mz -r mm10_with_chrL.allc.mz -n 48 -P ~/Ref/mm10/mm10_ucsc_with_chrL.main.chrom.sizes.txt allc_path.txt test
 ```
 
 ### test difference

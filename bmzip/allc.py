@@ -75,8 +75,8 @@ class AllC:
 def allc2mz_worker_with_ref(allc_path, outdir, reference, chrom,
                             formats=['H', 'H'], columns=['mc', 'cov'],
                             dimensions=['chrom'], usecols=[4, 5],
-                            na_value=[0, 0], chunksize=20000,
-                            pos_ref=0, pos_allc=1, sep='\t', q=None):
+                            missing_value=[0, 0], chunksize=20000,
+                            pr=0, pa=1, sep='\t', q=None):
     """
     Pack allc to .mz file for one chrom, allc_path must has already been indexed
     using tabix.
@@ -101,8 +101,8 @@ def allc2mz_worker_with_ref(allc_path, outdir, reference, chrom,
         columsn names, default is [pos, mc, cov]
     dimensions : list
         For allc file, default dimension is ['chrom'].
-    na_value: list
-        when the methylation record for a C is missing in allc file, then na_value
+    missing_value: list
+        when the methylation record for a C is missing in allc file, then missing_value
         would be written into .mz file, default is [0,0] for mc and cov respectively.
     chunksize : int
         default is 5000
@@ -125,7 +125,7 @@ def allc2mz_worker_with_ref(allc_path, outdir, reference, chrom,
     ref_reader = Reader(reference)
     ref_records = ref_reader.fetch(tuple([chrom]))
     data = b''
-    na_value_bytes = struct.pack(f"<{writer.fmts}", *na_value)
+    na_value_bytes = struct.pack(f"<{writer.fmts}", *missing_value)
     i = 0
     while True:
         try:
@@ -133,14 +133,14 @@ def allc2mz_worker_with_ref(allc_path, outdir, reference, chrom,
         except:
             break
         row_ref = ref_records.__next__()
-        while row_ref[pos_ref] < int(row_query[pos_allc]):
+        while row_ref[pr] < int(row_query[pa]):
             data += na_value_bytes
             i += 1
             try:
                 row_ref = ref_records.__next__()
             except:
                 break
-        if row_ref[pos_ref] == int(row_query[pos_allc]):  # match
+        if row_ref[pr] == int(row_query[pa]):  # match
             values = [func(row_query[i]) for i, func in zip(usecols, dtfuncs)]
             data += struct.pack(f"<{writer.fmts}", *values)
             i += 1
@@ -154,7 +154,7 @@ def allc2mz_worker_with_ref(allc_path, outdir, reference, chrom,
     writer.close()
     ref_reader.close()
     tbi.close()
-    print(f"{outfile} done.", "\t" * 4, end='\r')
+    # print(f"{outfile} done.", "\t" * 4, end='\r')
     if not q is None:
         q.put(tuple([outdir, chrom]))
     return outdir, chrom
@@ -219,7 +219,7 @@ def allc2mz_worker_without_ref(allc_path, outdir, chrom,
         writer.write_chunk(data, [chrom])
     writer.close()
     tbi.close()
-    print(f"{outfile} done.", "\t" * 4, end='\r')
+    # print(f"{outfile} done.", "\t" * 4, end='\r')
     if not q is None:
         q.put(tuple([outdir, chrom]))
     return outdir, chrom
@@ -248,15 +248,16 @@ def mzs_merger(chroms, formats, columns, dimensions, message, q):
                             message=message)
             writer.catmz(Input=f"{outdir}/*")
             os.system(f"rm -rf {outdir}")
-            print(f"{outfile} finished", "\t" * 4, end='\t')
+            basename = os.path.basename(outfile)
+            print(f"{basename} finished", "\t" * 4, end='\t')
             del finished_jobs[outdir]  # finished one allc, remove from monitoring
     return
 
 
 # ==========================================================
-def allc2mz(allc_paths, outdir, reference, na_value=[0, 0],
-            chunksize=5000, pos_ref=0, pos_allc=1,
-            n_jobs=8, sep='\t', path_to_chrom=None,
+def allc2mz(allc_paths, outdir, reference, missing_value=[0, 0],
+            chunksize=5000, pr=0, pa=1,
+            n_jobs=8, sep='\t', Path_to_chrom=None,
             ext='.allc.tsv.gz'):
     """
     convert allc.tsv.gz to .mz file.
@@ -274,7 +275,7 @@ def allc2mz(allc_paths, outdir, reference, na_value=[0, 0],
     chunksize : int
         default is 5000
     verbose : int
-    path_to_chrom : path
+    Path_to_chrom : path
         path to chrom_size path or similar file containing chromosomes order,
         the first columns should be chromosomes, tab separated and no header.
 
@@ -304,9 +305,9 @@ def allc2mz(allc_paths, outdir, reference, na_value=[0, 0],
     if not os.path.exists(outdir):
         os.mkdir(outdir)
 
-    if not path_to_chrom is None:
-        path_to_chrom = os.path.abspath(os.path.expanduser(path_to_chrom))
-        df = pd.read_csv(path_to_chrom, sep='\t', header=None, usecols=[0])
+    if not Path_to_chrom is None:
+        Path_to_chrom = os.path.abspath(os.path.expanduser(Path_to_chrom))
+        df = pd.read_csv(Path_to_chrom, sep='\t', header=None, usecols=[0])
         chroms = df.iloc[:, 0].tolist()
     else:
         raise ValueError("Please provide chrom size path")
@@ -326,7 +327,7 @@ def allc2mz(allc_paths, outdir, reference, na_value=[0, 0],
                 job = pool.apply_async(allc2mz_worker_with_ref,
                                        (allc_path, outdir1, reference, chrom,
                                         formats, columns, dimensions, usecols,
-                                        na_value, chunksize, pos_ref, pos_allc,
+                                        missing_value, chunksize, pr, pa,
                                         sep, queue1))
             else:
                 job = pool.apply_async(allc2mz_worker_without_ref,
