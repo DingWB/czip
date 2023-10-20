@@ -14,7 +14,6 @@ def main():
             'Reader': Reader,
             'AllC': AllC,
             'allc2mz': allc2mz,
-            'allcs2mzs': allcs2mzs,
             'test_diff': test_difference,
             'generate_context_ssi': generate_context_ssi,
         }
