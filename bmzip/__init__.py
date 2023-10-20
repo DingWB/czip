@@ -4,7 +4,7 @@ from .bmz import (
     Writer,
     test_difference
 )
-from .allc import AllC, allcs2mzs, generate_context_ssi, allc2mz
+from .allc import AllC, generate_context_ssi, allc2mz
 
 def main():
 	fire.core.Display = lambda lines, out: print(*lines, file=out)
