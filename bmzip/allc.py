@@ -13,7 +13,7 @@ import pysam
 import multiprocessing
 from Bio import SeqIO
 from collections import defaultdict
-import time
+import random
 # import pyximport
 # pyximport.install(pyimport=True) #pyximport.install(pyimport=True)
 from .utils import WriteC
@@ -75,7 +75,7 @@ class AllC:
 def allc2mz_worker_with_ref(allc_path, outdir, reference, chrom,
                             formats=['H', 'H'], columns=['mc', 'cov'],
                             dimensions=['chrom'], usecols=[4, 5],
-                            missing_value=[0, 0], chunksize=20000,
+                            missing_value=[0, 0], chunksize=2000,
                             pr=0, pa=1, sep='\t', q=None):
     """
     Pack allc to .mz file for one chrom, allc_path must has already been indexed
@@ -164,7 +164,7 @@ def allc2mz_worker_with_ref(allc_path, outdir, reference, chrom,
 def allc2mz_worker_without_ref(allc_path, outdir, chrom,
                                formats=['Q', 'H', 'H'], columns=['pos', 'mc', 'cov'],
                                dimensions=['chrom'], usecols=[1, 4, 5],
-                               chunksize=5000, sep='\t', q=None):
+                               chunksize=2000, sep='\t', q=None):
     """
     Pack allc to .mz file for one chrom, allc_path must has already been indexed
     using tabix.
@@ -248,17 +248,15 @@ def mzs_merger(chroms, formats, columns, dimensions, message, q):
                             message=message)
             writer.catmz(Input=f"{outdir}/*")
             os.system(f"rm -rf {outdir}")
-            basename = os.path.basename(outfile)
-            print(f"{basename} finished", "\t" * 4, end='\t')
+            # basename = os.path.basename(outfile)
+            # print(f"{basename} finished", "\t" * 4, end='\t')
             del finished_jobs[outdir]  # finished one allc, remove from monitoring
     return
 
-
 # ==========================================================
 def allc2mz(allc_paths, outdir, reference, missing_value=[0, 0],
-            chunksize=5000, pr=0, pa=1,
-            n_jobs=8, sep='\t', Path_to_chrom=None,
-            ext='.allc.tsv.gz'):
+            chunksize=2000, pr=0, pa=1, n_jobs=8, sep='\t',
+            Path_to_chrom=None, ext='.allc.tsv.gz'):
     """
     convert allc.tsv.gz to .mz file.
 
@@ -322,6 +320,7 @@ def allc2mz(allc_paths, outdir, reference, missing_value=[0, 0],
         outdir1 = outfile + '.tmp'
         if not os.path.exists(outdir1):
             os.mkdir(outdir1)
+        # random.shuffle(chroms)
         for chrom in chroms:
             if not reference is None:
                 job = pool.apply_async(allc2mz_worker_with_ref,
@@ -355,7 +354,7 @@ def _isCH(context):
 # ==========================================================
 def generate_context_ssi(Input, output=None, formats=['I'], columns=['ID'],
                          dimensions=['chrom'], col=2, pattern='CGN',
-                         chunksize=5000):
+                         chunksize=2000):
     if pattern == 'CGN':
         judge_func = _isCG
     else:  # CH
