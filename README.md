@@ -247,7 +247,7 @@ zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |awk '$5 >=100' |head
 #chr12   3110027 -       CGT     1218    1356    1
 #chr12   3110041 +       CAA     263     398     1
 
-/usr/bin/time -f "%e\t%M\t%P" bmzip Reader -I test_bed.mz query -d chr12 -s 3109883 -e 3110041
+/usr/bin/time -f "%e\t%M\t%P" bmzip Reader -I test_bed.mz query -D chr12 -s 3109883 -e 3110041
 #chrom   pos     mc      cov
 #chr12   3109883 224     255
 #chr12   3109884 590     690
@@ -308,6 +308,9 @@ zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |awk '$5 >=100' |head
 #chr12   3110039 5       990
 #chr12   3110041 263     398
 #0.98    238200  90%, only took 0.98 s
+
+
+bmzip Reader -I 2.mz query -D "{'chrom':'chr12'}" -s 3110029 -e 3110041 -r mm10_with_chrL.allc.mz
 ```
 
 #### Query with reference
@@ -321,5 +324,5 @@ bmzip1 Reader -I mm10_with_chrL.allc.mz query -d chr12 -s 3109911 -e 3109913  |h
 ### SubSet Index (.ssi)
 
 ```shell
-bmzip1 Reader -I mm10_with_chrL.allc.mz generate_context_ssi -p CGN
+bmzip generate_context_ssi -I mm10_with_chrL.allc.mz -p CGN
 ```

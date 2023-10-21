@@ -72,7 +72,7 @@ class AllC:
 
 
 # ==========================================================
-def allc2mz_worker_with_ref(allc_path, outdir, reference, chrom,
+def allc2mz_worker_with_ref(allc_path, outdir, reference, chrom, all_chroms,
                             formats=['H', 'H'], columns=['mc', 'cov'],
                             dimensions=['chrom'], usecols=[4, 5],
                             missing_value=[0, 0], chunksize=2000,
@@ -156,12 +156,12 @@ def allc2mz_worker_with_ref(allc_path, outdir, reference, chrom,
     tbi.close()
     # print(f"{outfile} done.", "\t" * 4, end='\r')
     if not q is None:
-        q.put(tuple([outdir, chrom]))
-    return outdir, chrom
+        q.put(tuple([outdir, chrom, all_chroms]))
+    return outdir, chrom, all_chroms
 
 
 # ==========================================================
-def allc2mz_worker_without_ref(allc_path, outdir, chrom,
+def allc2mz_worker_without_ref(allc_path, outdir, chrom, all_chroms,
                                formats=['Q', 'H', 'H'], columns=['pos', 'mc', 'cov'],
                                dimensions=['chrom'], usecols=[1, 4, 5],
                                chunksize=2000, sep='\t', q=None):
@@ -221,36 +221,33 @@ def allc2mz_worker_without_ref(allc_path, outdir, chrom,
     tbi.close()
     # print(f"{outfile} done.", "\t" * 4, end='\r')
     if not q is None:
-        q.put(tuple([outdir, chrom]))
-    return outdir, chrom
+        q.put(tuple([outdir, chrom, all_chroms]))
+    return outdir, chrom, all_chroms
 
 
-def mzs_merger(chroms, formats, columns, dimensions, message, q):
-    N = len(chroms)
+def mzs_merger(formats, columns, dimensions, message, q):
     finished_jobs = {}
     while 1:
         result = q.get()  # if q is empty, it will wait.
         if result == 'kill':
             print("Done!")
             break
-        outdir, chrom = result
+        outdir, chrom, all_chroms = result
         if outdir not in finished_jobs:
             finished_jobs[outdir] = [chrom]
         else:
             finished_jobs[outdir].append(chrom)
-        keys = list(finished_jobs.keys())
-        for outdir in keys:
-            if len(finished_jobs[outdir]) < N:
-                continue  # wait
-            outfile = outdir[:-4]  # .tmp
-            writer = Writer(Output=outfile, Formats=formats,
-                            Columns=columns, Dimensions=dimensions,
-                            message=message)
-            writer.catmz(Input=f"{outdir}/*")
-            os.system(f"rm -rf {outdir}")
-            # basename = os.path.basename(outfile)
-            # print(f"{basename} finished", "\t" * 4, end='\t')
-            del finished_jobs[outdir]  # finished one allc, remove from monitoring
+        if len(finished_jobs[outdir]) < len(all_chroms):
+            continue  # wait
+        outfile = outdir[:-4]  # .tmp
+        writer = Writer(Output=outfile, Formats=formats,
+                        Columns=columns, Dimensions=dimensions,
+                        message=message)
+        writer.catmz(Input=f"{outdir}/*", dim_order=all_chroms)
+        os.system(f"rm -rf {outdir}")
+        # basename = os.path.basename(outfile)
+        # print(f"{basename} finished", "\t" * 4, end='\t')
+        del finished_jobs[outdir]  # finished one allc, remove from monitoring
     return
 
 # ==========================================================
@@ -312,10 +309,13 @@ def allc2mz(allc_paths, outdir, reference=None, missing_value=[0, 0],
     manager = multiprocessing.Manager()
     queue1 = manager.Queue()
     pool = multiprocessing.Pool(n_jobs)
-    watcher = pool.apply_async(mzs_merger, (chroms, formats, columns,
+    watcher = pool.apply_async(mzs_merger, (formats, columns,
                                             dimensions, message, queue1))
     jobs = []
     for allc_path in allc_paths:
+        tbi = pysam.TabixFile(allc_path)
+        all_chroms = tbi.contigs
+        tbi.close()
         outfile = os.path.join(outdir, os.path.basename(allc_path).replace(ext, '.mz'))
         if os.path.exists(outfile):
             print(f"{outfile} existed, skip.")
@@ -324,16 +324,17 @@ def allc2mz(allc_paths, outdir, reference=None, missing_value=[0, 0],
         if not os.path.exists(outdir1):
             os.mkdir(outdir1)
         # random.shuffle(chroms)
+        chroms = [c for c in chroms if c in all_chroms]
         for chrom in chroms:
             if not reference is None:
                 job = pool.apply_async(allc2mz_worker_with_ref,
-                                       (allc_path, outdir1, reference, chrom,
+                                       (allc_path, outdir1, reference, chrom, chroms,
                                         formats, columns, dimensions, usecols,
                                         missing_value, chunksize, pr, pa,
                                         sep, queue1))
             else:
                 job = pool.apply_async(allc2mz_worker_without_ref,
-                                       (allc_path, outdir1, chrom,
+                                       (allc_path, outdir1, chrom, chroms,
                                         formats, columns, dimensions,
                                         usecols, chunksize, sep, queue1))
             jobs.append(job)
@@ -355,9 +356,7 @@ def _isCH(context):
 
 
 # ==========================================================
-def generate_context_ssi(Input, output=None, formats=['I'], columns=['ID'],
-                         dimensions=['chrom'], col=2, pattern='CGN',
-                         chunksize=2000):
+def generate_context_ssi(Input, output=None, pattern='CGN'):
     if pattern == 'CGN':
         judge_func = _isCG
     else:  # CH
@@ -367,21 +366,10 @@ def generate_context_ssi(Input, output=None, formats=['I'], columns=['ID'],
     else:
         output = os.path.abspath(os.path.expanduser(output))
     reader = Reader(Input)
-    writer = Writer(output, Formats=formats, Columns=columns,
-                    Dimensions=dimensions, fileobj=None,
-                    message=Input)
-    data = b''
-    for dim in reader.dim2chunk_start:
-        for i, record in enumerate(reader.__fetch__(dim, s=col, e=col + 1)):
-            if judge_func(record[0]):
-                data += struct.pack(f"<{writer.fmts}", i + 1)
-            if ((i + 1) % chunksize) == 0 and len(data) > 0:
-                writer.write_chunk(data, dim)
-                data = b''
-        if len(data) > 0:
-            writer.write_chunk(data, dim)
-            data = b''
-    writer.close()
+    reader.category_ssi(output=output, formats=['I'], columns=['ID'],
+                        dimensions=['chrom'], col=2, match_func=judge_func,
+                        chunksize=2000)
+    reader.close()
 
 
 # ==========================================================

@@ -7,6 +7,7 @@ from builtins import open as _open
 import numpy as np
 import pandas as pd
 import gzip
+from collections import defaultdict
 
 _bmz_magic = b'BMZIP'
 _block_magic = b"MB"
@@ -277,15 +278,29 @@ def _text_input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
         line = f.readline()
         i += 1
     f.close()
-    if len(data)>0:
+    if len(data) > 0:
         yield pd.DataFrame(data, columns=usecols), pre_dims
+
+
 # ==========================================================
-def _input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
-                 chunksize=5000):
+def _input_parser(infile, formats, sep='\t', usecols=[1, 4, 5], dim_cols=[0],
+                  chunksize=5000):
     if infile.endswith('.gz'):
         yield from _gz_input_parser(infile, formats, sep, usecols, dim_cols, chunksize)
     else:
         yield from _text_input_parser(infile, formats, sep, usecols, dim_cols, chunksize)
+
+
+# ==========================================================
+def _isCG(context):
+    return context[:2] == b'CG'
+
+
+# ==========================================================
+def _isCH(context):
+    return not _isCG(context)
+
+
 # ==========================================================
 class Reader:
     def __init__(self, Input, mode="rb", fileobj=None, max_cache=100):
@@ -378,8 +393,6 @@ class Reader:
         self.fmts = ''.join(Formats)
         self._unit_size = struct.calcsize(self.fmts)
         self.chunk_info = self.summary_chunks(printout=False)
-        self.dim2chunk_start = self.chunk_info.set_index(
-            'chunk_dims').chunk_start_offset.to_dict()
 
     def print_header(self):
         for k in self.header:
@@ -434,26 +447,34 @@ class Reader:
                   'chunk_tail_offset', 'chunk_nblocks', 'chunk_nrows']
         R = []
         while r:
-            self._handle.seek(self._chunk_start_offset + 10)
             nrow = int(self._chunk_data_len / self._unit_size)
-            chunk_info = [self._chunk_start_offset, self._chunk_size,
-                          self._chunk_dims, self._chunk_end_offset,
-                          self._chunk_nblocks, nrow]
-            R.append(chunk_info)
+            record = [self._chunk_start_offset, self._chunk_size,
+                      self._chunk_dims, self._chunk_end_offset,
+                      self._chunk_nblocks, nrow]
+            R.append(record)
             r = self._load_chunk(jump=True)
+        chunk_info = pd.DataFrame(R, columns=header)
+        if chunk_info.chunk_dims.value_counts().max() > 1:
+            raise ValueError("Duplicated chunk dimensions detected,"
+                             "Would cause conflict for querying, please check.")
+        for i, dimension in enumerate(self.header['Dimensions']):
+            chunk_info.insert(i, dimension, chunk_info.chunk_dims.apply(
+                lambda x: x[i]
+            ))
+        chunk_info.set_index('chunk_dims', inplace=True)
+        self.dim2chunk_start = chunk_info.chunk_start_offset.to_dict()
         if printout:
-            sys.stdout.write('\t'.join(header) + '\n')
-            for chunk_info in R:
+            sys.stdout.write('\t'.join(chunk_info.columns.tolist()) + '\n')
+            for i, row in chunk_info.iterrows():
                 try:
-                    sys.stdout.write('\t'.join([str(v) for v in chunk_info]) + '\n')
+                    sys.stdout.write('\t'.join([str(v) for v in row.tolist()]) + '\n')
                 except:
                     sys.stdout.close()
                     self.close()
                     return
             sys.stdout.close()
         else:
-            df = pd.DataFrame(R, columns=header)
-            return df
+            return chunk_info
 
     def summary_blocks(self, printout=True):
         r = self._load_chunk(self.header['header_size'], jump=True)
@@ -550,7 +571,8 @@ class Reader:
         while True:
             yield []
 
-    def view(self, show_dim=None, header=True, dim=None, reference=None):
+    def view(self, show_dim=None, header=True, Dimension=None,
+             reference=None):
         """
 		View .bmz file.
 
@@ -562,40 +584,44 @@ class Reader:
 			and chrom)
 		header : bool
 			whether to print the header.
-        dim: None, bool, list or file path
-            None (default): use the default order in .mz file;
-
-            bool (True): sort the dims and used as dim
-
-            list: use this dim (dims) as order and print records.
-
-            path: use the first len(dim) columns as dim order, there should be
+        Dimension: None, bool, list or file path
+            If None (default): use the default chunk order in .mz file;
+            If list: use this Dimension (dims) as order and print records.
+            If path: use the first len(Dimension) columns as dim order, there should be
                 no header in file path and use \t as separator.
+            If Dimension is dictionary,such as -D "{'sampleID':'cell1','chrom':'chr1'}",
+            will filter chunk using sampleID=cell1 and chrom=chr1.
+
 		Returns
 		-------
 
 		"""
         if type(show_dim) == int:
             show_dim = [show_dim]
-        elif type(show_dim)==str:
+        elif type(show_dim) == str:
             show_dim = [int(i) for i in show_dim.split(',')]
 
-        if not dim is None:
+        if Dimension is None or isinstance(Dimension, dict):
+            chunk_info = self.chunk_info.copy()
+            if isinstance(Dimension, dict):
+                selected_dim = Dimension.copy()
+                for d, v in selected_dim.items():
+                    chunk_info = chunk_info.loc[chunk_info[d] == v]
+            Dimension = chunk_info.index.tolist()
+        else:
             # equal to query chromosome if self.header['dimensions'][0]==chrom
-            if isinstance(dim, str):
-                order_path=os.path.abspath(os.path.expanduser(dim))
+            if isinstance(Dimension, str):
+                order_path = os.path.abspath(os.path.expanduser(Dimension))
                 if os.path.exists(order_path):
                     dim = pd.read_csv(order_path, sep='\t', header=None,
                                       usecols=show_dim)[show_dim].apply(lambda x: tuple(x.tolist()),
                                                                         axis=1).tolist()
                 else:
-                    dim = dim.split(',')
-            if type(dim[0]) == str:  # each element of dim should be a tuple
-                dim = [tuple([o]) for o in dim]
-            if not isinstance(dim, (list, tuple, np.ndarray)):  # dim is a list
+                    Dimension = Dimension.split(',')
+            if isinstance(Dimension, (list, tuple)) and type(Dimension[0]) == str:
+                Dimension = [tuple([o]) for o in Dimension]
+            if not isinstance(Dimension, (list, tuple, np.ndarray)):  # dim is a list
                 raise ValueError("input of dim_order is not corrected !")
-        else:
-            dim = list(self.dim2chunk_start.keys())
 
         if not reference is None:
             reference = os.path.abspath(os.path.expanduser(reference))
@@ -613,7 +639,7 @@ class Reader:
             line = "\t".join(columns)
             sys.stdout.write(dim_header + line + '\n')
 
-        for d in dim:
+        for d in Dimension:  # Dimension is a list of tuple ([(d1,d2),(d1,d2)])
             if not show_dim is None:
                 dim_stdout = "\t".join([d[t] for t in show_dim]) + '\t'
             else:
@@ -641,6 +667,66 @@ class Reader:
         if not reference is None:
             ref_reader.close()
 
+    def category_ssi(self, output=None, formats=['I'], columns=['ID'],
+                     dimensions=['chrom'], col=2, match_func=_isCG,
+                     chunksize=2000):
+        if output is None:
+            output = self.Input + '.' + match_func.__name__ + '.bmi'
+        else:
+            output = os.path.abspath(os.path.expanduser(output))
+        writer = Writer(output, Formats=formats, Columns=columns,
+                        Dimensions=dimensions, fileobj=None,
+                        message=os.path.basename(self.Input))
+        data = b''
+        for dim in self.dim2chunk_start:
+            print(dim, '\t' * 4, end='\r')
+            for i, record in enumerate(self.__fetch__(dim, s=col, e=col + 1)):
+                if match_func(record[0]):
+                    data += struct.pack(f"<{writer.fmts}", i + 1)
+                if (i % chunksize) == 0 and len(data) > 0:
+                    writer.write_chunk(data, dim)
+                    data = b''
+            if len(data) > 0:
+                writer.write_chunk(data, dim)
+                data = b''
+        writer.close()
+
+    def subsetids(self, dim=None, bmi=None, reference=None, IDs=None):
+        if IDs is None and bmi is None:
+            raise ValueError("Must provide either IDs or bmi!")
+        if not bmi is None:
+            bmi_path = os.path.abspath(os.path.expanduser(bmi))
+            bmi_reader = Reader(bmi_path)
+
+        for dim in self.dim2chunk_start:
+            self._load_chunk(self.dim2chunk_start[dim], jump=False)
+            if IDs is None and not bmi is None:
+                IDs = np.array([pos[0] for pos in bmi_reader.__fetch__(dim, s=0, e=1)])
+            if len(IDs) == 0:
+                continue
+            block_index = ((IDs - 1) * self._unit_size) // (_BLOCK_MAX_LEN)
+            block_start_offsets = [self._chunk_block_1st_record_virtual_offsets[
+                                       idx] >> 16 for idx in block_index]
+            within_block_offsets = ((IDs - 1) * self._unit_size) % (_BLOCK_MAX_LEN)
+            D = defaultdict(list)  # key is block_offset,value is a list of within_block_offset
+            for block_offset, within_block_offset, ID in zip(block_start_offsets,
+                                                             within_block_offsets):
+                D[block_offset].append(within_block_offset)
+            if not reference is None:
+                ref_records = ref_reader.fetch(d)
+            else:
+                ref_records = self.__empty_generator()
+            data = []  # store all records from this chunk
+            for start_offset in sorted(list(D.keys())):
+                self._load_block(start_offset)
+                for within_block_offset in D[start_offset]:
+                    tmp = self._buffer[
+                          within_block_offset:within_block_offset + self._unit_size]
+                    data.append(
+                        self._byte2real(struct.unpack(f"<{self.fmts}", tmp))
+                    )
+            yield data
+
     def __fetch__(self, dims, s=None, e=None):
         """
         Generator for a given dims
@@ -648,7 +734,7 @@ class Reader:
         Parameters
         ----------
         dims : tuple
-            dims length should match the Dimensions in header['Dimensions']
+            element length of dims should match the Dimensions in header['Dimensions']
 
         Returns
         -------
@@ -769,33 +855,33 @@ class Reader:
                         break
                     record = self._read_1record()
 
-    def query(self, dim=None, start=None, end=None, Regions=None,
+    def query(self, Dimension=None, start=None, end=None, Regions=None,
               query_col=[0], reference=None, printout=True):
         """
-        query .mz file by dim, start and end, if regions provided, dim, start and
+        query .mz file by Dimension, start and end, if regions provided, Dimension, start and
         end should be None, regions should be a list, each element of regions
         is a list, for example, regions=[[('cell1','chr1'),1,10],
         [('cell10','chr22'),100,200]],and so on.
 
         Parameters
         ----------
-        dim : str
+        Dimension : str
             dimension, such as chr1 (if Dimensions 'chrom' is inlcuded in
             header['Dimensions']), or sample1 (if something like 'sampleID' is
             included in header['Dimensions'] and chunk contains such dimension)
         start : int
-            start position, if None, the entire dim would be returned.
+            start position, if None, the entire Dimension would be returned.
         end : int
             end position
         regions : list or file path
             regions=[
-                [dim,start,end], [dim,start,end]
+                [Dimension,start,end], [Dimension,start,end]
             ],
-            dim is a tuple, for example, dim=('chr1');
+            Dimension is a tuple, for example, Dimension=('chr1');
 
             if regions is a file path (separated by tab and no header),
             the first len(header['Dimensions']) columns would be
-            used as dim, and next two columns would be used as start and end.
+            used as Dimension, and next two columns would be used as start and end.
         query_col: list
             index of columns (header['Columns']) to be queried,for example,
             if header['Columns']=['pos','mv','cov'], then pos is what we want to
@@ -807,15 +893,24 @@ class Reader:
         -------
 
         """
-        if dim is None and Regions is None:
-            raise ValueError("Please provide either dim,start,end or regions")
-        if (not dim is None) and (not Regions is None):
-            raise ValueError("Please query by dim,start,end or by regions, "
+        if Dimension is None and Regions is None:
+            raise ValueError("Please provide either Dimension,start,end or regions")
+        if (not Dimension is None) and (not Regions is None):
+            raise ValueError("Please query by Dimension,start,end or by regions, "
                              "not both !")
-        if not dim is None:
-            if type(dim) == str:
-                dim = tuple([dim])
-            Regions = [[dim, start, end]]
+        if not Dimension is None:
+            assert not start is None
+            assert not end is None
+            if type(Dimension) == str:
+                Dimension = tuple([Dimension])
+                Regions = [[Dimension, start, end]]
+            elif isinstance(Dimension, dict):
+                chunk_info = self.chunk_info.copy()
+                selected_dim = Dimension.copy()
+                for d, v in selected_dim.items():
+                    chunk_info = chunk_info.loc[chunk_info[d] == v]
+                Dimension = chunk_info.index.tolist()
+                Regions = [[dim, start, end] for dim in Dimension]
         else:
             if isinstance(Regions, str):
                 region_path = os.path.abspath(os.path.expanduser(Regions))
@@ -1288,7 +1383,7 @@ class Writer:
 
     def tomz(self, Input=None, usecols=[4, 5], dim_cols=[0],
              sep='\t', chunksize=5000, header=None, skiprows=0,
-             reference=None, pos_ref=0, pos_allc=0, jobs=10):
+             reference=None):
         """
         Pack dataframe, stdin or a file path into .mz file with or without reference
         coordinates file.
