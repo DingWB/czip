@@ -816,12 +816,12 @@ class Reader:
             if dim != dim_tmp:
                 start_block_index_tmp = 0
                 dim_tmp = dim
-            r = self._load_chunk(self.dim2chunk_start[dim], jump=False)
-            # find the closest block to a given start position
-            block_1st_starts = [
-                self._seek_and_read_1record(offset)[s]
-                for offset in self._chunk_block_1st_record_virtual_offsets
-            ]
+                r = self._load_chunk(self.dim2chunk_start[dim], jump=False)
+                # find the closest block to a given start position
+                block_1st_starts = [
+                    self._seek_and_read_1record(offset)[s]
+                    for offset in self._chunk_block_1st_record_virtual_offsets
+                ]
             for idx in range(start_block_index_tmp, self._chunk_nblocks - 1):
                 if block_1st_starts[idx + 1] > start:
                     start_block_index = idx
@@ -832,8 +832,6 @@ class Reader:
             block_start_offset = self._block_start_offset
             record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
             while record[s] < start:
-                # if self._within_block_offset + self._unit_size > len(self._buffer):
-                #     break
                 # record = self._read_1record()
                 record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
             # here we got the 1st record, return the id (row number) of 1st record.
@@ -1018,13 +1016,12 @@ class Reader:
                 sys.stdout.write('\t'.join(header) + '\n')
                 # query reference first
                 ref_records = ref_reader._query_regions(Regions, s, e)
-                ref_record = ref_records.__next__()  # 1st should contain primary_id
-                flag, primary_id, dim = ref_record
+                flag, primary_id, dim = ref_records.__next__()  # 1st should contain primary_id
                 records = self.fetchByDimID(dim, n=primary_id)
                 while True:
                     try:
-                        ref_record = ref_records.__next__()
-                        record = self._byte2str(records.__next__())
+                        ref_record = next(ref_records)
+                        record = self._byte2str(next(records))
                     except:
                         break
                     try:
