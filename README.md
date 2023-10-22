@@ -49,7 +49,7 @@ bmzip Writer  -O test.mz -F H,H -C mc,cov -D chrom -v 1 tomz -I /anvil/scratch/x
 ### convert allc to .mz
 ```shell
 # with reference
-bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -r mm10_with_chrL.allc.mz
+time bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -r mm10_with_chrL.allc.mz
 
 # without reference
 bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -v 1
@@ -218,7 +218,7 @@ bmzip Reader -I test_bed.mz view -s 0 -h False -d chr1 |head
 
 ### Query
 ```shell
-/usr/bin/time -f "%e\t%M\t%P" bmzip Reader -I test_bed.mz query -d chr8 -s 129300305 -e 129300362
+bmzip Reader -I test_no_ref.mz query -D chr8 -s 129300305 -e 129300362
 #chrom   pos     mc      cov
 #chr8    129300305       0       1
 #chr8    129300317       0       1
@@ -247,7 +247,7 @@ zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |awk '$5 >=100' |head
 #chr12   3110027 -       CGT     1218    1356    1
 #chr12   3110041 +       CAA     263     398     1
 
-/usr/bin/time -f "%e\t%M\t%P" bmzip Reader -I test_bed.mz query -D chr12 -s 3109883 -e 3110041
+bmzip Reader -I test_no_ref.mz query -D chr12 -s 3109883 -e 3110041
 #chrom   pos     mc      cov
 #chr12   3109883 224     255
 #chr12   3109884 590     690
@@ -310,15 +310,17 @@ zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |awk '$5 >=100' |head
 #0.98    238200  90%, only took 0.98 s
 
 
-bmzip Reader -I 2.mz query -D "{'chrom':'chr12'}" -s 3110029 -e 3110041 -r mm10_with_chrL.allc.mz
+bmzip Reader -I test.mz query -D "{'chrom':'chr12'}" -s 3110029 -e 3110041 -r mm10_with_chrL.allc.mz
+
+tabix FC_E17a_3C_1-1-I3-F13.allc.tsv.gz chr12:3110029-3110041
 ```
 
 #### Query with reference
 
 ```shell
-bmzip1 Reader -I test_bed3.mz query -d chr12 -s 3109911 -e 3109913 -r mm10_with_chrL.allc.mz |head
+bmzip Reader -I test.mz query -D chr12 -s 3109911 -e 3109913 -r mm10_with_chrL.allc.mz |head
 
-bmzip1 Reader -I mm10_with_chrL.allc.mz query -d chr12 -s 3109911 -e 3109913  |head
+bmzip Reader -I mm10_with_chrL.allc.mz query -D chr12 -s 3109911 -e 3109913  |head
 ```
 
 ### SubSet Index (.ssi)

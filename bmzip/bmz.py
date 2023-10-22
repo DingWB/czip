@@ -7,6 +7,8 @@ from builtins import open as _open
 import numpy as np
 import pandas as pd
 import gzip
+import numba
+from numba.experimental import jitclass
 from collections import defaultdict
 
 _bmz_magic = b'BMZIP'
@@ -15,6 +17,7 @@ _chunk_magic = b"MC"
 _BLOCK_MAX_LEN = 65535
 _bmz_eof = b"\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00BM\x02\x00\x1b\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00"
 _version = 1.0
+
 
 # ==========================================================
 def str2byte(x):
@@ -27,7 +30,10 @@ dtype_func = {
     'f': float, 'd': float,
     's': str2byte, 'c': str2byte
 }
+
+
 # ==========================================================
+# @numba.jit
 def get_dtfuncs(formats,tobytes=True):
     D=dtype_func
     if not tobytes:
@@ -596,9 +602,9 @@ class Reader:
 		-------
 
 		"""
-        if type(show_dim) == int:
+        if isinstance(show_dim, int):
             show_dim = [show_dim]
-        elif type(show_dim) == str:
+        elif isinstance(show_dim, str):
             show_dim = [int(i) for i in show_dim.split(',')]
 
         if Dimension is None or isinstance(Dimension, dict):
@@ -618,7 +624,7 @@ class Reader:
                                                                         axis=1).tolist()
                 else:
                     Dimension = Dimension.split(',')
-            if isinstance(Dimension, (list, tuple)) and type(Dimension[0]) == str:
+            if isinstance(Dimension, (list, tuple)) and isinstance(Dimension[0], str):
                 Dimension = [tuple([o]) for o in Dimension]
             if not isinstance(Dimension, (list, tuple, np.ndarray)):  # dim is a list
                 raise ValueError("input of dim_order is not corrected !")
@@ -770,7 +776,7 @@ class Reader:
             yield data
 
     def fetchByDimID(self, dims, n=None):  # n is 1-based, n >=1
-        if type(dims) == str:
+        if isinstance(dims, str):
             dims = tuple([dims])
         r = self._load_chunk(self.dim2chunk_start[dims], jump=False)
         if not n is None:  # seek to the position of the n rows
@@ -805,51 +811,25 @@ class Reader:
         Return a generator, the first element of generator is start offset of the
         1st record.
         """
+        dim_tmp = None
         for dim, start, end in regions:
+            if dim != dim_tmp:
+                start_block_index_tmp = 0
+                dim_tmp = dim
             r = self._load_chunk(self.dim2chunk_start[dim], jump=False)
             # find the closest block to a given start position
-            # block_1st_records = [
-            #     self._seek_and_read_1record(offset)
-            #     for offset in self._chunk_block_1st_record_virtual_offsets
-            # ]
-            # block_1st_starts = [r[s] for r in block_1st_records]
             block_1st_starts = [
                 self._seek_and_read_1record(offset)[s]
                 for offset in self._chunk_block_1st_record_virtual_offsets
             ]
-            for idx in range(0, self._chunk_nblocks - 1):
+            for idx in range(start_block_index_tmp, self._chunk_nblocks - 1):
                 if block_1st_starts[idx + 1] > start:
                     start_block_index = idx
                     break
                 start_block_index = self._chunk_nblocks - 1
-            # start_block_index=0
-            # while True:
-            #     if start_block_index+1 >= self._chunk_nblocks:
-            #         break
-            #     if block_1st_starts[start_block_index+1] > start:
-            #         break
-            #     start_block_index+=1
-            # if s == e:
-            #     end_block_index = start_block_index
-            # else:
-            #     block_1st_ends = [r[e] for r in block_1st_records]
-            #     for idx in range(0, self._chunk_nblocks - 1):
-            #         if block_1st_ends[idx + 1] > end:
-            #             end_block_index = idx
-            #             break
-            #         end_block_index = self._chunk_nblocks - 1
-            # end_block_index = 0  #0-based
-            # while True:
-            #     if end_block_index +1 >= self._chunk_nblocks:
-            #         break
-            #     if block_1st_ends[end_block_index+1] > end:
-            #         break
-            #     end_block_index += 1
-            # for block_index in range(start_block_index,end_block_index+1):
-            # print(block_index) #0-based
             virtual_offset = self._chunk_block_1st_record_virtual_offsets[start_block_index]
             self.seek(virtual_offset)  # seek to the target block, self._buffer
-            # record = self._read_1record()
+            block_start_offset = self._block_start_offset
             record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
             while record[s] < start:
                 # if self._within_block_offset + self._unit_size > len(self._buffer):
@@ -860,7 +840,7 @@ class Reader:
             # size of each block is 65535 (2**16-1=_BLOCK_MAX_LEN)
             # primary_id = int((_BLOCK_MAX_LEN * block_index +
             #                   self._within_block_offset) / self._unit_size)
-            if self._handle.tell() != (virtual_offset >> 16):
+            if self._block_start_offset > block_start_offset:
                 start_block_index += 1
             primary_id = int((_BLOCK_MAX_LEN * start_block_index +
                               self._within_block_offset) / self._unit_size)
@@ -869,12 +849,9 @@ class Reader:
             # 1-based, primary_id >=1, cause _within_block_offset >= self._unit_size
             yield "primary_id_&_dim:", primary_id, dim
             while record[e] <= end:
-                # print(list(dim) + list(record))
                 yield dim, record
-                # if self._within_block_offset + self._unit_size > len(self._buffer):
-                #     break
-                # record = self._read_1record()
                 record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
+            start_block_index_tmp = start_block_index
 
     def pos2id(self, dim, positions, col_to_query=0):  # return IDs (primary_id)
         self._load_chunk(self.dim2chunk_start[dim], jump=False)
@@ -953,7 +930,7 @@ class Reader:
         if not Dimension is None:
             assert not start is None
             assert not end is None
-            if type(Dimension) == str:
+            if isinstance(Dimension, str):
                 Dimension = tuple([Dimension])
                 Regions = [[Dimension, start, end]]
             elif isinstance(Dimension, dict):
@@ -978,10 +955,9 @@ class Reader:
                     ], axis=1).tolist()
                 else:
                     raise ValueError(f"path {region_path} not existed.")
-            else: #check format of regions
-                if type(Regions[0][0]) != tuple:
-                    raise ValueError("The first element of first region is not a tuple:"
-                                     f"{type(Regions[0][0])}")
+            else:  # check format of regions
+                if not isinstance(Regions[0][0], tuple):
+                    raise ValueError("The first element of first region is not a tuple")
 
         if len(query_col) == 1:
             s = e = query_col[0]
@@ -1245,7 +1221,7 @@ class Writer:
         else:
             if not Output is None:  # write output to a file
                 if "w" not in mode.lower() and "a" not in mode.lower():
-                    raise ValueError(f"Must use write or append mode, not {mode!r}")
+                    raise ValueError(f"Must use write or append mode")
                 handle = _open(Output, mode)
                 self.Output=Output
             else:  # write to stdout buffer
@@ -1254,27 +1230,27 @@ class Writer:
         self._buffer = b""
         self._chunk_start_offset = None
         self._chunk_dims = None
-        if type(Formats) == str and ',' not in Formats:
+        if isinstance(Formats, str) and ',' not in Formats:
             self.Formats = [Formats]
-        elif type(Formats) == str:
+        elif isinstance(Formats, str):
             self.Formats = Formats.split(',')
         else:
             self.Formats = list(Formats)
         self.level = level
-        if type(Columns) == str:
+        if isinstance(Columns, str):
             self.Columns = Columns.split(',')
         else:
             self.Columns = list(Columns)
-        if type(Dimensions) == str:
+        if isinstance(Dimensions, str):
             self.Dimensions = Dimensions.split(',')
         else:
             self.Dimensions = list(Dimensions)
         self._magic_size = len(_bmz_magic)
         self.verbose = verbose
-        self.message=message
-        if self.verbose > 0:
-            print(self.Formats, self.Columns, self.Dimensions)
-            print(type(self.Formats), type(self.Columns), type(self.Dimensions))
+        self.message = message
+        # if self.verbose > 0:
+        #     print(self.Formats, self.Columns, self.Dimensions)
+        #     print(type(self.Formats), type(self.Columns), type(self.Dimensions))
         self.write_header()
 
     def write_header(self):
@@ -1312,8 +1288,8 @@ class Writer:
         self._unit_size = struct.calcsize(self.fmts)
 
     def _write_block(self, block):
-        if len(block) > _BLOCK_MAX_LEN:  # 65536 = 1 << 16 = 2**16
-            raise ValueError(f"{len(block)} Block length > {_BLOCK_MAX_LEN}")
+        # if len(block) > _BLOCK_MAX_LEN:  # 65536 = 1 << 16 = 2**16
+        #     raise ValueError(f"{len(block)} Block length > {_BLOCK_MAX_LEN}")
         c = zlib.compressobj(
             self.level, zlib.DEFLATED, -15, zlib.DEF_MEM_LEVEL, 0
         )
@@ -1324,25 +1300,26 @@ class Writer:
 		"""
         compressed = c.compress(block) + c.flush()
         del c
-        if len(compressed) > _BLOCK_MAX_LEN:
-            raise RuntimeError(
-                "TODO - Didn't compress enough, try less data in this block"
-            )
+        # if len(compressed) > _BLOCK_MAX_LEN:
+        #     raise RuntimeError(
+        #         "Didn't compress enough, try less data in this block"
+        #     )
         bsize = struct.pack("<H", len(compressed) + 6)
         # block size: magic (2 btyes) + block_size (2bytes) + compressed data +
         # block_data_len (2 bytes)
-        uncompressed_length = struct.pack("<H", len(block))  # 2 bytes
+        data_len = len(block)
+        uncompressed_length = struct.pack("<H", data_len)  # 2 bytes
         data = _block_magic + bsize + compressed + uncompressed_length
-        block_start_offset=self._handle.tell()
+        block_start_offset = self._handle.tell()
         within_block_offset = int(
             np.ceil(self._chunk_data_len / self._unit_size) * self._unit_size
             - self._chunk_data_len)
-        virtual_offset=(block_start_offset << 16) | within_block_offset
+        virtual_offset = (block_start_offset << 16) | within_block_offset
         self._block_1st_record_virtual_offsets.append(virtual_offset)
         # _block_offsets are real position on disk, not a virtual offset
         self._handle.write(data)
         # how many bytes (uncompressed) have been writen.
-        self._chunk_data_len += len(block)
+        self._chunk_data_len += data_len
 
     def _write_chunk_tail(self):
         # tail: chunk_data_len (Q,8bytes) + n_blocks (Q, 8bytes)
@@ -1386,9 +1363,9 @@ class Writer:
         -------
 
         """
-        assert len(dims)==len(self.Dimensions)
-        if isinstance(data, str):
-            data = data.encode("latin-1")
+        # assert len(dims)==len(self.Dimensions)
+        # if isinstance(data, str):
+        #     data = data.encode("latin-1")
         if self._chunk_dims != dims:
             # the first chunk or another new chunk
             if self._chunk_dims is not None:
@@ -1402,8 +1379,8 @@ class Writer:
             self._handle.write(struct.pack("<Q", 0))  # 8 bytes; including this chunk_size
             self._chunk_data_len = 0
             self._block_1st_record_virtual_offsets = []
-            if self.verbose > 0:
-                print("Writing chunk with dims: ", self._chunk_dims)
+            # if self.verbose > 0:
+            #     print("Writing chunk with dims: ", self._chunk_dims)
 
         if len(self._buffer) + len(data) < _BLOCK_MAX_LEN:
             self._buffer += data
@@ -1418,14 +1395,14 @@ class Writer:
             # usecols and dim_cols should be in the columns of this dataframe.
             if self.chunksize is None:
                 for dim, df1 in input_handle.groupby(self.dim_cols)[self.usecols]:
-                    if type(dim) != list:
+                    if not isinstance(dim, list):
                         dim = [dim]
                     yield df1, dim
             else:
                 while input_handle.shape[0] > 0:
                     df = input_handle.iloc[:self.chunksize]
                     for dim, df1 in df.groupby(self.dim_cols)[self.usecols]:
-                        if type(dim) != list:
+                        if not isinstance(dim, list):
                             dim = [dim]
                         yield df1, dim
                     input_handle = input_handle.iloc[self.chunksize:]
@@ -1489,15 +1466,15 @@ class Writer:
         """
         self.sep = sep
         if not isinstance(Input,pd.DataFrame):
-            if type(usecols) == int:
+            if isinstance(usecols, int):
                 self.usecols = [int(usecols)]
-            elif type(usecols) == str:
+            elif isinstance(usecols, str):
                 self.usecols = [int(i) for i in usecols.split(',')]
             else:
                 self.usecols = [int(i) for i in usecols]
-            if type(dim_cols) == int:
+            if isinstance(dim_cols, int):
                 self.dim_cols = [int(dim_cols)]
-            elif type(dim_cols) == str:
+            elif isinstance(dim_cols, str):
                 self.dim_cols = [int(i) for i in dim_cols.split(',')]
             else:
                 self.dim_cols = [int(i) for i in dim_cols]
@@ -1510,13 +1487,13 @@ class Writer:
         self.chunksize = chunksize
         self.header = header
         self.skiprows = skiprows
-        if self.verbose > 0:
-            print("Input: ", type(Input), Input)
+        # if self.verbose > 0:
+        #     print("Input: ", type(Input), Input)
 
         if isinstance(Input, str):
             input_path = os.path.abspath(os.path.expanduser(Input))
             if not os.path.exists(input_path):
-                raise ValueError(f"Unknown format for Input: {type(Input)}")
+                raise ValueError("Unknown format for Input")
             if os.path.exists(input_path + '.tbi'):
                 print("Please use allc2mz command to convert input to .mz.")
                 return
@@ -1533,11 +1510,11 @@ class Writer:
         elif isinstance(Input, pd.DataFrame):
             data_generator = self._parse_input_no_ref(Input)
         else:
-            raise ValueError(f"Unknow input type {type(Input)}")
+            raise ValueError(f"Unknow input type")
 
-        if self.verbose > 0:
-            print(self.usecols, self.dim_cols)
-            print(type(self.usecols), type(self.dim_cols))
+        # if self.verbose > 0:
+        #     print(self.usecols, self.dim_cols)
+        #     print(type(self.usecols), type(self.dim_cols))
         for df, dim in data_generator:
             data = df.apply(lambda x: struct.pack(f"<{self.fmts}", *x.tolist()),
                             axis=1).sum()
@@ -1590,9 +1567,9 @@ class Writer:
 		-------
 
 		"""
-        if type(Input) == str and '*' in Input:
+        if isinstance(Input, str) and '*' in Input:
             Input = glob.glob(Input)
-        if type(Input) != list:
+        if not isinstance(Input, list):
             raise ValueError("Input should be either a list of a string including *.")
         if dim_order is None:
             Input = sorted(Input)

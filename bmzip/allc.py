@@ -252,7 +252,7 @@ def mzs_merger(formats, columns, dimensions, message, q):
     return
 
 # ==========================================================
-@numba.njit
+# @numba.njit(debug=True)
 def allc2mz(allc_path, outfile, reference=None, missing_value=[0, 0],
             chunksize=2000, pr=0, pa=1, sep='\t',
             Path_to_chrom=None):
@@ -277,13 +277,13 @@ def allc2mz(allc_path, outfile, reference=None, missing_value=[0, 0],
     -------
 
     """
-    global row_query, records, fmts, dtfuncs, usecols
     if os.path.exists(outfile):
         print(f"{outfile} existed, skip.")
         return
     allc_path = os.path.abspath(os.path.expanduser(allc_path))
     if not os.path.exists(allc_path + '.tbi'):
         raise ValueError(f"index file .tbi not existed, please create index first.")
+    print(allc_path)
     tbi = pysam.TabixFile(allc_path)
     contigs = tbi.contigs
     if not Path_to_chrom is None:
@@ -306,102 +306,74 @@ def allc2mz(allc_path, outfile, reference=None, missing_value=[0, 0],
                     Dimensions=dimensions, message=message)
     dtfuncs = get_dtfuncs(formats, tobytes=False)
 
-    def row2byte():
-        global row_query, records, fmts, dtfuncs, usecols
-        values = [func(row_query[i]) for i, func in zip(usecols, dtfuncs)]
-        try:
-            row_query = records.__next__().rstrip('\n').split('\t')
-            return struct.pack(f"<{fmts}", *values)
-        except:
-            return False
-
     if not reference is None:
         ref_reader = Reader(reference)
         na_value_bytes = struct.pack(f"<{writer.fmts}", *missing_value)
         for chrom in all_chroms:
-            print(chrom + '\t' * 10, end='\r')
-            records = tbi.fetch(chrom)
-
-            # method 2: better
-            # row_query = records.__next__().rstrip('\n').split(sep)
-            # data=b''.join(
-            #     list(
-            #         itertools.takewhile(lambda x:x!=False, [
-            #             na_value_bytes if ref_pos[0] < int(row_query[pa])
-            #             else row2byte()
-            #             for ref_pos in ref_reader.__fetch__(
-            #                 tuple([chrom]), s=pr, e=pr + 1
-            #             )
-            #         ])
-            #     )
-            # )
-            # writer.write_chunk(data, [chrom])
-
+            print(chrom)
             # method 1
             # ref_positions = ref_reader.__fetch__(tuple([chrom]), s=pr, e=pr + 1)
             # data = b''
-            # i = 0
-            # while True:
-            #     try:
-            #         row_query = records.__next__().rstrip('\n').split(sep)
-            #     except:
-            #         break
-            #     ref_pos = ref_positions.__next__()[0]
-            #     while ref_pos < int(row_query[pa]):
+            # for line in tbi.fetch(chrom):
+            #     row_query = line.rstrip('\n').split(sep)
+            #     row_query_pos=int(row_query[pa])
+            #     ref_pos = next(ref_positions)[0]
+            #     while ref_pos < row_query_pos:
             #         data += na_value_bytes
-            #         i += 1
             #         try:
-            #             ref_pos = ref_positions.__next__()[0]
+            #             ref_pos = next(ref_positions)[0]
             #         except:
             #             break
-            #     if ref_pos == int(row_query[pa]):  # match
+            #     if ref_pos == row_query_pos:  # match
             #         values = [func(row_query[i]) for i, func in zip(usecols, dtfuncs)]
             #         data += struct.pack(f"<{writer.fmts}", *values)
-            #         i += 1
             #
-            #     if i >= chunksize:
-            #         writer.write_chunk(data, [chrom])
-            #         data = b''
-            #         i = 0
-            # if len(data) > 0:
             #     writer.write_chunk(data, [chrom])
+            #     data = b''
 
-            # method 3
+            # methd 2
             ref_positions = ref_reader.__fetch__(tuple([chrom]), s=pr, e=pr + 1)
             data = b''
-            while True:
-                try:
-                    row_query = records.__next__().rstrip('\n').split(sep)
-                except:
-                    break
-                ref_pos = ref_positions.__next__()[0]
-                while ref_pos < int(row_query[pa]):
-                    data += na_value_bytes
-                    try:
-                        ref_pos = ref_positions.__next__()[0]
-                    except:
+            for line in tbi.fetch(chrom):
+                row_query = line.rstrip('\n').split(sep)
+                row_query_pos = int(row_query[pa])
+                for ref_pos in ref_positions:
+                    if ref_pos[0] < row_query_pos:
+                        data += na_value_bytes
+                    else:
+                        data += struct.pack(f"<{writer.fmts}",
+                                            *[func(row_query[i]) for i, func in
+                                              zip(usecols, dtfuncs)
+                                              ])
+                        writer.write_chunk(data, [chrom])
+                        data = b''
                         break
-                if ref_pos == int(row_query[pa]):  # match
-                    values = [func(row_query[i]) for i, func in zip(usecols, dtfuncs)]
-                    data += struct.pack(f"<{writer.fmts}", *values)
-            writer.write_chunk(data, [chrom])
+
         ref_reader.close()
     else:
         for chrom in all_chroms:
-            records = tbi.fetch(chrom)
-            data, i = b'', 0
-            while True:
-                try:
-                    values = records.__next__().rstrip('\n').split(sep)
-                except:
-                    break
-                if i >= chunksize:  # dims are the same, but reach chunksize
-                    writer.write_chunk(data, [chrom])
-                    data, i = b'', 0
-                values = [func(values[i]) for i, func in zip(usecols, dtfuncs)]
-                data += struct.pack(f"<{writer.fmts}", *values)
-                i += 1
-            if len(data) > 0:
+            print(chrom)
+            # records = tbi.fetch(chrom)
+            # data, i = b'', 0
+            # while True:
+            #     try:
+            #         values = records.__next__().rstrip('\n').split(sep)
+            #     except:
+            #         break
+            #     if i >= chunksize:  # dims are the same, but reach chunksize
+            #         writer.write_chunk(data, [chrom])
+            #         data, i = b'', 0
+            #     values = [func(values[i]) for i, func in zip(usecols, dtfuncs)]
+            #     data += struct.pack(f"<{writer.fmts}", *values)
+            #     i += 1
+            # if len(data) > 0:
+            #     writer.write_chunk(data, [chrom])
+
+            # method 2
+            for line in tbi.fetch(chrom):
+                values = line.rstrip('\n').split(sep)
+                data = struct.pack(f"<{writer.fmts}",
+                                   *[func(values[i]) for i, func in zip(usecols, dtfuncs)])
                 writer.write_chunk(data, [chrom])
     writer.close()
     tbi.close()
@@ -533,4 +505,7 @@ def generate_context_ssi(Input, output=None, pattern='CGN'):
 
 # ==========================================================
 if __name__ == "__main__":
-    pass
+    import fire
+
+    fire.core.Display = lambda lines, out: print(*lines, file=out)
+    fire.Fire()
