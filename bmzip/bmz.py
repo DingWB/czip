@@ -808,52 +808,104 @@ class Reader:
         for dim, start, end in regions:
             r = self._load_chunk(self.dim2chunk_start[dim], jump=False)
             # find the closest block to a given start position
-            block_1st_records = [
-                self._seek_and_read_1record(offset)
+            # block_1st_records = [
+            #     self._seek_and_read_1record(offset)
+            #     for offset in self._chunk_block_1st_record_virtual_offsets
+            # ]
+            # block_1st_starts = [r[s] for r in block_1st_records]
+            block_1st_starts = [
+                self._seek_and_read_1record(offset)[s]
                 for offset in self._chunk_block_1st_record_virtual_offsets
             ]
-            block_1st_starts = [r[s] for r in block_1st_records]
-            start_block_index = 0  # 0-based
-            while True:
-                if start_block_index+1 >= self._chunk_nblocks:
+            for idx in range(0, self._chunk_nblocks - 1):
+                if block_1st_starts[idx + 1] > start:
+                    start_block_index = idx
                     break
-                if block_1st_starts[start_block_index+1] > start:
+                start_block_index = self._chunk_nblocks - 1
+            # start_block_index=0
+            # while True:
+            #     if start_block_index+1 >= self._chunk_nblocks:
+            #         break
+            #     if block_1st_starts[start_block_index+1] > start:
+            #         break
+            #     start_block_index+=1
+            # if s == e:
+            #     end_block_index = start_block_index
+            # else:
+            #     block_1st_ends = [r[e] for r in block_1st_records]
+            #     for idx in range(0, self._chunk_nblocks - 1):
+            #         if block_1st_ends[idx + 1] > end:
+            #             end_block_index = idx
+            #             break
+            #         end_block_index = self._chunk_nblocks - 1
+            # end_block_index = 0  #0-based
+            # while True:
+            #     if end_block_index +1 >= self._chunk_nblocks:
+            #         break
+            #     if block_1st_ends[end_block_index+1] > end:
+            #         break
+            #     end_block_index += 1
+            # for block_index in range(start_block_index,end_block_index+1):
+            # print(block_index) #0-based
+            virtual_offset = self._chunk_block_1st_record_virtual_offsets[start_block_index]
+            self.seek(virtual_offset)  # seek to the target block, self._buffer
+            # record = self._read_1record()
+            record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
+            while record[s] < start:
+                # if self._within_block_offset + self._unit_size > len(self._buffer):
+                #     break
+                # record = self._read_1record()
+                record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
+            # here we got the 1st record, return the id (row number) of 1st record.
+            # size of each block is 65535 (2**16-1=_BLOCK_MAX_LEN)
+            # primary_id = int((_BLOCK_MAX_LEN * block_index +
+            #                   self._within_block_offset) / self._unit_size)
+            if self._handle.tell() != (virtual_offset >> 16):
+                start_block_index += 1
+            primary_id = int((_BLOCK_MAX_LEN * start_block_index +
+                              self._within_block_offset) / self._unit_size)
+            # primary_id is the current record (record[s] == start),
+            # with_block_offset is the end of current record
+            # 1-based, primary_id >=1, cause _within_block_offset >= self._unit_size
+            yield "primary_id_&_dim:", primary_id, dim
+            while record[e] <= end:
+                # print(list(dim) + list(record))
+                yield dim, record
+                # if self._within_block_offset + self._unit_size > len(self._buffer):
+                #     break
+                # record = self._read_1record()
+                record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
+
+    def pos2id(self, dim, positions, col_to_query=0):  # return IDs (primary_id)
+        self._load_chunk(self.dim2chunk_start[dim], jump=False)
+        block_1st_starts = [
+            self._seek_and_read_1record(offset)[col_to_query]
+            for offset in self._chunk_block_1st_record_virtual_offsets
+        ]
+        start_block_index_tmp = 0
+        R = []
+        for pos in positions:  # bed is sorted, [[0,1],[3,4],[7,8]]
+            for idx in range(start_block_index_tmp, self._chunk_nblocks - 1):
+                if block_1st_starts[idx + 1] > pos:
+                    start_block_index = idx
                     break
-                start_block_index+=1
-            if s == e:
-                end_block_index = start_block_index
-            else:
-                block_1st_ends = [r[e] for r in block_1st_records]
-                end_block_index = 0  #0-based
-                while True:
-                    if end_block_index +1 >= self._chunk_nblocks:
-                        break
-                    if block_1st_ends[end_block_index+1] > end:
-                        break
-                    end_block_index += 1
-            for block_index in range(start_block_index,end_block_index+1):
-                # print(block_index) #0-based
-                virtual_offset = self._chunk_block_1st_record_virtual_offsets[block_index]
-                self.seek(virtual_offset)  # seek to the target block, self._buffer
-                record = self._read_1record()
-                while record[s] < start:
-                    if self._within_block_offset + self._unit_size > len(self._buffer):
-                        break
-                    record = self._read_1record()
-                # here we got the 1st record, return the id (row number) of 1st record.
-                # size of each block is 65535 (2**16-1=_BLOCK_MAX_LEN)
-                primary_id = int((_BLOCK_MAX_LEN * block_index +
-                                  self._within_block_offset) / self._unit_size)
-                # primary_id is the current record (record[s] == start),
-                # with_block_offset is the end of current record
-                # 1-based, primary_id >=1, cause _within_block_offset >= self._unit_size
-                yield "primary_id_&_dim:", primary_id, dim
-                while record[e] <= end:
-                    # print(list(dim) + list(record))
-                    yield dim, record
-                    if self._within_block_offset + self._unit_size > len(self._buffer):
-                        break
-                    record = self._read_1record()
+                start_block_index = self._chunk_nblocks - 1
+            try:
+                virtual_offset = self._chunk_block_1st_record_virtual_offsets[start_block_index]
+            except:
+                break
+            self.seek(virtual_offset)  # seek to the target block, self._buffer
+            block_start_offset = self._block_start_offset
+            record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
+            while record[col_to_query] < pos:
+                record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
+            if self._block_start_offset > block_start_offset:
+                start_block_index += 1
+            primary_id = int((_BLOCK_MAX_LEN * start_block_index +
+                              self._within_block_offset) / self._unit_size)
+            # yield primary_id
+            R.append(primary_id)
+            start_block_index_tmp = start_block_index
 
     def query(self, Dimension=None, start=None, end=None, Regions=None,
               query_col=[0], reference=None, printout=True):
@@ -1081,14 +1133,14 @@ class Reader:
                        self._within_block_offset: self._within_block_offset + size
                        ]
                 self._within_block_offset += size
-                if not data:
-                    raise ValueError("Must be at least 1 byte")
+                # if not data:
+                #     raise ValueError("Must be at least 1 byte")
                 result += data
                 break
-            else:
+            else:  # need to load the enxt block
                 data = self._buffer[self._within_block_offset:]
                 size -= len(data)
-                self._load_block()  # will reset offsets
+                self._load_block()  # will reset offsets and _within_block_offset
                 result += data
 
         return result
@@ -1289,6 +1341,7 @@ class Writer:
         self._block_1st_record_virtual_offsets.append(virtual_offset)
         # _block_offsets are real position on disk, not a virtual offset
         self._handle.write(data)
+        # how many bytes (uncompressed) have been writen.
         self._chunk_data_len += len(block)
 
     def _write_chunk_tail(self):

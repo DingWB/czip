@@ -5,6 +5,7 @@ Created on Tue Sep  8 17:34:38 2020
 
 @author: DingWB
 """
+import itertools
 import sys
 import os
 import struct
@@ -18,6 +19,7 @@ import random
 # pyximport.install(pyimport=True) #pyximport.install(pyimport=True)
 from .utils import WriteC
 from .bmz import Reader, Writer, get_dtfuncs
+import numba
 # ==========================================================
 class AllC:
     def __init__(self, Genome=None, Output="hg38_allc.mz",
@@ -245,15 +247,170 @@ def mzs_merger(formats, columns, dimensions, message, q):
                         message=message)
         writer.catmz(Input=f"{outdir}/*", dim_order=all_chroms)
         os.system(f"rm -rf {outdir}")
-        # basename = os.path.basename(outfile)
-        # print(f"{basename} finished", "\t" * 4, end='\t')
+        print(os.path.basename(outfile))
         del finished_jobs[outdir]  # finished one allc, remove from monitoring
     return
 
 # ==========================================================
-def allc2mz(allc_paths, outdir, reference=None, missing_value=[0, 0],
-            chunksize=2000, pr=0, pa=1, n_jobs=8, sep='\t',
-            Path_to_chrom=None, ext='.allc.tsv.gz'):
+@numba.njit
+def allc2mz(allc_path, outfile, reference=None, missing_value=[0, 0],
+            chunksize=2000, pr=0, pa=1, sep='\t',
+            Path_to_chrom=None):
+    """
+    convert allc.tsv.gz to .mz file.
+
+    Parameters
+    ----------
+    allc_path : path
+        path to allc.tsv.gz, should has .tbi index.
+    outfile : path
+        output .mz file
+    reference : path
+        path to reference coordinates.
+    chunksize : int
+        default is 5000
+    Path_to_chrom : path
+        path to chrom_size path or similar file containing chromosomes order,
+        the first columns should be chromosomes, tab separated and no header.
+
+    Returns
+    -------
+
+    """
+    global row_query, records, fmts, dtfuncs, usecols
+    if os.path.exists(outfile):
+        print(f"{outfile} existed, skip.")
+        return
+    allc_path = os.path.abspath(os.path.expanduser(allc_path))
+    if not os.path.exists(allc_path + '.tbi'):
+        raise ValueError(f"index file .tbi not existed, please create index first.")
+    tbi = pysam.TabixFile(allc_path)
+    contigs = tbi.contigs
+    if not Path_to_chrom is None:
+        Path_to_chrom = os.path.abspath(os.path.expanduser(Path_to_chrom))
+        df = pd.read_csv(Path_to_chrom, sep='\t', header=None, usecols=[0])
+        chroms = df.iloc[:, 0].tolist()
+        all_chroms = [c for c in chroms if c in contigs]
+    else:
+        all_chroms = contigs
+    if not reference is None:
+        reference = os.path.abspath(os.path.expanduser(reference))
+        message = os.path.basename(reference)
+        formats, columns, dimensions = ['H', 'H'], ['mc', 'cov'], ['chrom']
+        usecols = [4, 5]
+    else:
+        message = ''
+        formats, columns, dimensions = ['Q', 'H', 'H'], ['pos', 'mc', 'cov'], ['chrom']
+        usecols = [1, 4, 5]
+    writer = Writer(outfile, Formats=formats, Columns=columns,
+                    Dimensions=dimensions, message=message)
+    dtfuncs = get_dtfuncs(formats, tobytes=False)
+
+    def row2byte():
+        global row_query, records, fmts, dtfuncs, usecols
+        values = [func(row_query[i]) for i, func in zip(usecols, dtfuncs)]
+        try:
+            row_query = records.__next__().rstrip('\n').split('\t')
+            return struct.pack(f"<{fmts}", *values)
+        except:
+            return False
+
+    if not reference is None:
+        ref_reader = Reader(reference)
+        na_value_bytes = struct.pack(f"<{writer.fmts}", *missing_value)
+        for chrom in all_chroms:
+            print(chrom + '\t' * 10, end='\r')
+            records = tbi.fetch(chrom)
+
+            # method 2: better
+            # row_query = records.__next__().rstrip('\n').split(sep)
+            # data=b''.join(
+            #     list(
+            #         itertools.takewhile(lambda x:x!=False, [
+            #             na_value_bytes if ref_pos[0] < int(row_query[pa])
+            #             else row2byte()
+            #             for ref_pos in ref_reader.__fetch__(
+            #                 tuple([chrom]), s=pr, e=pr + 1
+            #             )
+            #         ])
+            #     )
+            # )
+            # writer.write_chunk(data, [chrom])
+
+            # method 1
+            # ref_positions = ref_reader.__fetch__(tuple([chrom]), s=pr, e=pr + 1)
+            # data = b''
+            # i = 0
+            # while True:
+            #     try:
+            #         row_query = records.__next__().rstrip('\n').split(sep)
+            #     except:
+            #         break
+            #     ref_pos = ref_positions.__next__()[0]
+            #     while ref_pos < int(row_query[pa]):
+            #         data += na_value_bytes
+            #         i += 1
+            #         try:
+            #             ref_pos = ref_positions.__next__()[0]
+            #         except:
+            #             break
+            #     if ref_pos == int(row_query[pa]):  # match
+            #         values = [func(row_query[i]) for i, func in zip(usecols, dtfuncs)]
+            #         data += struct.pack(f"<{writer.fmts}", *values)
+            #         i += 1
+            #
+            #     if i >= chunksize:
+            #         writer.write_chunk(data, [chrom])
+            #         data = b''
+            #         i = 0
+            # if len(data) > 0:
+            #     writer.write_chunk(data, [chrom])
+
+            # method 3
+            ref_positions = ref_reader.__fetch__(tuple([chrom]), s=pr, e=pr + 1)
+            data = b''
+            while True:
+                try:
+                    row_query = records.__next__().rstrip('\n').split(sep)
+                except:
+                    break
+                ref_pos = ref_positions.__next__()[0]
+                while ref_pos < int(row_query[pa]):
+                    data += na_value_bytes
+                    try:
+                        ref_pos = ref_positions.__next__()[0]
+                    except:
+                        break
+                if ref_pos == int(row_query[pa]):  # match
+                    values = [func(row_query[i]) for i, func in zip(usecols, dtfuncs)]
+                    data += struct.pack(f"<{writer.fmts}", *values)
+            writer.write_chunk(data, [chrom])
+        ref_reader.close()
+    else:
+        for chrom in all_chroms:
+            records = tbi.fetch(chrom)
+            data, i = b'', 0
+            while True:
+                try:
+                    values = records.__next__().rstrip('\n').split(sep)
+                except:
+                    break
+                if i >= chunksize:  # dims are the same, but reach chunksize
+                    writer.write_chunk(data, [chrom])
+                    data, i = b'', 0
+                values = [func(values[i]) for i, func in zip(usecols, dtfuncs)]
+                data += struct.pack(f"<{writer.fmts}", *values)
+                i += 1
+            if len(data) > 0:
+                writer.write_chunk(data, [chrom])
+    writer.close()
+    tbi.close()
+
+
+# ==========================================================
+def allc2mz_mp(allc_paths, outdir, reference=None, missing_value=[0, 0],
+               chunksize=2000, pr=0, pa=1, n_jobs=8, sep='\t',
+               Path_to_chrom=None, ext='.allc.tsv.gz'):
     """
     convert allc.tsv.gz to .mz file.
 
@@ -313,9 +470,6 @@ def allc2mz(allc_paths, outdir, reference=None, missing_value=[0, 0],
                                             dimensions, message, queue1))
     jobs = []
     for allc_path in allc_paths:
-        tbi = pysam.TabixFile(allc_path)
-        all_chroms = tbi.contigs
-        tbi.close()
         outfile = os.path.join(outdir, os.path.basename(allc_path).replace(ext, '.mz'))
         if os.path.exists(outfile):
             print(f"{outfile} existed, skip.")
@@ -323,6 +477,9 @@ def allc2mz(allc_paths, outdir, reference=None, missing_value=[0, 0],
         outdir1 = outfile + '.tmp'
         if not os.path.exists(outdir1):
             os.mkdir(outdir1)
+        tbi = pysam.TabixFile(allc_path)
+        all_chroms = tbi.contigs
+        tbi.close()
         # random.shuffle(chroms)
         chroms = [c for c in chroms if c in all_chroms]
         for chrom in chroms:
@@ -345,6 +502,8 @@ def allc2mz(allc_paths, outdir, reference=None, missing_value=[0, 0],
     pool.join()
     manager._process.terminate()
     manager.shutdown()
+
+
 # ==========================================================
 def _isCG(context):
     return context[:2] == b'CG'
