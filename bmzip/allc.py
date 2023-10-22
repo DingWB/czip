@@ -254,7 +254,7 @@ def mzs_merger(formats, columns, dimensions, message, q):
 # ==========================================================
 # @numba.njit(debug=True)
 def allc2mz(allc_path, outfile, reference=None, missing_value=[0, 0],
-            chunksize=2000, pr=0, pa=1, sep='\t',
+            pr=0, pa=1, sep='\t',
             Path_to_chrom=None):
     """
     convert allc.tsv.gz to .mz file.
@@ -283,7 +283,7 @@ def allc2mz(allc_path, outfile, reference=None, missing_value=[0, 0],
     allc_path = os.path.abspath(os.path.expanduser(allc_path))
     if not os.path.exists(allc_path + '.tbi'):
         raise ValueError(f"index file .tbi not existed, please create index first.")
-    print(allc_path)
+    # print(allc_path)
     tbi = pysam.TabixFile(allc_path)
     contigs = tbi.contigs
     if not Path_to_chrom is None:
@@ -310,7 +310,7 @@ def allc2mz(allc_path, outfile, reference=None, missing_value=[0, 0],
         ref_reader = Reader(reference)
         na_value_bytes = struct.pack(f"<{writer.fmts}", *missing_value)
         for chrom in all_chroms:
-            print(chrom)
+            # print(chrom)
             # method 1
             # ref_positions = ref_reader.__fetch__(tuple([chrom]), s=pr, e=pr + 1)
             # data = b''
@@ -348,11 +348,10 @@ def allc2mz(allc_path, outfile, reference=None, missing_value=[0, 0],
                         writer.write_chunk(data, [chrom])
                         data = b''
                         break
-
         ref_reader.close()
     else:
         for chrom in all_chroms:
-            print(chrom)
+            # print(chrom)
             # records = tbi.fetch(chrom)
             # data, i = b'', 0
             # while True:

@@ -61,6 +61,12 @@ bmzip Writer -O test_bed.mz -F Q,H,H -C pos,mc,cov -D chrom tomz -I FC_E17a_3C_1
 time bmzip allc2mz -r mm10_with_chrL.allc.mz -n 48 -P ~/Ref/mm10/mm10_ucsc_with_chrL.main.chrom.sizes.txt allc_path.txt test
 ```
 
+### Run allc2mz on GCP
+
+```shell
+snakemake -s /home/x-wding2/Projects/Github/bmzip/data/snakemake_template/run_allc2mz.smk --config allc_path="allc_path.txt" reference="mm10_with_chrL.allc.mz" -j 2 -np
+```
+
 ### test difference
 
 ```shell
