@@ -25,8 +25,8 @@ setup(
 	install_requires=['pandas','fire','numpy'],
 	include_package_data=True,
 	package_data={
-		'': ['*.txt', '*.tsv', '*.csv', '*.fa', '*Snakefile', '*ipynb','*yaml']
-	},
+        '': ['*.txt', '*.tsv', '*.csv', '*.fa', '*Snakefile', '*ipynb', '*yaml', '*.smk']
+    },
 	entry_points={
 		'console_scripts':
 			[

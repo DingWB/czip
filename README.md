@@ -61,10 +61,26 @@ bmzip Writer -O test_bed.mz -F Q,H,H -C pos,mc,cov -D chrom tomz -I FC_E17a_3C_1
 time bmzip allc2mz -r mm10_with_chrL.allc.mz -n 48 -P ~/Ref/mm10/mm10_ucsc_with_chrL.main.chrom.sizes.txt allc_path.txt test
 ```
 
-### Run allc2mz on GCP
+### Run allc2mz using snakemake
 
 ```shell
+# local
 snakemake -s /home/x-wding2/Projects/Github/bmzip/data/snakemake_template/run_allc2mz.smk --config allc_path="allc_path.txt" reference="mm10_with_chrL.allc.mz" -j 2 -np
+
+# gcp
+head new_allc_path.tsv #gs://mouse_pfc/allc/FC_P0a_3C_10-6-G10-D11.allc.tsv.gz
+#allc/FC_P0a_3C_10-6-G10-D11.allc.tsv.gz
+#allc/FC_P0a_3C_8-2-I2-P15.allc.tsv.gz
+#allc/FC_P28a_3C_2-2-E5-C4.allc.tsv.gz
+#allc/FC_E17a_3C_3-2-O5-E4.allc.tsv.gz
+#allc/FC_P13a_3C_4-6-C7-N23.allc.tsv.gz
+#allc/FC_E17b_3C_5-1-I24-H14.allc.tsv.gz
+#allc/FC_P28b_3C_3-4-K20-J20.allc.tsv.gz
+#allc/FC_P0b_3C_6-1-J3-P1.allc.tsv.gz
+#allc/FC_P0b_3C_4-6-E22-I12.allc.tsv.gz
+#allc/FC_P28a_3C_6-3-M9-K17.allc.tsv.gz
+
+snakemake -s /home/x-wding2/Projects/Github/bmzip/data/snakemake_template/run_allc2mz.smk --config allc_path="allc_path.txt" reference="mm10_with_chrL.allc.mz" gcp=True --default-remote-prefix mouse_pfc --default-remote-provider GS --google-lifesciences-region us-west1 --keep-remote -j 2 -np
 ```
 
 ### test difference
