@@ -1,3 +1,2 @@
-recursive-include data *.txt *.tsv *.csv *.fa *Snakefile *ipynb *.smk
-recursive-include data/snakemake_template *.smk
-exclude doc
+recursive-include data *
+exclude docs
