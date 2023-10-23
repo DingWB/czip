@@ -255,7 +255,7 @@ def mzs_merger(formats, columns, dimensions, message, q):
 # ==========================================================
 # @numba.njit(debug=True)
 def allc2mz(allc_path, outfile, reference=None, missing_value=[0, 0],
-            pr=0, pa=1, sep='\t', Path_to_chrom=None, chunksize=5000):
+            pr=0, pa=1, sep='\t', Path_to_chrom=None, chunksize=2000):
     """
     convert allc.tsv.gz to .mz file.
 
@@ -310,7 +310,7 @@ def allc2mz(allc_path, outfile, reference=None, missing_value=[0, 0],
         ref_reader = Reader(reference)
         na_value_bytes = struct.pack(f"<{writer.fmts}", *missing_value)
         for chrom in all_chroms:
-            print(chrom, end='\r')
+            # print(chrom,'\t'*4,end='\r')
             # method 1
             # ref_positions = ref_reader.__fetch__(tuple([chrom]), s=pr, e=pr + 1)
             # data, i = b'', 0

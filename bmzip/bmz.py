@@ -775,7 +775,7 @@ class Reader:
         if len(data) > 0:
             yield data
 
-    def fetchByDimID(self, dims, n=None):  # n is 1-based, n >=1
+    def fetchByStartID(self, dims, n=None):  # n is 1-based, n >=1
         if isinstance(dims, str):
             dims = tuple([dims])
         r = self._load_chunk(self.dim2chunk_start[dims], jump=False)
@@ -786,8 +786,9 @@ class Reader:
             block_start_offset = (first_record_vos >> 16)
             virtual_start_offset = (block_start_offset << 16) | within_block_offset
             self.seek(virtual_start_offset)  # load_block is inside sek
-        while self._within_block_offset + self._unit_size <= len(self._buffer):
-            yield self._read_1record()
+        while True:
+            # yield self._read_1record()
+            yield struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
 
     def _read_1record(self):
         tmp = self._buffer[
@@ -818,15 +819,16 @@ class Reader:
                 dim_tmp = dim
                 r = self._load_chunk(self.dim2chunk_start[dim], jump=False)
                 # find the closest block to a given start position
-                block_1st_starts = [
+                block_1st_starts = np.array([
                     self._seek_and_read_1record(offset)[s]
                     for offset in self._chunk_block_1st_record_virtual_offsets
-                ]
+                ])
             for idx in range(start_block_index_tmp, self._chunk_nblocks - 1):
                 if block_1st_starts[idx + 1] > start:
                     start_block_index = idx
                     break
                 start_block_index = self._chunk_nblocks - 1
+            # start_block_index=np.argmax(block_1st_starts > start)-1
             virtual_offset = self._chunk_block_1st_record_virtual_offsets[start_block_index]
             self.seek(virtual_offset)  # seek to the target block, self._buffer
             block_start_offset = self._block_start_offset
@@ -1017,7 +1019,7 @@ class Reader:
                 # query reference first
                 ref_records = ref_reader._query_regions(Regions, s, e)
                 flag, primary_id, dim = ref_records.__next__()  # 1st should contain primary_id
-                records = self.fetchByDimID(dim, n=primary_id)
+                records = self.fetchByStartID(dim, n=primary_id)
                 while True:
                     try:
                         ref_record = next(ref_records)
@@ -1035,14 +1037,14 @@ class Reader:
                             return
                     except ValueError:  # len(record) ==3: #"primary_id_&_dim:", primary_id, dim
                         flag, primary_id, dim = ref_record  # next block or next dim
-                        records = self.fetchByDimID(dim, n=primary_id)
+                        records = self.fetchByStartID(dim, n=primary_id)
                 sys.stdout.close()
                 self.close()
             else:
                 ref_records = ref_reader._query_regions(Regions, s, e)
                 ref_record = ref_records.__next__()  # 1st should contain primary_id
                 flag, primary_id, dim = ref_record
-                records = self.fetchByDimID(dim, n=primary_id)
+                records = self.fetchByStartID(dim, n=primary_id)
                 while True:
                     try:
                         ref_record = ref_records.__next__()
@@ -1055,7 +1057,7 @@ class Reader:
                         yield list(dims) + rows
                     except ValueError:  # len(record) ==3: #"primary_id_&_dim:", primary_id, dim
                         flag, primary_id, dim = ref_record  # next block or next dim
-                        records = self.fetchByDimID(dim, n=primary_id)
+                        records = self.fetchByStartID(dim, n=primary_id)
             ref_reader.close()
 
     def _seek_and_read_1record(self,virtual_offset):
