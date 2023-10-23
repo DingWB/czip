@@ -59,7 +59,7 @@ rule run_allc2mz:
         "yap"
 
     params:
-        reference='' if not reference is None else f"--reference {reference}",
+        reference='' if reference is None else f"--reference {reference}",
 
     shell:
         """
