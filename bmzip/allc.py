@@ -13,6 +13,7 @@ import pandas as pd
 import pysam
 import multiprocessing
 from Bio import SeqIO
+import numpy as np
 from collections import defaultdict
 import random
 # import pyximport
@@ -254,8 +255,7 @@ def mzs_merger(formats, columns, dimensions, message, q):
 # ==========================================================
 # @numba.njit(debug=True)
 def allc2mz(allc_path, outfile, reference=None, missing_value=[0, 0],
-            pr=0, pa=1, sep='\t',
-            Path_to_chrom=None):
+            pr=0, pa=1, sep='\t', Path_to_chrom=None, chunksize=5000):
     """
     convert allc.tsv.gz to .mz file.
 
@@ -313,41 +313,63 @@ def allc2mz(allc_path, outfile, reference=None, missing_value=[0, 0],
             print(chrom, end='\r')
             # method 1
             # ref_positions = ref_reader.__fetch__(tuple([chrom]), s=pr, e=pr + 1)
-            # data = b''
+            # data, i = b'', 0
             # for line in tbi.fetch(chrom):
             #     row_query = line.rstrip('\n').split(sep)
-            #     row_query_pos=int(row_query[pa])
-            #     ref_pos = next(ref_positions)[0]
-            #     while ref_pos < row_query_pos:
-            #         data += na_value_bytes
-            #         try:
-            #             ref_pos = next(ref_positions)[0]
-            #         except:
+            #     row_query_pos = int(row_query[pa])
+            #     for ref_pos in ref_positions:
+            #         if ref_pos[0] < row_query_pos:
+            #             data += na_value_bytes
+            #             i += 1
+            #             if i > chunksize:
+            #                 writer.write_chunk(data, [chrom])
+            #                 data, i = b'', 0
+            #         elif ref_pos[0] == row_query_pos:
+            #             data += struct.pack(f"<{writer.fmts}",
+            #                                 *[func(row_query[i]) for i, func in
+            #                                   zip(usecols, dtfuncs)
+            #                                   ])
+            #             i += 1
             #             break
-            #     if ref_pos == row_query_pos:  # match
-            #         values = [func(row_query[i]) for i, func in zip(usecols, dtfuncs)]
-            #         data += struct.pack(f"<{writer.fmts}", *values)
-            #
+            #         else:
+            #             break
+            #     if i > chunksize:
+            #         writer.write_chunk(data, [chrom])
+            #         data, i = b'', 0
+            # if len(data) > 0:
             #     writer.write_chunk(data, [chrom])
-            #     data = b''
 
             # methd 2
-            ref_positions = ref_reader.__fetch__(tuple([chrom]), s=pr, e=pr + 1)
-            data = b''
-            for line in tbi.fetch(chrom):
-                row_query = line.rstrip('\n').split(sep)
-                row_query_pos = int(row_query[pa])
-                for ref_pos in ref_positions:
-                    if ref_pos[0] < row_query_pos:
-                        data += na_value_bytes
-                    else:
-                        data += struct.pack(f"<{writer.fmts}",
-                                            *[func(row_query[i]) for i, func in
-                                              zip(usecols, dtfuncs)
-                                              ])
-                        writer.write_chunk(data, [chrom])
-                        data = b''
-                        break
+            # ref_positions = ref_reader.__fetch__(tuple([chrom]), s=pr, e=pr + 1)
+            ref_positions = np.array([pos[0] for pos in ref_reader.__fetch__(tuple([chrom]), s=pr, e=pr + 1)])
+            records = [line.rstrip('\n').split(sep) for line in tbi.fetch(chrom)]
+            query_positions = np.array([int(record[pa]) for record in records])
+            indices = np.where(np.in1d(ref_positions, query_positions))[0]
+            # indices is the indice where element of query_positions in ref_positions
+            indice_start = 0
+            # sum=0
+            for indice, record in zip(indices, records):
+                for i in range((indice - indice_start) // chunksize):
+                    writer.write_chunk(na_value_bytes * chunksize, [chrom])
+                    # sum+=chunksize
+                i = (indice - indice_start) % chunksize
+                data = b''
+                if i > 0:
+                    data += na_value_bytes * i
+                    # sum += i
+                data += struct.pack(f"<{writer.fmts}", *[func(record[i]) for i, func in
+                                                         zip(usecols, dtfuncs)])
+                writer.write_chunk(data, [chrom])
+                # sum += 1
+                indice_start = indice + 1
+            indice = len(ref_positions)
+            for i in range((indice - indice_start) // chunksize):
+                writer.write_chunk(na_value_bytes * chunksize, [chrom])
+                # sum += chunksize
+            i = (indice - indice_start) % chunksize
+            if i > 0:
+                writer.write_chunk(na_value_bytes * i, [chrom])
+                # sum += i
         ref_reader.close()
     else:
         for chrom in all_chroms:

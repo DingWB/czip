@@ -50,12 +50,10 @@ bmzip Writer  -O test.mz -F H,H -C mc,cov -D chrom -v 1 tomz -I /anvil/scratch/x
 ```shell
 # with reference
 time bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -r mm10_with_chrL.allc.mz
+time bmzip allc2mz FC_P13a_3C_4-4-C7-E19.allc.tsv.gz test_small_file.mz -r mm10_with_chrL.allc.mz
 
 # without reference
 bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -v 1
-
-# with coordinates
-bmzip Writer -O test_bed.mz -F Q,H,H -C pos,mc,cov -D chrom tomz -I FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 1,4,5 -d 0
 
 # allc2mz in parallel
 time bmzip allc2mz -r mm10_with_chrL.allc.mz -n 48 -P ~/Ref/mm10/mm10_ucsc_with_chrL.main.chrom.sizes.txt allc_path.txt test
@@ -72,8 +70,10 @@ head 1000_allc_path.tsv #gs://mouse_pfc/allc/FC_P0a_3C_10-6-G10-D11.allc.tsv.gz
 #FC_P0a_3C_10-6-G10-D11.allc.tsv.gz
 #FC_P0a_3C_8-2-I2-P15.allc.tsv.gz
 
-snakemake -s run_allc2mz.smk --config indir="allc" outdir="mz" allc_path="1000_allc_path.tsv" reference="mm10_with_chrL.allc.mz" ref_prefix="gs://wubin_ref/mm10/annotations" gcp=True --default-remote-prefix mouse_pfc --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j 96 -np
+snakemake -s run_allc2mz.smk --config indir="allc" outdir="mz" allc_path="1000_allc_path.tsv" reference="mm10_with_chrL.allc.mz" ref_prefix="gs://wubin_ref/mm10/annotations" Path_to_chrom="mm10_ucsc_with_chrL.main.chrom.sizes.txt" Path_to_chrom_prefix="gs://wubin_ref/mm10" gcp=True --default-remote-prefix mouse_pfc --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j 96 -np
 # --keep-remote
+
+snakemake -s run_allc2mz.smk --config indir="allc" outdir="mz" allc_path="1000_allc_path.tsv" reference="mm10_with_chrL.allc.mz" ref_prefix="gs://wubin_ref/mm10/annotations" gcp=True --default-remote-prefix mouse_pfc --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j 96 -np
 ```
 
 ### test difference
@@ -267,67 +267,21 @@ bmzip Reader -I test_no_ref.mz query -D chr12 -s 3109883 -e 3110041
 #chr12   3109883 224     255
 #chr12   3109884 590     690
 #chr12   3109885 20      815
-#chr12   3109891 2       939
-#chr12   3109893 2       959
-#chr12   3109899 9       404
-#chr12   3109901 8       420
-#chr12   3109903 8       430
-#chr12   3109908 15      1437
-#chr12   3109909 11      1453
-#chr12   3109911 410     471
-#chr12   3109912 1364    1548
-#chr12   3109914 10      1579
-#chr12   3109921 19      1610
-#chr12   3109922 4       1513
-#chr12   3109923 451     505
-#chr12   3109924 1413    1609
-#chr12   3109926 8       1631
-#chr12   3109927 9       1623
-#chr12   3109932 3       537
-#chr12   3109934 14      1626
-#chr12   3109940 9       1628
-#chr12   3109941 8       1585
-#chr12   3109943 19      1637
-#chr12   3109944 9       1649
-#chr12   3109953 13      1647
-#chr12   3109958 14      1654
-#chr12   3109960 2       527
-#chr12   3109961 7       530
-#chr12   3109963 3       531
-#chr12   3109965 21      1603
-#chr12   3109968 11      1645
-#chr12   3109969 14      1643
-#chr12   3109971 398     522
-#chr12   3109974 21      1638
-#chr12   3109975 14      1639
-#chr12   3109981 28      1635
-#chr12   3109982 18      1625
-#chr12   3109983 6       529
-#chr12   3109986 11      1635
 #chr12   3109991 2       517
 #chr12   3109993 11      1639
 #chr12   3109999 9       522
 #chr12   3110002 26      1624
 #chr12   3110003 15      1617
 #chr12   3110009 17      1599
-#chr12   3110011 8       1571
-#chr12   3110015 3       477
-#chr12   3110018 4       475
-#chr12   3110019 4       484
-#chr12   3110021 5       470
-#chr12   3110024 18      1427
-#chr12   3110026 401     457
-#chr12   3110027 1218    1356
-#chr12   3110029 3       443
-#chr12   3110032 13      1224
-#chr12   3110039 5       990
-#chr12   3110041 263     398
+
 #0.98    238200  90%, only took 0.98 s
 
 
 bmzip Reader -I test.mz query -D "{'chrom':'chr12'}" -s 3110029 -e 3110041 -r mm10_with_chrL.allc.mz
-
 tabix FC_E17a_3C_1-1-I3-F13.allc.tsv.gz chr12:3110029-3110041
+
+tabix FC_P13a_3C_4-4-C7-E19.allc.tsv.gz chr10:74629843-74629846
+bmzip Reader -I test_small_file.mz query -D "{'chrom':'chr10'}" -s 74629843 -e 74629846 -r mm10_with_chrL.allc.mz
 ```
 
 #### Query with reference
