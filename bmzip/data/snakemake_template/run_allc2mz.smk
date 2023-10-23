@@ -38,7 +38,7 @@ if 'reference' in config:
     reference = config['reference']
     if 'ref_prefix' in config:
         ref_prefix = config['ref_prefix']
-        os.system(f"gsutil -m cp {ref_prefix}/{reference} ./")
+        os.system(f"gsutil cp -n {ref_prefix}/{reference} ./")
 else:
     reference = None
 
@@ -63,6 +63,5 @@ rule run_allc2mz:
 
     shell:
         """
-        mkdir -p {wildcards.outdir}
         bmzip allc2mz {input.allc_file} {output} {params.reference}
         """

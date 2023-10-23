@@ -72,7 +72,7 @@ head 1000_allc_path.tsv #gs://mouse_pfc/allc/FC_P0a_3C_10-6-G10-D11.allc.tsv.gz
 #FC_P0a_3C_10-6-G10-D11.allc.tsv.gz
 #FC_P0a_3C_8-2-I2-P15.allc.tsv.gz
 
-snakemake -s run_allc2mz.smk --config indir="allc" outdir="mz" allc_path="1000_allc_path.tsv" reference="mm10_with_chrL.allc.mz" ref_prefix="gs://wubin_ref/mm10/annotations' gcp=True --default-remote-prefix mouse_pfc --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j 96 -np
+snakemake -s run_allc2mz.smk --config indir="allc" outdir="mz" allc_path="1000_allc_path.tsv" reference="mm10_with_chrL.allc.mz" ref_prefix="gs://wubin_ref/mm10/annotations" gcp=True --default-remote-prefix mouse_pfc --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j 96 -np
 # --keep-remote
 ```
 
