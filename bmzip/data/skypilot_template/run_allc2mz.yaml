@@ -1,0 +1,23 @@
+name: { name }
+workdir: { workdir }
+num_nodes: 1
+resources:
+  cloud: gcp
+  region: us-west1
+  instance_type: n1-highcpu-96
+  use_spot: True
+  disk_size: 250
+  disk_tier: 'medium'
+  image_id: projects/ecker-wding/global/images/myimage
+
+setup: |
+  mkdir -p ~/Ref && gsutil -m cp -r -n gs://wubin_ref/hg38 ~/Ref
+
+run: |
+  conda activate yap
+  pip install git+https://github.com/DingWB/cemba_data
+  snakemake -s run_allc2mz.smk --config indir="allc" outdir="mz" \
+  allc_path="1000_allc_path.tsv" reference="mm10_with_chrL.allc.mz" \
+  ref_prefix="gs://wubin_ref/mm10/annotations' gcp=True \
+  --default-remote-prefix mouse_pfc --default-remote-provider GS \
+  --google-lifesciences-region us-west1 --scheduler greedy -j 96

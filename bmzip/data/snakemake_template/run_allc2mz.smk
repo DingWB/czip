@@ -19,7 +19,7 @@ if 'outdir' in config:
     outdir = config["outdir"]  #
 else:
     outdir = 'mz'
-outdir = os.path.abspath(os.path.expanduser(outdir))
+
 if not os.path.exists(outdir):
     os.mkdir(outdir)
 if 'suffix' in config:
@@ -27,22 +27,31 @@ if 'suffix' in config:
 else:
     # suffix = ".allc.tsv.gz"
     suffix = '.' + '.'.join(os.path.basename(allc_files[0]).split('.')[1:])
-snames = [file.replace(suffix,'') for file in allc_files]
+
+if 'indir' in config:
+    indir = config["indir"]  #real path = indir + allc_file
+else:  #full path
+    indir = os.path.dirname(allc_files[0])
+
+snames = [os.path.basename(file.replace(suffix,'')) for file in allc_files]
 if 'reference' in config:
     reference = config['reference']
+    if 'ref_prefix' in config:
+        ref_prefix = config['ref_prefix']
+        os.system(f"gsutil -m cp {ref_prefix}/{reference} ./")
 else:
     reference = None
 
-print(allc_path,outdir,suffix,reference,allc_files)
+print(allc_path,indir,outdir,suffix,reference)
 
 rule target_all:
     input:  #[sname+'.mz' for sname in snames]
-        expand("{outdir}/{sample}.mz",sample=snames,outdir=outdir)
+        expand(outdir + "/{sample}.mz",sample=snames)
 
 rule run_allc2mz:
     input:
-        allc_file=lambda wildcards: wildcards.sname + suffix,
-        allc_file_idx=lambda wildcards: wildcards.sname + suffix + '.tbi'
+        allc_file=lambda wildcards: os.path.join(indir,wildcards.sname + suffix),
+        allc_file_idx=lambda wildcards: os.path.join(indir,wildcards.sname + suffix + '.tbi')
 
     output:
         "{outdir}/{sname}.mz"
@@ -54,5 +63,6 @@ rule run_allc2mz:
 
     shell:
         """
+        mkdir -p {wildcards.outdir}
         bmzip allc2mz {input.allc_file} {output} {params.reference}
         """
