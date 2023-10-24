@@ -79,6 +79,25 @@ else:
 snames = [sname for sname in snames if sname + '.mz' not in existed_outfiles]
 
 print(indir,outdir,suffix,reference)
+n = len(snames)
+print("No of allc files:",str(n))
+
+# for log
+if 'allc_path' in config:
+    write_allc_path = config['allc_path']
+else:
+    write_allc_path = ''
+
+data = f"""
+indir: {indir}
+outdir: {outdir}
+suffix: {suffix}
+reference: {reference}
+No. of allc files: {n}
+allc_path: {write_allc_path}
+"""
+with open("parameters.txt",'w') as f:
+    f.write(data)
 
 rule target_all:
     input:  #[sname+'.mz' for sname in snames]

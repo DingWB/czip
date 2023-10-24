@@ -19,7 +19,9 @@ run: |
   conda activate yap
   bmzip copy_smk -o allc2mz.smk
   gsutil ls gs://mouse_pfc/allc/*.gz > allc.path.tsv
-  split -n 10 -d allc.path.tsv allc.path.
+  split -n l/10 -d allc.path.tsv allc.path.
   echo "SkypilotNode: $SKYPILOT_NODE_RANK"
+  echo "SkypilotNode: $SKYPILOT_NODE_RANK" > node
+  echo 'snakemake --printshellcmds -s allc2mz.smk --config {indir} {outdir} {allc_path}".0$SKYPILOT_NODE_RANK" {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu}' > cmd
   snakemake --printshellcmds -s allc2mz.smk --config {indir} {outdir} {allc_path}".0$SKYPILOT_NODE_RANK" {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu}
   #--batch target_all=1/2 --immediate-submit --notemp
