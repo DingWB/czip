@@ -1,5 +1,5 @@
 name: allc2mz
-num_nodes: 1
+num_nodes: 10
 resources:
   cloud: gcp
   region: us-west1
@@ -19,8 +19,7 @@ run: |
   conda activate yap
   bmzip copy_smk -o allc2mz.smk
   gsutil ls gs://mouse_pfc/allc/*.gz > allc.path.tsv
-  split -l 2000 -d allc.path.tsv allc.path.
-  snakemake -s allc2mz.smk --config {indir} {outdir} {allc_path}".${SKYPILOT_NODE_RANK}" {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu} --batch target_all=1/4
-  snakemake -s allc2mz.smk --config {indir} {outdir} {allc_path}".${SKYPILOT_NODE_RANK}" {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu} --batch target_all=2/4
-  snakemake -s allc2mz.smk --config {indir} {outdir} {allc_path}".${SKYPILOT_NODE_RANK}" {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu} --batch target_all=3/4
-  snakemake -s allc2mz.smk --config {indir} {outdir} {allc_path}".${SKYPILOT_NODE_RANK}" {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu} --batch target_all=4/4
+  split -n 10 -d allc.path.tsv allc.path.
+  echo "SkypilotNode: $SKYPILOT_NODE_RANK"
+  snakemake --printshellcmds --immediate-submit -s allc2mz.smk --config {indir} {outdir} {allc_path}".0$SKYPILOT_NODE_RANK" {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu} --batch target_all=1/2
+  snakemake --printshellcmds --immediate-submit -s allc2mz.smk --config {indir} {outdir} {allc_path}".0$SKYPILOT_NODE_RANK" {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu} --batch target_all=2/2

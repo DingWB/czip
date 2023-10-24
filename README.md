@@ -49,8 +49,8 @@ bmzip Writer  -O test.mz -F H,H -C mc,cov -D chrom -v 1 tomz -I /anvil/scratch/x
 ### convert allc to .mz
 ```shell
 # with reference
-time bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -r mm10_with_chrL.allc.mz
-time bmzip allc2mz FC_P13a_3C_4-4-C7-E19.allc.tsv.gz test_small_file.mz -r mm10_with_chrL.allc.mz
+time bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz FC_E17a_3C_1-1-I3-F13.mz -r mm10_with_chrL.allc.mz
+time bmzip allc2mz FC_P13a_3C_4-4-C7-E19.allc.tsv.gz FC_P13a_3C_4-4-C7-E19.mz -r mm10_with_chrL.allc.mz
 
 # without reference
 bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -v 1
@@ -70,13 +70,14 @@ head 1000_allc_path.tsv #gs://mouse_pfc/allc/FC_P0a_3C_10-6-G10-D11.allc.tsv.gz
 #FC_P0a_3C_10-6-G10-D11.allc.tsv.gz
 #FC_P0a_3C_8-2-I2-P15.allc.tsv.gz
 
-snakemake -s run_allc2mz.smk --config indir="allc" outdir="mz" allc_path="1000_allc_path.tsv" reference="mm10_with_chrL.allc.mz" ref_prefix="gs://wubin_ref/mm10/annotations" Path_to_chrom="mm10_ucsc_with_chrL.main.chrom.sizes.txt" Path_to_chrom_prefix="gs://wubin_ref/mm10" gcp=True --default-remote-prefix mouse_pfc --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j 96 -np
+snakemake --printshellcmds --immediate-submit -s run_allc2mz.smk --config indir="allc" outdir="mz" allc_path="1000_allc_path.tsv" reference="mm10_with_chrL.allc.mz" ref_prefix="gs://wubin_ref/mm10/annotations" Path_to_chrom="mm10_ucsc_with_chrL.main.chrom.sizes.txt" Path_to_chrom_prefix="gs://wubin_ref/mm10" gcp=True --default-remote-prefix mouse_pfc --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j 96 -np
 # --keep-remote
 
-snakemake -s run_allc2mz.smk --config indir="allc" outdir="mz" allc_path="1000_allc_path.tsv" reference="mm10_with_chrL.allc.mz" ref_prefix="gs://wubin_ref/mm10/annotations" gcp=True --default-remote-prefix mouse_pfc --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j 96 -np
-
+bmzip copy_smk -o allc2mz.smk
+snakemake --printshellcmds --immediate-submit -s run_allc2mz.smk --config indir="test_allc" outdir="test_mz" reference="mm10_with_chrL.allc.mz" ref_prefix="gs://wubin_ref/mm10/annotations" chrom="mm10_ucsc_with_chrL.main.chrom.sizes.txt" chrom_prefix="gs://wubin_ref/mm10" gcp=True --default-remote-prefix mouse_pfc --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j 96 -np
 
 bmzip prepare_sky --indir gs://mouse_pfc/allc --outdir pfc_mz --allc_path allc.path --reference mm10_with_chrL.allc.mz --ref_prefix gs://wubin_ref/mm10/annotations --gcp True --bucket mouse_pfc --chrom mm10_ucsc_with_chrL.main.chrom.sizes.txt --chrom_prefix gs://wubin_ref/mm10 --cpu 96 > 1.yaml
+sky spot launch -n allc2mz 1.yaml
 ```
 
 ### test difference

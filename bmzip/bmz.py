@@ -33,7 +33,6 @@ dtype_func = {
 
 
 # ==========================================================
-# @numba.jit
 def get_dtfuncs(formats,tobytes=True):
     D=dtype_func
     if not tobytes:
@@ -697,41 +696,50 @@ class Reader:
                 data = b''
         writer.close()
 
-    def subsetids(self, dim=None, bmi=None, reference=None, IDs=None):
-        if IDs is None and bmi is None:
-            raise ValueError("Must provide either IDs or bmi!")
-        if not bmi is None:
-            bmi_path = os.path.abspath(os.path.expanduser(bmi))
-            bmi_reader = Reader(bmi_path)
+    def fetch_bmi(self, dim):
+        if len(self.header['Columns']) == 1:
+            s, e = 0, 1  # only one columns, ID
+            return np.array([record[0] for record in self.__fetch__(dim, s=s, e=e)])
+        else:
+            s, e = 0, 2  # two columns: ID_start, ID_end
+            return np.array([record for record in self.__fetch__(dim, s=s, e=e)])
 
-        for dim in self.dim2chunk_start:
-            self._load_chunk(self.dim2chunk_start[dim], jump=False)
-            if IDs is None and not bmi is None:
-                IDs = np.array([pos[0] for pos in bmi_reader.__fetch__(dim, s=0, e=1)])
-            if len(IDs) == 0:
-                continue
-            block_index = ((IDs - 1) * self._unit_size) // (_BLOCK_MAX_LEN)
-            block_start_offsets = [self._chunk_block_1st_record_virtual_offsets[
-                                       idx] >> 16 for idx in block_index]
-            within_block_offsets = ((IDs - 1) * self._unit_size) % (_BLOCK_MAX_LEN)
-            D = defaultdict(list)  # key is block_offset,value is a list of within_block_offset
-            for block_offset, within_block_offset, ID in zip(block_start_offsets,
-                                                             within_block_offsets):
-                D[block_offset].append(within_block_offset)
-            if not reference is None:
-                ref_records = ref_reader.fetch(d)
-            else:
-                ref_records = self.__empty_generator()
-            data = []  # store all records from this chunk
-            for start_offset in sorted(list(D.keys())):
-                self._load_block(start_offset)
-                for within_block_offset in D[start_offset]:
-                    tmp = self._buffer[
-                          within_block_offset:within_block_offset + self._unit_size]
-                    data.append(
-                        self._byte2real(struct.unpack(f"<{self.fmts}", tmp))
-                    )
-            yield data
+    def subsetids(self, dim=None, reference=None, IDs=None):
+        """
+
+        Parameters
+        ----------
+        dim : tuple
+        reference : path
+        IDs : np.array
+
+        Returns
+        -------
+
+        """
+        self._load_chunk(self.dim2chunk_start[dim], jump=False)
+        block_index = ((IDs - 1) * self._unit_size) // (_BLOCK_MAX_LEN)
+        block_start_offsets = [self._chunk_block_1st_record_virtual_offsets[
+                                   idx] >> 16 for idx in block_index]
+        within_block_offsets = ((IDs - 1) * self._unit_size) % (_BLOCK_MAX_LEN)
+        D = defaultdict(list)  # key is block_offset,value is a list of within_block_offset
+        for block_offset, within_block_offset, ID in zip(block_start_offsets,
+                                                         within_block_offsets):
+            D[block_offset].append(within_block_offset)
+        if not reference is None:
+            ref_records = ref_reader.fetch(d)
+        else:
+            ref_records = self.__empty_generator()
+        data = []  # store all records from this chunk
+        for start_offset in sorted(list(D.keys())):
+            self._load_block(start_offset)
+            for within_block_offset in D[start_offset]:
+                tmp = self._buffer[
+                      within_block_offset:within_block_offset + self._unit_size]
+                data.append(
+                    self._byte2real(struct.unpack(f"<{self.fmts}", tmp))
+                )
+        yield data
 
     def __fetch__(self, dims, s=None, e=None):
         """

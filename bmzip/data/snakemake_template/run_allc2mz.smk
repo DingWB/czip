@@ -23,6 +23,7 @@ if 'gcp' in config and config["gcp"]:
         allc_files = [file.name for file in files if file.name.endswith('.gz')]
     else:
         allc_path = config["allc_path"]
+        print(f"allc_path: {allc_path}")
         allc_files = pd.read_csv(os.path.expanduser(allc_path),sep='\t',
             header=None).iloc[:, 0].tolist()
 
@@ -41,6 +42,7 @@ else:  #run on local
         allc_files = [file for file in os.listdir(indir) if file.endswith('.gz')]
     else:
         allc_path = config["allc_path"]
+        print(f"allc_path: {allc_path}")
         allc_files = pd.read_csv(os.path.expanduser(allc_path),sep='\t',
             header=None).iloc[:, 0].tolist()
         indir = os.path.dirname(allc_files[0])
@@ -89,8 +91,6 @@ rule run_allc2mz:
 
     output:
         "{outdir}/{sname}.mz"
-    conda:
-        "yap"
 
     params:
         reference='' if reference is None else f"--reference {reference}",
