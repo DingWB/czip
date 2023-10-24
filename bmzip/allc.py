@@ -16,8 +16,6 @@ from Bio import SeqIO
 import numpy as np
 from collections import defaultdict
 import random
-# import pyximport
-# pyximport.install(pyimport=True) #pyximport.install(pyimport=True)
 from .utils import WriteC
 from .bmz import Reader, Writer, get_dtfuncs
 import numba
@@ -523,7 +521,48 @@ def generate_context_ssi(Input, output=None, pattern='CGN'):
                         chunksize=2000)
     reader.close()
 
+def prepare_sky(smk=None, sky=None, indir=None, outdir=None, allc_path=None,
+                reference=None, ref_prefix=None, chrom=None, chrom_prefix=None,
+                gcp=False, bucket=None, cpu=24, name=None, out_yaml='job.yaml'):
+    if smk is None:
+        smk = os.path.join(os.path.dirname(__file__),
+                           "data/snakemake_template/run_allc2mz.smk")
+    if sky is None:
+        sky = os.path.join(os.path.dirname(__file__),
+                           "data/skypilot_template/run_allc2mz.yaml")
+    if name is None:
+        name = 'allc2mz'
+    workdir = os.path.basename("./")
+    D = {
+        'indir': indir, 'outdir': outdir, 'allc_path': allc_path,
+        'reference': reference, 'ref_prefix': ref_prefix, 'chrom': chrom,
+        'chrom_prefix': chrom_prefix, 'gcp': gcp, 'bucket': bucket,
+        'cpu': cpu
+    }
+    for k in D:
+        if D[k] is None:
+            D[k] = ''
+        else:
+            if k not in ['bucket', 'cpu']:
+                value = D[k]
+                D[k] = f"{k}={value}"
+    # D['smk']=smk
+    D['name'] = name
+    D['workdir'] = workdir
+    with open(sky, 'r') as f:
+        template = f.read()
+    # with open(out_yaml,'w') as f:
+    #     f.write(template.format(**D))
+    print(template.format(**D))
+    print("## sky spot launch -y -n job job.yaml")
 
+
+def copy_smk(outname=None):
+    if outname is None:
+        outname = os.path.abspath("job.yaml")
+    smk = os.path.join(os.path.dirname(__file__),
+                       "data/snakemake_template/run_allc2mz.smk")
+    os.system(f"cp {smk} {outname}")
 # ==========================================================
 if __name__ == "__main__":
     import fire

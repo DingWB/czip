@@ -1602,14 +1602,15 @@ class Writer:
             # data_size = reader.header['total_size'] - reader.header['header_size']
             chunks = reader.get_chunks()
             (start_offset, chunk_size, dims, data_len,
-             end_offset, nblocks, b1str_virtual_offsets) = chunks.__next__()
+             end_offset, nblocks, b1str_virtual_offsets) = next(chunks)
             # check whether new dim has already been added to header
             if not self.new_dim_creator is None:
-                new_dim=self.new_dim_creator(os.path.basename(file_path))
-                dims=dims+tuple([new_dim])
-            if len(dims) > len(self.Dimensions):
+                new_dim = self.new_dim_creator(os.path.basename(file_path))
+            else:
+                new_dim = []
+            if len(dims + tuple([new_dim])) > len(self.Dimensions):
                 # new_dim title should be also added to header Dimensions
-                self.Dimensions=self.Dimensions+[title]
+                self.Dimensions = self.Dimensions + [title]
                 self._handle.seek(self._n_dim_offset)
                 # when a new dim is added, go back here and rewrite the n_dim (1byte)
                 self._handle.write(struct.pack("<B", len(self.Dimensions)))  # 1byte
@@ -1638,10 +1639,11 @@ class Writer:
                 for block_offset in new_block_1st_record_vof:
                     self._handle.write(struct.pack("<Q", block_offset))
                 # rewrite the new dim onto the tail of chunk
-                for dim in dims:
+                for dim in dims + tuple([new_dim]):
                     dim_len = len(dim)
                     self._handle.write(struct.pack("<B", dim_len))  # length of each dim, 1 byte
                     self._handle.write(struct.pack(f"<{dim_len}s", bytes(dim, 'utf-8')))
+                    # print(dim_len,dim)
                 # read next chunk
                 try:
                     (start_offset, chunk_size, dims, data_len,

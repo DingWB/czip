@@ -74,6 +74,9 @@ snakemake -s run_allc2mz.smk --config indir="allc" outdir="mz" allc_path="1000_a
 # --keep-remote
 
 snakemake -s run_allc2mz.smk --config indir="allc" outdir="mz" allc_path="1000_allc_path.tsv" reference="mm10_with_chrL.allc.mz" ref_prefix="gs://wubin_ref/mm10/annotations" gcp=True --default-remote-prefix mouse_pfc --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j 96 -np
+
+
+bmzip prepare_sky --indir gs://mouse_pfc/test_allc --outdir test_mz  --reference mm10_with_chrL.allc.mz --ref_prefix gs://wubin_ref/mm10/annotations --gcp True --bucket mouse_pfc --cpu 90
 ```
 
 ### test difference
@@ -296,4 +299,13 @@ bmzip Reader -I mm10_with_chrL.allc.mz query -D chr12 -s 3109911 -e 3109913  |he
 
 ```shell
 bmzip generate_context_ssi -I mm10_with_chrL.allc.mz -p CGN
+```
+
+### Aggregration
+
+#### catmz
+
+```shell
+bmzip1 Writer -O two_samples.mz -F H,H -C mc,cov -D chrom,filename catmz -I "raw/*.mz" -a
+bmzip1 Reader -I two_samples.mz summary_chunks
 ```
