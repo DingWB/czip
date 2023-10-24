@@ -66,17 +66,17 @@ if 'reference' in config:
 else:
     reference = None
 
-if 'Path_to_chrom' in config:
-    Path_to_chrom = config['Path_to_chrom']
-    if 'Path_to_chrom_prefix' in config:
-        Path_to_chrom_prefix = config['Path_to_chrom_prefix']
-        os.system(f"gsutil cp -n {Path_to_chrom_prefix}/{Path_to_chrom} ./")
+if 'chrom' in config:
+    chrom = config['chrom']
+    if 'chrom_prefix' in config:
+        chrom_prefix = config['chrom_prefix']
+        os.system(f"gsutil cp -n {chrom_prefix}/{chrom} ./")
 else:
-    Path_to_chrom = None
+    chrom = None
 
 snames = [sname for sname in snames if sname + '.mz' not in existed_outfiles]
 
-print(allc_path,outdir,suffix,reference)
+print(indir,outdir,suffix,reference)
 
 rule target_all:
     input:  #[sname+'.mz' for sname in snames]
@@ -94,9 +94,9 @@ rule run_allc2mz:
 
     params:
         reference='' if reference is None else f"--reference {reference}",
-        Path_to_chrom='' if Path_to_chrom is None else f"-P {Path_to_chrom}"
+        chrom='' if chrom is None else f"-P {chrom}"
 
     shell:
         """
-        bmzip allc2mz {input.allc_file} {output} {params.reference} {params.Path_to_chrom}
+        bmzip allc2mz {input.allc_file} {output} {params.reference} {params.chrom}
         """

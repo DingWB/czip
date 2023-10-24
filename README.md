@@ -76,7 +76,7 @@ snakemake -s run_allc2mz.smk --config indir="allc" outdir="mz" allc_path="1000_a
 snakemake -s run_allc2mz.smk --config indir="allc" outdir="mz" allc_path="1000_allc_path.tsv" reference="mm10_with_chrL.allc.mz" ref_prefix="gs://wubin_ref/mm10/annotations" gcp=True --default-remote-prefix mouse_pfc --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j 96 -np
 
 
-bmzip prepare_sky --indir gs://mouse_pfc/test_allc --outdir test_mz  --reference mm10_with_chrL.allc.mz --ref_prefix gs://wubin_ref/mm10/annotations --gcp True --bucket mouse_pfc --cpu 90
+bmzip prepare_sky --indir gs://mouse_pfc/allc --outdir pfc_mz --allc_path allc.path --reference mm10_with_chrL.allc.mz --ref_prefix gs://wubin_ref/mm10/annotations --gcp True --bucket mouse_pfc --chrom mm10_ucsc_with_chrL.main.chrom.sizes.txt --chrom_prefix gs://wubin_ref/mm10 --cpu 96 > 1.yaml
 ```
 
 ### test difference
@@ -236,7 +236,7 @@ bmzip Reader -I test_bed.mz view -s 0 -h False -d chr1 |head
 
 ### Query
 ```shell
-bmzip Reader -I test_no_ref.mz query -D chr8 -s 129300305 -e 129300362
+bmzip Reader -I test.mz query -D chr8 -s 129300305 -e 129300362
 #chrom   pos     mc      cov
 #chr8    129300305       0       1
 #chr8    129300317       0       1
@@ -282,6 +282,9 @@ bmzip Reader -I test_no_ref.mz query -D chr12 -s 3109883 -e 3110041
 
 bmzip Reader -I test.mz query -D "{'chrom':'chr12'}" -s 3110029 -e 3110041 -r mm10_with_chrL.allc.mz
 tabix FC_E17a_3C_1-1-I3-F13.allc.tsv.gz chr12:3110029-3110041
+
+bmzip Reader -I test.mz query -D chr11 -s 3104261 -e 3104273 -r mm10_with_chrL.allc.mz
+tabix FC_E17a_3C_1-1-I3-F13.allc.tsv.gz chr11:3104261-3104273
 
 tabix FC_P13a_3C_4-4-C7-E19.allc.tsv.gz chr10:74629843-74629846
 bmzip Reader -I test_small_file.mz query -D "{'chrom':'chr10'}" -s 74629843 -e 74629846 -r mm10_with_chrL.allc.mz

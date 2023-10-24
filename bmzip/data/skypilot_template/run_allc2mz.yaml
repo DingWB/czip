@@ -1,5 +1,4 @@
-name: { name }
-workdir: { workdir }
+name: allc2mz
 num_nodes: 1
 resources:
   cloud: gcp
@@ -18,5 +17,10 @@ setup: |
 
 run: |
   conda activate yap
-  bmzip copy_smk -o job.yaml
-  snakemake -s job.yaml --config {indir} {outdir} {allc_path} {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu} -np
+  bmzip copy_smk -o allc2mz.smk
+  gsutil ls gs://mouse_pfc/allc/*.gz > allc.path.tsv
+  split -l 2000 -d allc.path.tsv allc.path.
+  snakemake -s allc2mz.smk --config {indir} {outdir} {allc_path}".${SKYPILOT_NODE_RANK}" {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu} --batch target_all=1/4
+  snakemake -s allc2mz.smk --config {indir} {outdir} {allc_path}".${SKYPILOT_NODE_RANK}" {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu} --batch target_all=2/4
+  snakemake -s allc2mz.smk --config {indir} {outdir} {allc_path}".${SKYPILOT_NODE_RANK}" {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu} --batch target_all=3/4
+  snakemake -s allc2mz.smk --config {indir} {outdir} {allc_path}".${SKYPILOT_NODE_RANK}" {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu} --batch target_all=4/4
