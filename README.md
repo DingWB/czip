@@ -74,7 +74,7 @@ snakemake --printshellcmds --immediate-submit -s run_allc2mz.smk --config indir=
 # --keep-remote
 
 bmzip copy_smk -o allc2mz.smk
-snakemake --printshellcmds --immediate-submit -s run_allc2mz.smk --config indir="test_allc" outdir="test_mz" reference="mm10_with_chrL.allc.mz" ref_prefix="gs://wubin_ref/mm10/annotations" chrom="mm10_ucsc_with_chrL.main.chrom.sizes.txt" chrom_prefix="gs://wubin_ref/mm10" gcp=True --default-remote-prefix mouse_pfc --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j 96 -np
+snakemake --printshellcmds --immediate-submit --notemp -s allc2mz.smk --config indir="gs://mouse_pfc/test_allc" outdir="test_mz" reference="mm10_with_chrL.allc.mz" ref_prefix="gs://wubin_ref/mm10/annotations" chrom="mm10_ucsc_with_chrL.main.chrom.sizes.txt" chrom_prefix="gs://wubin_ref/mm10" gcp=True --default-remote-prefix mouse_pfc --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j 96 -np
 
 bmzip prepare_sky --indir gs://mouse_pfc/allc --outdir pfc_mz --allc_path allc.path --reference mm10_with_chrL.allc.mz --ref_prefix gs://wubin_ref/mm10/annotations --gcp True --bucket mouse_pfc --chrom mm10_ucsc_with_chrL.main.chrom.sizes.txt --chrom_prefix gs://wubin_ref/mm10 --cpu 96 > 1.yaml
 sky spot launch -n allc2mz 1.yaml
