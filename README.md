@@ -300,10 +300,21 @@ bmzip Reader -I test.mz query -D chr12 -s 3109911 -e 3109913 -r mm10_with_chrL.a
 bmzip Reader -I mm10_with_chrL.allc.mz query -D chr12 -s 3109911 -e 3109913  |head
 ```
 
-### SubSet Index (.ssi)
+### SubSet
+
+#### Create subset index (.ssi)
 
 ```shell
 bmzip generate_context_ssi -I mm10_with_chrL.allc.mz -p CGN
+```
+
+#### view subset
+
+```shell
+bmzip Reader -I FC_E17a_3C_1-1-I3-F13.mz subset -d chr1 -b mm10_with_chrL.allc.mz.CGN.bmi -r mm10_with_chrL.allc.mz |head
+
+zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |awk '$4 ~ "^CG" && $5 > 3' |head
+
 ```
 
 ### Aggregration

@@ -696,15 +696,15 @@ class Reader:
                 data = b''
         writer.close()
 
-    def fetch_bmi(self, dim):
+    def get_ids_from_bmi(self, dim):
         if len(self.header['Columns']) == 1:
             s, e = 0, 1  # only one columns, ID
             return np.array([record[0] for record in self.__fetch__(dim, s=s, e=e)])
-        else:
-            s, e = 0, 2  # two columns: ID_start, ID_end
+        else:  # two columns: ID_start, ID_end
+            s, e = 0, 2
             return np.array([record for record in self.__fetch__(dim, s=s, e=e)])
 
-    def fetch_ids(self, dim=None, reference=None, IDs=None):
+    def getRecordsByIds(self, dim=None, reference=None, IDs=None):
         """
 
         Parameters
@@ -722,29 +722,112 @@ class Reader:
         block_start_offsets = np.array([self._chunk_block_1st_record_virtual_offsets[
                                             idx] >> 16 for idx in block_index])
         within_block_offsets = ((IDs - 1) * self._unit_size) % (_BLOCK_MAX_LEN)
-        D = defaultdict(list)  # key is block_offset,value is a list of within_block_offset
-        for block_offset, within_block_offset in zip(block_start_offsets,
-                                                     within_block_offsets):
-            D[block_offset].append(within_block_offset)
-        data = []  # store all records from this chunk
-        for start_offset in sorted(list(D.keys())):
-            self._load_block(start_offset)
-            buffer = self._buffer
-            self._load_block()
-            # combine two block together in case of record spaning two block
-            buffer += self._buffer
-            for within_block_offset in D[start_offset]:
-                tmp = buffer[
-                      within_block_offset:within_block_offset + self._unit_size]
-                data.append(
-                    self._byte2real(struct.unpack(f"<{self.fmts}", tmp))
-                )
         if reference is None:
-            return np.array(data)
+            block_start_offset_tmp = None
+            for block_start_offset, within_block_offset in zip(
+                block_start_offsets, within_block_offsets):
+                if block_start_offset != block_start_offset_tmp:
+                    self._load_block(block_start_offset)
+                    block_start_offset_tmp = block_start_offset
+                self._within_block_offset = within_block_offset
+                yield self._byte2real(struct.unpack(
+                    f"<{self.fmts}", self.read(self._unit_size)
+                ))
+
         else:
             ref_reader = Reader(os.path.abspath(os.path.expanduser(reference)))
-            ref_records = ref_reader.fetch_ids(dim=dim, reference=None, IDs=IDs)
-            return np.hstack((ref_records, data))
+            ref_records = ref_reader.getRecordsByIds(dim=dim, reference=None, IDs=IDs)
+            records = self.getRecordsByIds(dim=dim, reference=None, IDs=IDs)
+            for ref_record, record in zip(ref_records, records):
+                yield ref_record + record
+            ref_reader.close()
+
+    def getRecordsByIdRegions(self, dim=None, reference=None, IDs=None):
+        """
+        Get .mz content for a given dim and IDs
+        Parameters
+        ----------
+        dim : tuple
+        reference : path
+        IDs : list or np.ndarray
+            every element of IDs is a list or tuple with length=2, id_start and id_end
+
+        Returns
+        -------
+        generator
+        """
+        self._load_chunk(self.dim2chunk_start[dim], jump=False)
+        if reference is None:
+            block_start_offsets_tmp = None
+            for id_start, id_end in IDs:
+                block_index = ((id_start - 1) * self._unit_size) // (_BLOCK_MAX_LEN)
+                block_start_offset = self._chunk_block_1st_record_virtual_offsets[
+                                         block_index] >> 16
+                if block_start_offset != block_start_offsets_tmp:
+                    self._load_block(block_start_offset)
+                    block_start_offsets_tmp = block_start_offset
+                self._within_block_offset = ((id_start - 1) * self._unit_size
+                                             ) % _BLOCK_MAX_LEN
+                for i in range(id_start, id_end + 1):
+                    yield self._byte2real(struct.unpack(
+                        f"<{self.fmts}", self.read(self._unit_size)
+                    ))
+        else:
+            ref_reader = Reader(os.path.abspath(os.path.expanduser(reference)))
+            ref_records = ref_reader.getRecordsByIdRegions(self, dim=dim,
+                                                           reference=None, IDs=IDs)
+            records = self.getRecordsByIdRegions(self, dim=dim, reference=None,
+                                                 IDs=IDs)
+            for ref_record, record in zip(ref_records, records):
+                yield ref_record + record
+            ref_reader.close()
+
+        if reference is None:
+            block_start_offset_tmp = None
+            for block_start_offset, within_block_offset in zip(
+                block_start_offsets, within_block_offsets):
+                if block_start_offset != block_start_offset_tmp:
+                    self._load_block(block_start_offset)
+                    block_start_offset_tmp = block_start_offset
+                self._within_block_offset = within_block_offset
+                yield self._byte2real(struct.unpack(
+                    f"<{self.fmts}", self.read(self._unit_size)
+                ))
+        else:
+            ref_reader = Reader(os.path.abspath(os.path.expanduser(reference)))
+            ref_records = ref_reader.getRecordsByIds(dim=dim, reference=None, IDs=IDs)
+            records = self.getRecordsByIds(dim=dim, reference=None, IDs=IDs)
+            for ref_record, record in zip(ref_records, records):
+                yield ref_record + record
+            ref_reader.close()
+
+    def subset(self, dim, bmi, reference=None, printout=True):
+        if isinstance(dim, str):
+            dim = tuple([dim])
+        bmi_reader = Reader(bmi)
+        IDs = bmi_reader.get_ids_from_bmi(dim)
+        if not reference is None:
+            ref_reader = Reader(os.path.abspath(os.path.expanduser(reference)))
+            ref_header = ref_reader.header['Columns']
+            ref_reader.close()
+        else:
+            ref_header = []
+        header = self.header['Dimensions'] + ref_header + self.header['Columns']
+        ncol = 1 if len(IDs.shape) == 1 else 2
+        func = self.getRecordsByIds if ncol == 1 else self.getRecordsByIdRegions
+        if printout:
+            sys.stdout.write('\t'.join(header) + '\n')
+            try:
+                for record in func(dim, reference, IDs):
+                    sys.stdout.write('\t'.join(list(dim) + list(map(str, record))) + '\n')
+                    # print(list(dim)+list(map(str,record)))
+            except:
+                sys.stdout.close()
+                self.close()
+                return
+            sys.stdout.close()
+        else:
+            yield from func(dim, reference, IDs)
 
     def __fetch__(self, dims, s=None, e=None):
         """
