@@ -274,7 +274,8 @@ def prepare_sky(smk=None, sky=None, indir=None, outdir=None, allc_path=None,
     # with open(out_yaml,'w') as f:
     #     f.write(template.format(**D))
     print(template.format(**D))
-    print("## sky spot launch -y -n job job.yaml")
+    print("# sky launch -c test 1.yaml")
+    print("# sky spot launch -y -n job job.yaml")
 
 def copy_smk(outname=None):
     if outname is None:
