@@ -645,6 +645,8 @@ class Reader:
             sys.stdout.write(dim_header + line + '\n')
 
         for d in Dimension:  # Dimension is a list of tuple ([(d1,d2),(d1,d2)])
+            if d not in self.dim2chunk_start:
+                continue
             if not show_dim is None:
                 dim_stdout = "\t".join([d[t] for t in show_dim]) + '\t'
             else:
@@ -865,6 +867,7 @@ class Reader:
             end_index = len(self._cached_data) - (len(self._cached_data) % self._unit_size)
             for result in struct.iter_unpack(f"<{self.fmts}", self._cached_data[:end_index]):
                 yield result[s:e]  # a tuple
+                # print(result)
             self._cached_data = self._cached_data[end_index:]
             self._load_block()
 
@@ -1714,10 +1717,10 @@ class Writer:
              end_offset, nblocks, b1str_virtual_offsets) = next(chunks)
             # check whether new dim has already been added to header
             if not self.new_dim_creator is None:
-                new_dim = self.new_dim_creator(os.path.basename(file_path))
+                new_dim = [self.new_dim_creator(os.path.basename(file_path))]
             else:
                 new_dim = []
-            if len(dims + tuple([new_dim])) > len(self.Dimensions):
+            if len(dims + tuple(new_dim)) > len(self.Dimensions):
                 # new_dim title should be also added to header Dimensions
                 self.Dimensions = self.Dimensions + [title]
                 self._handle.seek(self._n_dim_offset)
@@ -1748,7 +1751,7 @@ class Writer:
                 for block_offset in new_block_1st_record_vof:
                     self._handle.write(struct.pack("<Q", block_offset))
                 # rewrite the new dim onto the tail of chunk
-                for dim in dims + tuple([new_dim]):
+                for dim in dims + tuple(new_dim):
                     dim_len = len(dim)
                     self._handle.write(struct.pack("<B", dim_len))  # length of each dim, 1 byte
                     self._handle.write(struct.pack(f"<{dim_len}s", bytes(dim, 'utf-8')))

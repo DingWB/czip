@@ -22,7 +22,7 @@ import numba
 # ==========================================================
 class AllC:
     def __init__(self, Genome=None, Output="hg38_allc.mz",
-                 pattern="C", n_jobs=12):
+                 pattern="C", n_jobs=12, keep_temp=False):
         """
         Extract position of specific pattern in the reference genome, for example C.
             Example: python ~/Scripts/python/tbmate.py AllC -g ~/genome/hg38/hg38.fa --n_jobs 10 run
@@ -46,6 +46,7 @@ class AllC:
         self.pattern=pattern
         self.records = SeqIO.parse(self.genome, "fasta")
         self.n_jobs = n_jobs if not n_jobs is None else os.cpu_count()
+        self.keep_temp = keep_temp
         if pattern=='C':
             self.func=WriteC
 
@@ -69,7 +70,8 @@ class AllC:
     def run(self):
         self.writePattern()
         self.merge()
-        os.system(f"rm -rf {self.outdir}")
+        if not self.keep_temp:
+            os.system(f"rm -rf {self.outdir}")
 
 def allc2mz(allc_path, outfile, reference=None, missing_value=[0, 0],
             pr=0, pa=1, sep='\t', Path_to_chrom=None, chunksize=2000):
@@ -130,26 +132,33 @@ def allc2mz(allc_path, outfile, reference=None, missing_value=[0, 0],
             # print(chrom,'\t'*4,end='\r')
             # method 1
             ref_positions = ref_reader.__fetch__(tuple([chrom]), s=pr, e=pr + 1)
+            records = tbi.fetch(chrom)
             data, i = b'', 0
-            for line in tbi.fetch(chrom):
-                row_query = line.rstrip('\n').split(sep)
-                row_query_pos = int(row_query[pa])
-                for ref_pos in ref_positions:
-                    if ref_pos[0] < row_query_pos:
-                        data += na_value_bytes
-                        i += 1
-                        if i > chunksize:
-                            writer.write_chunk(data, [chrom])
-                            data, i = b'', 0
-                    elif ref_pos[0] == row_query_pos:
+            row_query = next(records).rstrip('\n').split(sep)
+            row_query_pos = int(row_query[pa])
+            for ref_pos in ref_positions:
+                if ref_pos[0] < row_query_pos:
+                    data += na_value_bytes
+                    i += 1
+                else:
+                    if ref_pos[0] == row_query_pos:  # match
                         data += struct.pack(f"<{writer.fmts}",
                                             *[func(row_query[i]) for i, func in
                                               zip(usecols, dtfuncs)
                                               ])
                         i += 1
+                    try:
+                        row_query = next(records).rstrip('\n').split(sep)
+                        row_query_pos = int(row_query[pa])
+                    except:
                         break
-                    else:
-                        break
+                if i > chunksize:
+                    writer.write_chunk(data, [chrom])
+                    data, i = b'', 0
+            # when break: write all the rest reference positions (na_value_bytes)
+            for ref_pos in ref_positions:
+                data += na_value_bytes
+                i += 1
                 if i > chunksize:
                     writer.write_chunk(data, [chrom])
                     data, i = b'', 0

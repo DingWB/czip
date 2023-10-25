@@ -16,7 +16,7 @@ conda install -c "intel/label/test" libfabric ?
 
 ### generate ALLC coordinates (.mz file was created by ALLC class)
 ```shell
-bmzip AllC -G ~/Ref/mm10/mm10_ucsc_with_chrL.fa -O mm10_with_chrL.allc.mz -j 20 run
+bmzip AllC -G ~/Ref/mm10/mm10_ucsc_with_chrL.fa -O mm10_with_chrL.allc.mz -n 20 -k True run
 # took 15 minutes using 20 cpus
 ```
 
@@ -102,7 +102,6 @@ bmzip Writer -O test_bed.mz -F Q,H,H -C pos,mc,cov -D chrom tomz -I /anvil/scrat
 ### View
 
 #### print_header
-
 ```shell
 bmzip Reader -I mm10_with_chrL.allc.mz print_header
 # {'magic': b'BMZIP', 'version': 1.0, 'total_size': 3160879498, 'Formats': ['Q', '3s', 'c'], 'names': ['pos', 'context', 'strand'], 'tags': ['chrom'], 'header_size': 51}
@@ -234,6 +233,10 @@ bmzip Reader -I test_bed.mz view -s 0 -h False -d chr1,chr2 |cut -f 1 |uniq
 
 # only view 1 chrom
 bmzip Reader -I test_bed.mz view -s 0 -h False -d chr1 |head
+
+# examine total number of rows
+bmzip Reader -I mm10_with_chrL.allc.mz summary_chunks |awk 'BEGIN{sum=0};{if(NR > 1){sum+=$6}};END{print(sum)}'
+# should be 1105362117 for mm10
 ```
 
 ### Query
@@ -282,7 +285,7 @@ bmzip Reader -I test_no_ref.mz query -D chr12 -s 3109883 -e 3110041
 #0.98    238200  90%, only took 0.98 s
 
 
-bmzip Reader -I test.mz query -D "{'chrom':'chr12'}" -s 3110029 -e 3110041 -r mm10_with_chrL.allc.mz
+bmzip Reader -I FC_E17a_3C_1-1-I3-F13.mz query -D "{'chrom':'chr12'}" -s 3110029 -e 3110041 -r mm10_with_chrL.allc.mz
 tabix FC_E17a_3C_1-1-I3-F13.allc.tsv.gz chr12:3110029-3110041
 
 bmzip Reader -I test.mz query -D chr11 -s 3104261 -e 3104273 -r mm10_with_chrL.allc.mz
