@@ -768,10 +768,11 @@ class Reader:
                     block_start_offsets_tmp = block_start_offset
                 self._within_block_offset = ((id_start - 1) * self._unit_size
                                              ) % _BLOCK_MAX_LEN
-                for i in range(id_start, id_end + 1):
-                    yield self._byte2real(struct.unpack(
+                data = np.array([
+                    self._byte2real(struct.unpack(
                         f"<{self.fmts}", self.read(self._unit_size)
-                    ))
+                    )) for i in range(id_start, id_end + 1)])
+                yield data
         else:
             ref_reader = Reader(os.path.abspath(os.path.expanduser(reference)))
             ref_records = ref_reader.getRecordsByIdRegions(self, dim=dim,
@@ -779,7 +780,7 @@ class Reader:
             records = self.getRecordsByIdRegions(self, dim=dim, reference=None,
                                                  IDs=IDs)
             for ref_record, record in zip(ref_records, records):
-                yield ref_record + record
+                yield np.hstack((ref_record, record))
             ref_reader.close()
 
         if reference is None:
@@ -813,21 +814,33 @@ class Reader:
         else:
             ref_header = []
         header = self.header['Dimensions'] + ref_header + self.header['Columns']
-        ncol = 1 if len(IDs.shape) == 1 else 2
-        func = self.getRecordsByIds if ncol == 1 else self.getRecordsByIdRegions
-        if printout:
-            sys.stdout.write('\t'.join(header) + '\n')
-            try:
-                for record in func(dim, reference, IDs):
-                    sys.stdout.write('\t'.join(list(dim) + list(map(str, record))) + '\n')
-                    # print(list(dim)+list(map(str,record)))
-            except:
+        sys.stdout.write('\t'.join(header) + '\n')
+        if len(IDs.shape) == 1:
+            if printout:
+                try:
+                    for record in self.getRecordsByIds(dim, reference, IDs):
+                        sys.stdout.write('\t'.join(list(dim) + list(map(str, record))) + '\n')
+                        # print(list(dim)+list(map(str,record)))
+                except:
+                    sys.stdout.close()
+                    self.close()
+                    return
                 sys.stdout.close()
-                self.close()
-                return
-            sys.stdout.close()
+            else:
+                yield from self.getRecordsByIds(dim, reference, IDs)
         else:
-            yield from func(dim, reference, IDs)
+            if printout:
+                try:
+                    for data in self.getRecordsByIdRegions(dim, reference, IDs):
+                        for row in data:
+                            sys.stdout.write('\t'.join(list(dim) + list(map(str, row))) + '\n')
+                except:
+                    sys.stdout.close()
+                    self.close()
+                    return
+                sys.stdout.close()
+            else:
+                yield from self.getRecordsByIdRegions(dim, reference, IDs)
 
     def __fetch__(self, dims, s=None, e=None):
         """
