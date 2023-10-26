@@ -57,6 +57,12 @@ bmzip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.mz -v 1
 
 # allc2mz in parallel
 time bmzip allc2mz -r mm10_with_chrL.allc.mz -n 48 -P ~/Ref/mm10/mm10_ucsc_with_chrL.main.chrom.sizes.txt allc_path.txt test
+
+# make a small example allc file in which there is only 1 record in each chrom
+zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |awk 'BEGIN{chrom=""};{if ($1!=chrom) {print($0); chrom=$1}}' | bgzip > 1.allc.tsv.gz
+tabix -b 2 -e 2 1.allc.tsv.gz
+time bmzip allc2mz 1.allc.tsv.gz 1.mz -r mm10_with_chrL.allc.mz
+
 ```
 
 ### Run allc2mz using snakemake
