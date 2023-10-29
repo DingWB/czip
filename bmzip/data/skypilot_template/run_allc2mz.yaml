@@ -1,4 +1,5 @@
 name: allc2mz
+workdir: "./"
 num_nodes: 10
 resources:
   cloud: gcp
@@ -22,6 +23,6 @@ run: |
   split -n l/10 -d allc.path.tsv allc.path.
   echo "SkypilotNode: $SKYPILOT_NODE_RANK"
   echo "SkypilotNode: $SKYPILOT_NODE_RANK" > node
-  echo 'snakemake --printshellcmds -s allc2mz.smk --config {indir} {outdir} {allc_path}".0$SKYPILOT_NODE_RANK" {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu} -np' > cmd
+  echo 'snakemake --use-conda --printshellcmds -s allc2mz.smk --config {indir} {outdir} {allc_path}".0$SKYPILOT_NODE_RANK" {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu} -np' > cmd
   snakemake --printshellcmds -s allc2mz.smk --config {indir} {outdir} {allc_path}".0$SKYPILOT_NODE_RANK" {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu}
   #--batch target_all=1/2 --immediate-submit --notemp

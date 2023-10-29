@@ -7,9 +7,6 @@ from builtins import open as _open
 import numpy as np
 import pandas as pd
 import gzip
-import numba
-from numba.experimental import jitclass
-from collections import defaultdict
 
 _bmz_magic = b'BMZIP'
 _block_magic = b"MB"
@@ -297,13 +294,15 @@ def _input_parser(infile, formats, sep='\t', usecols=[1, 4, 5], dim_cols=[0],
 
 
 # ==========================================================
-def _isCG(context):
-    return context[:2] == b'CG'
+def _isCG(record):
+    return record[2][:2] == b'CG'
 
 
+def _isForwardCG(record):
+    return record[2][:2] == b'CG' and record[1] == b'+'
 # ==========================================================
-def _isCH(context):
-    return not _isCG(context)
+def _isCH(record):
+    return not _isCG(record)
 
 
 # ==========================================================
@@ -572,7 +571,7 @@ class Reader:
         return [str(v, 'utf-8') if f[-1] in ['s', 'c'] else v
                 for v, f in zip(values, self.header['Formats'])]
 
-    def __empty_generator(self):
+    def _empty_generator(self):
         while True:
             yield []
 
@@ -655,7 +654,7 @@ class Reader:
             if not reference is None:
                 ref_records = ref_reader.fetch(d)
             else:
-                ref_records = self.__empty_generator()
+                ref_records = self._empty_generator()
             try:
                 for record, ref_record in zip(records, ref_records):
                     line = '\t'.join([str(i) for i in ref_record + record])
@@ -675,7 +674,7 @@ class Reader:
             ref_reader.close()
 
     def category_ssi(self, output=None, formats=['I'], columns=['ID'],
-                     dimensions=['chrom'], col=2, match_func=_isCG,
+                     dimensions=['chrom'], match_func=_isForwardCG,
                      chunksize=2000):
         if output is None:
             output = self.Input + '.' + match_func.__name__ + '.bmi'
@@ -687,8 +686,8 @@ class Reader:
         data = b''
         for dim in self.dim2chunk_start:
             print(dim, '\t' * 4, end='\r')
-            for i, record in enumerate(self.__fetch__(dim, s=col, e=col + 1)):
-                if match_func(record[0]):
+            for i, record in enumerate(self.__fetch__(dim)):
+                if match_func(record):
                     data += struct.pack(f"<{writer.fmts}", i + 1)
                 if (i % chunksize) == 0 and len(data) > 0:
                     writer.write_chunk(data, dim)
@@ -706,7 +705,7 @@ class Reader:
             s, e = 0, 2
             return np.array([record for record in self.__fetch__(dim, s=s, e=e)])
 
-    def getRecordsByIds(self, dim=None, reference=None, IDs=None):
+    def _getRecordsByIds(self, dim=None, IDs=None):
         """
 
         Parameters
@@ -724,25 +723,59 @@ class Reader:
         block_start_offsets = np.array([self._chunk_block_1st_record_virtual_offsets[
                                             idx] >> 16 for idx in block_index])
         within_block_offsets = ((IDs - 1) * self._unit_size) % (_BLOCK_MAX_LEN)
-        if reference is None:
-            block_start_offset_tmp = None
-            for block_start_offset, within_block_offset in zip(
-                block_start_offsets, within_block_offsets):
-                if block_start_offset != block_start_offset_tmp:
-                    self._load_block(block_start_offset)
-                    block_start_offset_tmp = block_start_offset
-                self._within_block_offset = within_block_offset
-                yield self._byte2real(struct.unpack(
-                    f"<{self.fmts}", self.read(self._unit_size)
-                ))
+        block_start_offset_tmp = None
+        for block_start_offset, within_block_offset in zip(
+            block_start_offsets, within_block_offsets):
+            if block_start_offset != block_start_offset_tmp:
+                self._load_block(block_start_offset)
+                block_start_offset_tmp = block_start_offset
+            self._within_block_offset = within_block_offset
+            yield self.read(self._unit_size)
 
+    def getRecordsByIds(self, dim=None, reference=None, IDs=None):
+        if reference is None:
+            for record in self._getRecordsByIds(dim, IDs):
+                yield self._byte2real(struct.unpack(
+                    f"<{self.fmts}", record
+                ))
         else:
             ref_reader = Reader(os.path.abspath(os.path.expanduser(reference)))
-            ref_records = ref_reader.getRecordsByIds(dim=dim, reference=None, IDs=IDs)
-            records = self.getRecordsByIds(dim=dim, reference=None, IDs=IDs)
+            ref_records = ref_reader.getRecordsByIds(dim=dim, IDs=IDs)
+            records = self.getRecordsByIds(dim=dim, IDs=IDs)
             for ref_record, record in zip(ref_records, records):
-                yield ref_record + record
+                yield ref_reader._byte2real(struct.unpack(
+                    f"<{ref_reader.fmts}", ref_record
+                )) + self._byte2real(struct.unpack(
+                    f"<{self.fmts}", record
+                ))
             ref_reader.close()
+
+    def _getRecordsByIdRegions(self, dim=None, IDs=None):
+        """
+        Get .mz content for a given dim and IDs
+        Parameters
+        ----------
+        dim : tuple
+        reference : path
+        IDs : list or np.ndarray
+            every element of IDs is a list or tuple with length=2, id_start and id_end
+
+        Returns
+        -------
+        generator
+        """
+        self._load_chunk(self.dim2chunk_start[dim], jump=False)
+        block_start_offsets_tmp = None
+        for id_start, id_end in IDs:
+            block_index = ((id_start - 1) * self._unit_size) // (_BLOCK_MAX_LEN)
+            block_start_offset = self._chunk_block_1st_record_virtual_offsets[
+                                     block_index] >> 16
+            if block_start_offset != block_start_offsets_tmp:
+                self._load_block(block_start_offset)
+                block_start_offsets_tmp = block_start_offset
+            self._within_block_offset = ((id_start - 1) * self._unit_size
+                                         ) % _BLOCK_MAX_LEN
+            yield [self.read(self._unit_size) for i in range(id_start, id_end + 1)]
 
     def getRecordsByIdRegions(self, dim=None, reference=None, IDs=None):
         """
@@ -760,55 +793,30 @@ class Reader:
         """
         self._load_chunk(self.dim2chunk_start[dim], jump=False)
         if reference is None:
-            block_start_offsets_tmp = None
-            for id_start, id_end in IDs:
-                block_index = ((id_start - 1) * self._unit_size) // (_BLOCK_MAX_LEN)
-                block_start_offset = self._chunk_block_1st_record_virtual_offsets[
-                                         block_index] >> 16
-                if block_start_offset != block_start_offsets_tmp:
-                    self._load_block(block_start_offset)
-                    block_start_offsets_tmp = block_start_offset
-                self._within_block_offset = ((id_start - 1) * self._unit_size
-                                             ) % _BLOCK_MAX_LEN
-                data = np.array([
-                    self._byte2real(struct.unpack(
-                        f"<{self.fmts}", self.read(self._unit_size)
-                    )) for i in range(id_start, id_end + 1)])
-                yield data
+            for records in self._getRecordsByIdRegions(dim, IDs):
+                yield np.array([self._byte2real(struct.unpack(
+                    f"<{self.fmts}", record)) for record in records])
         else:
             ref_reader = Reader(os.path.abspath(os.path.expanduser(reference)))
-            ref_records = ref_reader.getRecordsByIdRegions(self, dim=dim,
-                                                           reference=None, IDs=IDs)
-            records = self.getRecordsByIdRegions(self, dim=dim, reference=None,
-                                                 IDs=IDs)
-            for ref_record, record in zip(ref_records, records):
+            ref_records = ref_reader._getRecordsByIdRegions(dim=dim, IDs=IDs)
+            records = self._getRecordsByIdRegions(dim=dim, IDs=IDs)
+            for ref_records, records in zip(ref_records, records):
+                ref_record = np.array([ref_reader._byte2real(struct.unpack(
+                    f"<{ref_reader.fmts}", record)) for record in ref_records])
+                record = np.array([self._byte2real(struct.unpack(
+                    f"<{self.fmts}", record)) for record in records])
                 yield np.hstack((ref_record, record))
             ref_reader.close()
 
-        if reference is None:
-            block_start_offset_tmp = None
-            for block_start_offset, within_block_offset in zip(
-                block_start_offsets, within_block_offsets):
-                if block_start_offset != block_start_offset_tmp:
-                    self._load_block(block_start_offset)
-                    block_start_offset_tmp = block_start_offset
-                self._within_block_offset = within_block_offset
-                yield self._byte2real(struct.unpack(
-                    f"<{self.fmts}", self.read(self._unit_size)
-                ))
-        else:
-            ref_reader = Reader(os.path.abspath(os.path.expanduser(reference)))
-            ref_records = ref_reader.getRecordsByIds(dim=dim, reference=None, IDs=IDs)
-            records = self.getRecordsByIds(dim=dim, reference=None, IDs=IDs)
-            for ref_record, record in zip(ref_records, records):
-                yield ref_record + record
-            ref_reader.close()
-
-    def subset(self, dim, bmi, reference=None, printout=True):
+    def subset(self, dim, bmi=None, IDs=None, reference=None, printout=True):
         if isinstance(dim, str):
             dim = tuple([dim])
-        bmi_reader = Reader(bmi)
-        IDs = bmi_reader.get_ids_from_bmi(dim)
+        if bmi is None and IDs is None:
+            raise ValueError("Please provide either bmi or IDs")
+        if not bmi is None:
+            bmi_reader = Reader(bmi)
+            IDs = bmi_reader.get_ids_from_bmi(dim)
+            bmi_reader.close()
         if not reference is None:
             ref_reader = Reader(os.path.abspath(os.path.expanduser(reference)))
             ref_header = ref_reader.header['Columns']
@@ -816,9 +824,9 @@ class Reader:
         else:
             ref_header = []
         header = self.header['Dimensions'] + ref_header + self.header['Columns']
-        sys.stdout.write('\t'.join(header) + '\n')
         if len(IDs.shape) == 1:
             if printout:
+                sys.stdout.write('\t'.join(header) + '\n')
                 try:
                     for record in self.getRecordsByIds(dim, reference, IDs):
                         sys.stdout.write('\t'.join(list(dim) + list(map(str, record))) + '\n')
@@ -828,10 +836,11 @@ class Reader:
                     self.close()
                     return
                 sys.stdout.close()
-            else:
+            else:  # each element is one record
                 yield from self.getRecordsByIds(dim, reference, IDs)
         else:
             if printout:
+                sys.stdout.write('\t'.join(header) + '\n')
                 try:
                     for data in self.getRecordsByIdRegions(dim, reference, IDs):
                         for row in data:
@@ -841,7 +850,7 @@ class Reader:
                     self.close()
                     return
                 sys.stdout.close()
-            else:
+            else:  # each element is a data array (multiple records)
                 yield from self.getRecordsByIdRegions(dim, reference, IDs)
 
     def __fetch__(self, dims, s=None, e=None):
@@ -973,16 +982,13 @@ class Reader:
         ]
         start_block_index_tmp = 0
         R = []
-        for pos in positions:  # bed is sorted, [[0,1],[3,4],[7,8]]
+        for pos in positions:  # positions is sorted, [[0,1],[3,4],[7,8]]
             for idx in range(start_block_index_tmp, self._chunk_nblocks - 1):
                 if block_1st_starts[idx + 1] > pos:
                     start_block_index = idx
                     break
                 start_block_index = self._chunk_nblocks - 1
-            try:
-                virtual_offset = self._chunk_block_1st_record_virtual_offsets[start_block_index]
-            except:
-                break
+            virtual_offset = self._chunk_block_1st_record_virtual_offsets[start_block_index]
             self.seek(virtual_offset)  # seek to the target block, self._buffer
             block_start_offset = self._block_start_offset
             record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
@@ -992,9 +998,9 @@ class Reader:
                 start_block_index += 1
             primary_id = int((_BLOCK_MAX_LEN * start_block_index +
                               self._within_block_offset) / self._unit_size)
-            # yield primary_id
             R.append(primary_id)
             start_block_index_tmp = start_block_index
+        return R
 
     def query(self, Dimension=None, start=None, end=None, Regions=None,
               query_col=[0], reference=None, printout=True):
@@ -1289,11 +1295,41 @@ class Reader:
         """Close a file with WITH statement."""
         self.close()
 
+
+# ==========================================================
+def extract(mz_path=None, outfile=None, bmi=None, chunksize=5000):
+    bmi_reader = Reader(bmi)
+    reader = Reader(mz_path)
+    writer = Writer(outfile, Formats=reader.header['Formats'],
+                    Columns=reader.header['Columns'],
+                    Dimensions=reader.header['Dimensions'],
+                    message=bmi)
+    # dtfuncs = get_dtfuncs(writer.Formats)
+    for dim in reader.dim2chunk_start.keys():
+        print(dim)
+        IDs = bmi_reader.get_ids_from_bmi(dim)
+        if len(IDs.shape) != 1:
+            raise ValueError("Only support 1D bmi now!")
+        records = reader._getRecordsByIds(dim, IDs)
+        data, i = b'', 0
+        for record in records:  # unpacked bytes
+            data += record
+            i += 1
+            if i > chunksize:
+                writer.write_chunk(data, dim)
+                data, i = b'', 0
+        if len(data) > 0:
+            writer.write_chunk(data, dim)
+    writer.close()
+    reader.close()
+    bmi_reader.close()
+
+
 # ==========================================================
 class Writer:
     def __init__(self, Output=None, mode="wb", Formats=['H', 'H'],
                  Columns=['mc', 'cov'], Dimensions=['chrom'], fileobj=None,
-                 message='',level=6, verbose=0):
+                 message='', level=6, verbose=0):
         """
         bmzip .mz writer.
 

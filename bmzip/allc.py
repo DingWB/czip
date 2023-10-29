@@ -7,7 +7,7 @@ Created on Tue Sep  8 17:34:38 2020
 """
 import itertools
 import sys
-import os
+import os, sys
 import struct
 import pandas as pd
 import pysam
@@ -16,9 +16,50 @@ from Bio import SeqIO
 import numpy as np
 from collections import defaultdict
 import random
-from .utils import WriteC
+# from .utils import WriteC
+# sys.path.append(os.path.dirname(__file__))
 from .bmz import Reader, Writer, get_dtfuncs
-import numba
+
+
+# ==========================================================
+def WriteC(record, outdir, chunksize=5000):
+    # cdef int i, N
+    # cdef char* chrom, base, context, strand
+    chrom = record.id
+    outfile = os.path.join(outdir, chrom + ".mz")
+    if os.path.exists(outfile):
+        print(f"{outfile} existed, skip.")
+        return None
+    print(chrom)
+    writer = Writer(outfile, Formats=['Q', 'c', '3s'],
+                    Columns=['pos', 'strand', 'context'],
+                    Dimensions=['chrom'])
+    dtfuncs = get_dtfuncs(writer.Formats)
+    N = record.seq.__len__()
+    data = b''
+    for i in range(N):  # 0-based
+        base = record.seq[i:i + 1].upper()
+        if base.__str__() == 'C':  # forward strand
+            context = record.seq[i: i + 3].upper().__str__()  # pos, left l1 base pair and right l2 base pair
+            strand = '+'
+        elif base.reverse_complement().__str__() == 'C':  # reverse strand
+            context = record.seq[i - 2:i + 1].reverse_complement().upper().__str__()
+            strand = '-'
+        else:
+            continue
+        # f.write(f"{chrom}\t{i}\t{i + 1}\t{context}\t{strand}\n")
+        values = [func(v) for v, func in zip([i + 1, strand, context], dtfuncs)]
+        data += struct.pack(writer.fmts, *values)
+        # position is 0-based (start) 1-based (end position, i+1)
+        if i % chunksize == 0 and len(data) > 0:
+            writer.write_chunk(data, [chrom])
+            data = b''
+    if len(data) > 0:
+        writer.write_chunk(data, [chrom])
+    writer.close()
+
+
+# ==========================================================
 # ==========================================================
 class AllC:
     def __init__(self, Genome=None, Output="hg38_allc.mz",
@@ -223,32 +264,55 @@ def allc2mz(allc_path, outfile, reference=None, missing_value=[0, 0],
                 writer.write_chunk(data, [chrom])
     writer.close()
     tbi.close()
-# ==========================================================
-def _isCG(context):
-    return context[:2] == b'CG'
 
 
 # ==========================================================
-def _isCH(context):
-    return not _isCG(context)
+def _isCG(record):
+    return record[2][:2] == b'CG'
 
 
 # ==========================================================
-def generate_context_ssi(Input, output=None, pattern='CGN'):
+def _isForwardCG(record):
+    return record[2][:2] == b'CG' and record[1] == b'+'
+
+
+# ==========================================================
+def _isCH(record):
+    return not _isCG(record)
+
+
+# ==========================================================
+def generate_ssi(Input, output=None, pattern="+CGN"):
+    """
+    Generate ssi (subset index) for a given input .mz
+
+    Parameters
+    ----------
+    Input : .mz
+    output : .bmi
+    pattern : CGN, CHN, +CGN, -CGN
+
+    Returns
+    -------
+
+    """
     if pattern == 'CGN':
         judge_func = _isCG
-    else:  # CH
+    elif pattern == 'CHN':  # CH
         judge_func = _isCH
+    elif pattern == '+CGN':
+        judge_func = _isForwardCG
+    else:
+        raise ValueError("Currently, only CGN, CHN, +CGN supported")
     if output is None:
         output = Input + '.' + pattern + '.bmi'
     else:
         output = os.path.abspath(os.path.expanduser(output))
     reader = Reader(Input)
     reader.category_ssi(output=output, formats=['I'], columns=['ID'],
-                        dimensions=['chrom'], col=2, match_func=judge_func,
+                        dimensions=['chrom'], match_func=judge_func,
                         chunksize=2000)
     reader.close()
-
 
 def prepare_sky(smk=None, sky=None, indir=None, outdir=None, allc_path=None,
                 reference=None, ref_prefix=None, chrom=None, chrom_prefix=None,
@@ -286,12 +350,181 @@ def prepare_sky(smk=None, sky=None, indir=None, outdir=None, allc_path=None,
     print("# sky launch -c test 1.yaml")
     print("# sky spot launch -y -n job job.yaml")
 
-def copy_smk(outname=None):
-    if outname is None:
-        outname = os.path.abspath("job.yaml")
-    smk = os.path.join(os.path.dirname(__file__),
-                       "data/snakemake_template/run_allc2mz.smk")
-    os.system(f"cp {smk} {outname}")
+
+def mzs_merger(outfile, formats, columns, dimensions, message, n_batch, q):
+    finished_jobs = {}
+    N = {}
+    chunk_id_tmp = 0
+    writer = Writer(Output=outfile, Formats=formats,
+                    Columns=columns, Dimensions=dimensions,
+                    message=message)
+    dtfuncs = get_dtfuncs(writer.Formats)
+    while 1:
+        result = q.get()  # if q is empty, it will wait.
+        if result == 'kill':
+            print("Done!")
+            writer.close()
+            break
+        dim, chunk_id, data = result  # chunk_id==''last_one''
+        if dim not in finished_jobs:
+            print(dim)
+            finished_jobs[dim] = {}
+            N[dim] = {}
+        if chunk_id not in finished_jobs[dim]:
+            finished_jobs[dim][chunk_id] = data
+            N[dim][chunk_id] = 0
+            # print(dim,chunk_id,end='\r')
+        else:
+            finished_jobs[dim][chunk_id] += data  # sum this chunk for another 100 files
+            N[dim][chunk_id] += 1  # record how many batch have been processed
+        if N[dim][chunk_id_tmp] == n_batch:
+            data = b''.join([struct.pack(f"<{writer.fmts}",
+                                         *[func(v) for v, func in zip(values, dtfuncs)])
+                             for values in finished_jobs[dim][chunk_id]])
+            print(dim, chunk_id_tmp, N[dim][chunk_id_tmp], n_batch)
+            writer.write_chunk(data, dim)
+            del finished_jobs[dim][chunk_id]  # finished one allc, remove from monitoring
+            chunk_id_tmp += 1
+            if chunk_id_tmp not in N[dim]:
+                chunk_id_tmp = 0
+
+
+def merge_mz_worker(indir, batch_mz_files, dim, chunksize=5000, q=None):
+    mz_readers = {}
+    for mz_path in batch_mz_files:
+        mz_readers[mz_path] = Reader(os.path.join(indir, mz_path))
+    mz_records = {}
+    for k in mz_readers:
+        if dim not in mz_readers[k].dim2chunk_start:
+            continue
+        mz_records[k] = mz_readers[k].__fetch__(dim, s=0, e=2)
+    R, i = [], 0
+    chunk_id = 0
+    for i, records in enumerate(zip(*[mz_records[k] for k in mz_records])):
+        R.append(np.sum(records, axis=0))
+        if i > chunksize:
+            data = np.vstack(R)
+            R, i = [], 0
+            q.put(tuple([dim, chunk_id, data]))
+            chunk_id += 1
+    if len(R) > 0:
+        data = np.vstack(R)
+        q.put(tuple([dim, chunk_id, data]))
+    for k in mz_readers:
+        mz_readers[k].close()
+    return
+    # return np.sum(R,axis=0) #sum of mc and cov in len(IDs) positions among batch_mz_files
+
+
+def merge_mz(indir="/anvil/scratch/x-wding2/Projects/mouse-pfc/data/pseudo_cell/mz",
+             mz_paths=None, outfile="merged.mz", batchsize=50, chunksize=5000, n_jobs=20,
+             formats=['H', 'H'], columns=['mc', 'cov'], dimensions=['chrom'],
+             message='', Path_to_chrom="~/Ref/mm10/mm10_ucsc_with_chrL.main.chrom.sizes.txt"):
+    outfile = os.path.abspath(os.path.expanduser(outfile))
+    if os.path.exists(outfile):
+        print(f"{outfile} existed, skip.")
+        return
+    if mz_paths is None:
+        mz_paths = os.listdir(indir)
+    n_batch = int(np.ceil(len(mz_paths) / batchsize))
+    batch_mz_paths = []
+    for i in range(n_batch):
+        batch_mz_paths.append(mz_paths[i * batchsize:i * batchsize + batchsize])
+    Path_to_chrom = os.path.abspath(os.path.expanduser(Path_to_chrom))
+    df = pd.read_csv(Path_to_chrom, sep='\t', header=None, usecols=[0])
+    chroms = df.iloc[:, 0].tolist()
+    manager = multiprocessing.Manager()
+    queue1 = manager.Queue()
+    pool = multiprocessing.Pool(n_jobs)
+    watcher = pool.apply_async(mzs_merger, (outfile, formats, columns,
+                                            dimensions, message, n_batch, queue1))
+    jobs = []
+    for chrom in chroms:
+        for batch_mz_files in batch_mz_paths:
+            job = pool.apply_async(merge_mz_worker,
+                                   (indir, batch_mz_files, tuple([chrom]),
+                                    chunksize, queue1))
+            jobs.append(job)
+    for job in jobs:
+        r = job.get()
+    queue1.put('kill')
+    pool.close()
+    pool.join()
+    manager._process.terminate()
+    manager.shutdown()
+
+
+# ==========================================================
+def extractCG(Input=None, outfile=None, bmi=None, chunksize=5000,
+              merge_strand=True):
+    """
+
+    Parameters
+    ----------
+    mz_path :
+    outfile :
+    bmi : path
+        bmi should be bmi to mm10_with_chrL.allc.mz.CGN.bmi, not forward
+        strand bmi, but after merge (if merge_strand is True), forward bmi
+        mm10_with_chrL.allc.mz.+CGN.bmi should be used to generate
+         reference, one can
+        run: bmzip extract -m mm10_with_chrL.allc.mz
+        -o mm10_with_chrL.allCG.forward.mz
+        -b mm10_with_chrL.allc.mz.+CGN.bmi and use
+        mm10_with_chrL.allCG.forward.mz as new reference.
+    chunksize :int
+    merge_strand: bool
+        after merging, only forward strand would be kept, reverse strand values
+        would be added to the corresponding forward strand.
+
+    Returns
+    -------
+
+    """
+    mz_path = os.path.abspath(os.path.expanduser(Input))
+    bmi_path = os.path.abspath(os.path.expanduser(bmi))
+    bmi_reader = Reader(bmi_path)
+    reader = Reader(mz_path)
+    writer = Writer(outfile, Formats=reader.header['Formats'],
+                    Columns=reader.header['Columns'],
+                    Dimensions=reader.header['Dimensions'],
+                    message=bmi_path)
+    dtfuncs = get_dtfuncs(writer.Formats)
+    for dim in reader.dim2chunk_start.keys():
+        print(dim)
+        IDs = bmi_reader.get_ids_from_bmi(dim)
+        if len(IDs.shape) != 1:
+            raise ValueError("Only support 1D bmi now!")
+        records = reader._getRecordsByIds(dim, IDs)
+        data, count = b'', 0
+        # for CG, if pos is forward (+), then pos+1 is reverse strand (-)
+        if merge_strand:
+            for i, record in enumerate(records):  # unpacked bytes
+                if i % 2 == 0:
+                    v0 = struct.unpack(f"<{reader.fmts}", record)
+                else:
+                    v1 = struct.unpack(f"<{reader.fmts}", record)
+                    values = [r1 + r2 for r1, r2 in zip(v0, v1)]
+                    data += struct.pack(writer.fmts,
+                                        *[func(v) for v, func in zip(values, dtfuncs)])
+                    count += 1
+                if count > chunksize:
+                    writer.write_chunk(data, dim)
+                    data, count = b'', 0
+        else:
+            for record in records:  # unpacked bytes
+                data += record
+                count += 1
+                if count > chunksize:
+                    writer.write_chunk(data, dim)
+                    data, count = b'', 0
+        if len(data) > 0:
+            writer.write_chunk(data, dim)
+    writer.close()
+    reader.close()
+    bmi_reader.close()
+
+
 # ==========================================================
 if __name__ == "__main__":
     import fire

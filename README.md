@@ -18,6 +18,12 @@ conda install -c "intel/label/test" libfabric ?
 ```shell
 bmzip AllC -G ~/Ref/mm10/mm10_ucsc_with_chrL.fa -O mm10_with_chrL.allc.mz -n 20 -k True run
 # took 15 minutes using 20 cpus
+
+bmzip generate_ssi ~/Ref/mm10/annotations/mm10_with_chrL.allc.mz
+# output is ~/Ref/mm10/annotations/mm10_with_chrL.allc.mz.+CGN.bmi
+
+bmzip extract -m ~/Ref/mm10/annotations/mm10_with_chrL.allc.mz -o ~/Ref/mm10/annotations/mm10_with_chrL.allCG.forward.mz -b ~/Ref/mm10/annotations/mm10_with_chrL.allc.mz.+CGN.bmi
+#output is: mm10_with_chrL.allCG.forward.mz
 ```
 
 ### Create .mz using `bmzip Writer`
@@ -63,6 +69,24 @@ zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |awk 'BEGIN{chrom=""};{if ($1!=chrom) {pr
 tabix -b 2 -e 2 1.allc.tsv.gz
 time bmzip allc2mz 1.allc.tsv.gz 1.mz -r mm10_with_chrL.allc.mz
 
+# file sizes
+24514 allc.tsg.gz + .tbi
+2.83TiB
+
+.mz files:
+769.21GiB
+```
+
+### Extract CG from .mz and merge strand
+
+```shell
+bmzip extractCG -I mz/FC_P13a_3C_2-1-E5-D13.mz -o FC_P13a_3C_2-1-E5-D13.CGN.mz -b ~/Ref/mm10/annotations/mm10_with_chrL.allc.mz.CGN.bmi
+
+# create reference for forward CGN
+bmzip extract -m ~/Ref/mm10/annotations/mm10_with_chrL.allc.mz -o ~/Ref/mm10/annotations/mm10_with_chrL.allCG.forward.mz -b ~/Ref/mm10/annotations/mm10_with_chrL.allc.mz.+CGN.bmi -o mm10_with_chrL.allCG.forward.mz
+
+# view CG .mz
+bmzip Reader -I FC_P13a_3C_2-1-E5-D13.CGN.mz view -s 0 -r ~/Ref/mm10/annotations/mm10_with_chrL.allCG.forward.mz
 ```
 
 ### Run allc2mz using snakemake
@@ -314,7 +338,7 @@ bmzip Reader -I mm10_with_chrL.allc.mz query -D chr12 -s 3109911 -e 3109913  |he
 #### Create subset index (.ssi)
 
 ```shell
-bmzip generate_context_ssi -I mm10_with_chrL.allc.mz -p CGN
+bmzip generate_context_ssi -I ~/Ref/mm10/annotations/mm10_with_chrL.allc.mz -p CGN
 ```
 
 #### view subset
