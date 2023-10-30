@@ -89,6 +89,13 @@ bmzip extract -m ~/Ref/mm10/annotations/mm10_with_chrL.allc.mz -o ~/Ref/mm10/ann
 bmzip Reader -I FC_P13a_3C_2-1-E5-D13.CGN.mz view -s 0 -r ~/Ref/mm10/annotations/mm10_with_chrL.allCG.forward.mz
 ```
 
+### Merge .mz files
+
+```shell
+bmzip merge_mz -i mz-CGN/ -o merged.mz
+
+```
+
 ### Run allc2mz using snakemake
 
 ```shell

@@ -60,7 +60,6 @@ def WriteC(record, outdir, chunksize=5000):
 
 
 # ==========================================================
-# ==========================================================
 class AllC:
     def __init__(self, Genome=None, Output="hg38_allc.mz",
                  pattern="C", n_jobs=12, keep_temp=False):
@@ -389,69 +388,95 @@ def mzs_merger(outfile, formats, columns, dimensions, message, n_batch, q):
                 chunk_id_tmp = 0
 
 
-def merge_mz_worker(indir, batch_mz_files, dim, chunksize=5000, q=None):
-    mz_readers = {}
-    for mz_path in batch_mz_files:
-        mz_readers[mz_path] = Reader(os.path.join(indir, mz_path))
-    mz_records = {}
-    for k in mz_readers:
-        if dim not in mz_readers[k].dim2chunk_start:
-            continue
-        mz_records[k] = mz_readers[k].__fetch__(dim, s=0, e=2)
-    R, i = [], 0
-    chunk_id = 0
-    for i, records in enumerate(zip(*[mz_records[k] for k in mz_records])):
-        R.append(np.sum(records, axis=0))
+def merge_mz_worker(outfile_cat, outdir, chrom, dims, formats, chunksize=5000):
+    # print(chrom, "started",end='\r')
+    outname = os.path.join(outdir, chrom + '.mz')
+    reader = Reader(outfile_cat)
+    data = None
+    for dim in dims:  # each dim is a file of the same chrom
+        values = np.array([record for record in reader.__fetch__(dims=dim, s=0, e=2)])
+        if data is None:
+            data = values.copy()
+        else:
+            data += values
+        # q.put(tuple([dim, chunk_id, data]))
+    reader.close()
+    writer = Writer(outname, Formats=formats,
+                    Columns=reader.header['Columns'],
+                    Dimensions=reader.header['Dimensions'][:1],
+                    message='outfile_cat')
+    byte_data, i = b'', 0
+    for values in data:
+        byte_data += struct.pack(f"<{writer.fmts}",
+                                 *values)
+        i += 1
         if i > chunksize:
-            data = np.vstack(R)
-            R, i = [], 0
-            q.put(tuple([dim, chunk_id, data]))
-            chunk_id += 1
-    if len(R) > 0:
-        data = np.vstack(R)
-        q.put(tuple([dim, chunk_id, data]))
-    for k in mz_readers:
-        mz_readers[k].close()
+            writer.write_chunk(byte_data, [chrom])
+            byte_data, i = b'', 0
+    if len(byte_data) > 0:
+        writer.write_chunk(byte_data, [chrom])
+    writer.close()
+    print(chrom, "done")
     return
-    # return np.sum(R,axis=0) #sum of mc and cov in len(IDs) positions among batch_mz_files
 
 
-def merge_mz(indir="/anvil/scratch/x-wding2/Projects/mouse-pfc/data/pseudo_cell/mz",
-             mz_paths=None, outfile="merged.mz", batchsize=50, chunksize=5000, n_jobs=20,
-             formats=['H', 'H'], columns=['mc', 'cov'], dimensions=['chrom'],
-             message='', Path_to_chrom="~/Ref/mm10/mm10_ucsc_with_chrL.main.chrom.sizes.txt"):
+def merge_mz(indir="/anvil/scratch/x-wding2/Projects/mouse-pfc/data/pseudo_cell/mz-CGN",
+             mz_paths=None, outfile="merged.mz", n_jobs=12, formats=['I', 'I'],
+             Path_to_chrom="~/Ref/mm10/mm10_ucsc_with_chrL.main.chrom.sizes.txt",
+             keep_cat=False):
     outfile = os.path.abspath(os.path.expanduser(outfile))
     if os.path.exists(outfile):
         print(f"{outfile} existed, skip.")
         return
     if mz_paths is None:
         mz_paths = os.listdir(indir)
-    n_batch = int(np.ceil(len(mz_paths) / batchsize))
-    batch_mz_paths = []
-    for i in range(n_batch):
-        batch_mz_paths.append(mz_paths[i * batchsize:i * batchsize + batchsize])
+    reader = Reader(os.path.join(indir, mz_paths[0]))
+    header = reader.header
+    reader.close()
+    outfile_cat = outfile + '.cat.mz'
+    writer = Writer(Output=outfile_cat, Formats=header['Formats'],
+                    Columns=header['Columns'], Dimensions=header['Dimensions'],
+                    message="catmz")
+    writer.catmz(Input=[os.path.join(indir, mz_path) for mz_path in mz_paths],
+                 add_dim=True)
     Path_to_chrom = os.path.abspath(os.path.expanduser(Path_to_chrom))
     df = pd.read_csv(Path_to_chrom, sep='\t', header=None, usecols=[0])
     chroms = df.iloc[:, 0].tolist()
-    manager = multiprocessing.Manager()
-    queue1 = manager.Queue()
+
+    reader = Reader(outfile_cat)
+    chrom_col = reader.header['Dimensions'][0]
+    chunk_info = reader.chunk_info
+    reader.close()
+    # manager = multiprocessing.Manager()
+    # queue1 = manager.Queue()
     pool = multiprocessing.Pool(n_jobs)
-    watcher = pool.apply_async(mzs_merger, (outfile, formats, columns,
-                                            dimensions, message, n_batch, queue1))
+    # watcher = pool.apply_async(mzs_merger, (outfile, formats, columns,
+    #                                         dimensions, message, n_batch, queue1))
     jobs = []
+    outdir = outfile + '.tmp'
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
     for chrom in chroms:
-        for batch_mz_files in batch_mz_paths:
-            job = pool.apply_async(merge_mz_worker,
-                                   (indir, batch_mz_files, tuple([chrom]),
-                                    chunksize, queue1))
-            jobs.append(job)
+        dims = chunk_info.loc[chunk_info[chrom_col] == chrom].index.tolist()
+        if len(dims) == 0:
+            continue
+        job = pool.apply_async(merge_mz_worker,
+                               (outfile_cat, outdir, chrom, dims, formats))
+        jobs.append(job)
     for job in jobs:
         r = job.get()
-    queue1.put('kill')
+    # queue1.put('kill')
     pool.close()
     pool.join()
-    manager._process.terminate()
-    manager.shutdown()
+    # manager._process.terminate()
+    # manager.shutdown()
+    if not keep_cat:
+        os.remove(outfile_cat)
+    writer = Writer(Output=outfile, Formats=formats,
+                    Columns=header['Columns'], Dimensions=header['Dimensions'],
+                    message="catmz")
+    writer.catmz(Input=f"{outdir}/*.mz")
+    os.system(f"rm -rf {outdir}")
 
 
 # ==========================================================
