@@ -516,7 +516,7 @@ def extractCG(Input=None, outfile=None, bmi=None, chunksize=5000,
                     message=bmi_path)
     dtfuncs = get_dtfuncs(writer.Formats)
     for dim in reader.dim2chunk_start.keys():
-        print(dim)
+        # print(dim)
         IDs = bmi_reader.get_ids_from_bmi(dim)
         if len(IDs.shape) != 1:
             raise ValueError("Only support 1D bmi now!")
