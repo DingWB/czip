@@ -483,7 +483,7 @@ class Reader:
     def summary_blocks(self, printout=True):
         r = self._load_chunk(self.header['header_size'], jump=True)
         header = ['chunk_dims'] + ['block_start_offset', 'block_size',
-                                   'block_data_start']
+                                   'block_data_start', 'block_data_len']
         if printout:
             sys.stdout.write('\t'.join(header) + '\n')
         else:
@@ -492,7 +492,7 @@ class Reader:
             self._handle.seek(self._chunk_start_offset + 10)
             chunk_info = [self._chunk_dims]
             for block in SummaryBmzBlocks(self._handle):
-                block = chunk_info + list(block)[:-1]
+                block = chunk_info + list(block)
                 if printout:
                     try:
                         sys.stdout.write('\t'.join([str(v) for v in block]) + '\n')
@@ -1831,6 +1831,8 @@ class Writer:
 		"""
         if self._buffer:
             self.flush()
+        else:
+            self._chunk_finished()
         self._write_total_size_eof_close()
 
     def tell(self):

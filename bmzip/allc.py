@@ -15,10 +15,9 @@ import multiprocessing
 from Bio import SeqIO
 import numpy as np
 from collections import defaultdict
-import random
-# from .utils import WriteC
-# sys.path.append(os.path.dirname(__file__))
-from .bmz import Reader, Writer, get_dtfuncs
+import math
+from .bmz import (Reader, Writer, get_dtfuncs,
+                  _BLOCK_MAX_LEN, _chunk_magic)
 
 
 # ==========================================================
@@ -388,42 +387,52 @@ def mzs_merger(outfile, formats, columns, dimensions, message, n_batch, q):
                 chunk_id_tmp = 0
 
 
-def merge_mz_worker(outfile_cat, outdir, chrom, dims, formats, chunksize=5000):
+def merge_mz_worker(outfile_cat, outdir, chrom, dims, formats,
+                    block_idx_start, batch_nblock, chunksize=5000):
     # print(chrom, "started",end='\r')
-    outname = os.path.join(outdir, chrom + '.mz')
-    reader = Reader(outfile_cat)
+    outname = os.path.join(outdir, chrom + f'.{block_idx_start}.mz')
+    reader1 = Reader(outfile_cat)
     data = None
     for dim in dims:  # each dim is a file of the same chrom
-        values = np.array([record for record in reader.__fetch__(dims=dim, s=0, e=2)])
+        r = reader1._load_chunk(reader1.dim2chunk_start[dim], jump=False)
+        block_start_offset = reader1._chunk_block_1st_record_virtual_offsets[
+                                 block_idx_start] >> 16
+        buffer = b''
+        for i in range(batch_nblock):
+            reader1._load_block(start_offset=block_start_offset)
+            buffer += reader1._buffer
+            block_start_offset = None
+        values = np.array([result[:2] for result in struct.iter_unpack(
+            f"<{reader1.fmts}", buffer)])  # values for batch_nblock (23) blocks
         if data is None:
             data = values.copy()
         else:
             data += values
         # q.put(tuple([dim, chunk_id, data]))
-    reader.close()
-    writer = Writer(outname, Formats=formats,
-                    Columns=reader.header['Columns'],
-                    Dimensions=reader.header['Dimensions'][:1],
-                    message='outfile_cat')
+    writer1 = Writer(outname, Formats=formats,
+                     Columns=reader1.header['Columns'],
+                     Dimensions=reader1.header['Dimensions'][:1],
+                     message=outfile_cat)
     byte_data, i = b'', 0
-    for values in data:
-        byte_data += struct.pack(f"<{writer.fmts}",
+    for values in data.tolist():
+        byte_data += struct.pack(f"<{writer1.fmts}",
                                  *values)
         i += 1
         if i > chunksize:
-            writer.write_chunk(byte_data, [chrom])
+            writer1.write_chunk(byte_data, [chrom])
             byte_data, i = b'', 0
     if len(byte_data) > 0:
-        writer.write_chunk(byte_data, [chrom])
-    writer.close()
-    print(chrom, "done")
+        writer1.write_chunk(byte_data, [chrom])
+    writer1.close()
+    reader1.close()
+    print(chrom, block_idx_start, "done")
     return
 
 
 def merge_mz(indir="/anvil/scratch/x-wding2/Projects/mouse-pfc/data/pseudo_cell/mz-CGN",
              mz_paths=None, outfile="merged.mz", n_jobs=12, formats=['I', 'I'],
              Path_to_chrom="~/Ref/mm10/mm10_ucsc_with_chrL.main.chrom.sizes.txt",
-             keep_cat=False):
+             keep_cat=False, batchsize=10):
     outfile = os.path.abspath(os.path.expanduser(outfile))
     if os.path.exists(outfile):
         print(f"{outfile} existed, skip.")
@@ -447,6 +456,13 @@ def merge_mz(indir="/anvil/scratch/x-wding2/Projects/mouse-pfc/data/pseudo_cell/
     chrom_col = reader.header['Dimensions'][0]
     chunk_info = reader.chunk_info
     reader.close()
+    chrom_nblocks = chunk_info.reset_index().loc[:, [chrom_col, 'chunk_nblocks']
+                    ].drop_duplicates().set_index(chrom_col).chunk_nblocks.to_dict()
+    # chunk_info.set_index(chrom_col)
+    unit_nblock = int(writer._unit_size / (math.gcd(writer._unit_size, _BLOCK_MAX_LEN)))
+    nunit_perbatch = int(np.ceil((chunk_info.chunk_nblocks.max() / batchsize
+                                  ) / unit_nblock))
+    batch_nblock = nunit_perbatch * unit_nblock  # how many block for each batch
     # manager = multiprocessing.Manager()
     # queue1 = manager.Queue()
     pool = multiprocessing.Pool(n_jobs)
@@ -460,9 +476,13 @@ def merge_mz(indir="/anvil/scratch/x-wding2/Projects/mouse-pfc/data/pseudo_cell/
         dims = chunk_info.loc[chunk_info[chrom_col] == chrom].index.tolist()
         if len(dims) == 0:
             continue
-        job = pool.apply_async(merge_mz_worker,
-                               (outfile_cat, outdir, chrom, dims, formats))
-        jobs.append(job)
+        block_idx_start = 0
+        while block_idx_start < chrom_nblocks[chrom]:
+            job = pool.apply_async(merge_mz_worker,
+                                   (outfile_cat, outdir, chrom, dims, formats,
+                                    block_idx_start, batch_nblock))
+            jobs.append(job)
+            block_idx_start += batch_nblock
     for job in jobs:
         r = job.get()
     # queue1.put('kill')
@@ -472,12 +492,49 @@ def merge_mz(indir="/anvil/scratch/x-wding2/Projects/mouse-pfc/data/pseudo_cell/
     # manager.shutdown()
     if not keep_cat:
         os.remove(outfile_cat)
+    # First, merge different batch for each chrom
+    for chrom in chroms:
+        # print(chrom,end='\t')
+        outname = os.path.join(outdir, chrom + '.mz')
+        writer = Writer(Output=outname, Formats=formats,
+                        Columns=header['Columns'], Dimensions=header['Dimensions'],
+                        message=outfile_cat)
+        writer._chunk_start_offset = writer._handle.tell()
+        writer._handle.write(_chunk_magic)
+        # chunk total size place holder: 0
+        writer._handle.write(struct.pack("<Q", 0))  # 8 bytes; including this chunk_size
+        writer._chunk_data_len = 0
+        writer._block_1st_record_virtual_offsets = []
+        writer._chunk_dims = [chrom]
+        block_idx_start = 0
+        infile = os.path.join(outdir, chrom + f'.{block_idx_start}.mz')
+        while os.path.exists(infile):
+            reader = Reader(infile)
+            reader._load_chunk(reader.header['header_size'])
+            block_start_offset = reader._chunk_start_offset + 10
+            writer._buffer = b''
+            for i in range(reader._chunk_nblocks):
+                reader._load_block(start_offset=block_start_offset)  #
+                if len(writer._buffer) + len(reader._buffer) < _BLOCK_MAX_LEN:
+                    writer._buffer += reader._buffer
+                else:
+                    writer._buffer += reader._buffer
+                    while len(writer._buffer) >= _BLOCK_MAX_LEN:
+                        writer._write_block(writer._buffer[:_BLOCK_MAX_LEN])
+                        writer._buffer = writer._buffer[_BLOCK_MAX_LEN:]
+                block_start_offset = None
+            block_idx_start += batch_nblock
+            infile = os.path.join(outdir, chrom + f'.{block_idx_start}.mz')
+            reader.close()
+        # write chunk tail
+        writer.close()
+
+    # Second, merge chromosomes to outfile
     writer = Writer(Output=outfile, Formats=formats,
                     Columns=header['Columns'], Dimensions=header['Dimensions'],
-                    message="catmz")
-    writer.catmz(Input=f"{outdir}/*.mz")
+                    message="merged")
+    writer.catmz(Input=[f"{outdir}/{chrom}.mz" for chrom in chroms])
     os.system(f"rm -rf {outdir}")
-
 
 # ==========================================================
 def extractCG(Input=None, outfile=None, bmi=None, chunksize=5000,
