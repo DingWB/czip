@@ -429,8 +429,7 @@ def merge_mz_worker(outfile_cat, outdir, chrom, dims, formats,
     return
 
 
-def merge_mz(indir="/anvil/scratch/x-wding2/Projects/mouse-pfc/data/pseudo_cell/mz-CGN",
-             mz_paths=None, outfile="merged.mz", n_jobs=12, formats=['I', 'I'],
+def merge_mz(indir=None, mz_paths=None, outfile="merged.mz", n_jobs=12, formats=['I', 'I'],
              Path_to_chrom="~/Ref/mm10/mm10_ucsc_with_chrL.main.chrom.sizes.txt",
              keep_cat=False, batchsize=10):
     outfile = os.path.abspath(os.path.expanduser(outfile))
