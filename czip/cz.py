@@ -8,11 +8,11 @@ import numpy as np
 import pandas as pd
 import gzip
 
-_bmz_magic = b'BMZIP'
+_bcz_magic = b'BMZIP'
 _block_magic = b"MB"
 _chunk_magic = b"MC"
 _BLOCK_MAX_LEN = 65535
-_bmz_eof = b"\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00BM\x02\x00\x1b\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+_bcz_eof = b"\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00BM\x02\x00\x1b\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00"
 _version = 1.0
 
 
@@ -40,18 +40,6 @@ def get_dtfuncs(formats,tobytes=True):
 
 # ==========================================================
 def make_virtual_offset(block_start_offset, within_block_offset):
-    """Compute a BGZF virtual offset from block start and within block offsets.
-
-	The BAM indexing scheme records read positions using a 64 bit
-	'virtual offset', comprising in C terms:
-
-	block_start_offset << 16 | within_block_offset
-
-	Here block_start_offset is the file offset of the BGZF block
-	start (unsigned integer using up to 64-16 = 48 bits), and
-	within_block_offset within the (decompressed) block (unsigned
-	16 bit integer).
-	"""
     if within_block_offset < 0 or within_block_offset >= _BLOCK_MAX_LEN:
         raise ValueError(
             "Require 0 <= within_block_offset < 2**16, got %i" % within_block_offset
@@ -65,108 +53,26 @@ def make_virtual_offset(block_start_offset, within_block_offset):
 
 # ==========================================================
 def split_virtual_offset(virtual_offset):
-    """Divides a 64-bit BGZF virtual offset into block start & within block offsets.
-
-	>>> (100000, 0) == split_virtual_offset(_BLOCK_MAX_LEN00000)
-	True
-	>>> (100000, 10) == split_virtual_offset(_BLOCK_MAX_LEN00010)
-	True
-
-	"""
     start = virtual_offset >> 16
     return start, virtual_offset ^ (start << 16)
 
 
 # ==========================================================
-def SummaryBmzBlocks(handle):
-    """Low level debugging function to inspect BGZF blocks.
-
-	Expects a BGZF compressed file opened in binary read mode using
-	the builtin open function. Do not use a handle from this bgzf
-	module or the gzip module's open function which will decompress
-	the file.
-
-	Returns the block start offset (see virtual offsets), the block
-	length (add these for the start of the next block), and the
-	decompressed length of the blocks contents (limited to _BLOCK_MAX_LEN in
-	BGZF), as an iterator - one tuple per BGZF block.
-
-	>>> from builtins import open
-	>>> handle = open("SamBam/ex1.bam", "rb")
-	>>> for values in BmzBlocks(handle):
-	...     print("Raw start %i, raw length %i; data start %i, data length %i" % values)
-	Raw start 0, raw length 18239; data start 0, data length _BLOCK_MAX_LEN
-	Raw start 18239, raw length 18223; data start _BLOCK_MAX_LEN, data length _BLOCK_MAX_LEN
-	Raw start 36462, raw length 18017; data start 131072, data length _BLOCK_MAX_LEN
-	Raw start 54479, raw length 17342; data start 196608, data length _BLOCK_MAX_LEN
-	Raw start 71821, raw length 17715; data start 262144, data length _BLOCK_MAX_LEN
-	Raw start 89536, raw length 17728; data start 327680, data length _BLOCK_MAX_LEN
-	Raw start 107264, raw length 17292; data start 393216, data length 63398
-	Raw start 124556, raw length 28; data start 456614, data length 0
-	>>> handle.close()
-
-	Indirectly we can tell this file came from an old version of
-	samtools because all the blocks (except the final one and the
-	dummy empty EOF marker block) are _BLOCK_MAX_LEN bytes.  Later versions
-	avoid splitting a read between two blocks, and give the header
-	its own block (useful to speed up replacing the header). You
-	can see this in ex1_refresh.bam created using samtools 0.1.18:
-
-	samtools view -b ex1.bam > ex1_refresh.bam
-
-	>>> handle = open("SamBam/ex1_refresh.bam", "rb")
-	>>> for values in BmzBlocks(handle):
-	...     print("Raw start %i, raw length %i; data start %i, data length %i" % values)
-	Raw start 0, raw length 53; data start 0, data length 38
-	Raw start 53, raw length 18195; data start 38, data length 65434
-	Raw start 18248, raw length 18190; data start 65472, data length 65409
-	Raw start 36438, raw length 18004; data start 130881, data length 65483
-	Raw start 54442, raw length 17353; data start 196364, data length 65519
-	Raw start 71795, raw length 17708; data start 261883, data length 65411
-	Raw start 89503, raw length 17709; data start 327294, data length 65466
-	Raw start 107212, raw length 17390; data start 392760, data length 63854
-	Raw start 124602, raw length 28; data start 456614, data length 0
-	>>> handle.close()
-
-	The above example has no embedded SAM header (thus the first block
-	is very small at just 38 bytes of decompressed data), while the next
-	example does (a larger block of 103 bytes). Notice that the rest of
-	the blocks show the same sizes (they contain the same read data):
-
-	>>> handle = open("SamBam/ex1_header.bam", "rb")
-	>>> for values in BmzBlocks(handle):
-	...     print("Raw start %i, raw length %i; data start %i, data length %i" % values)
-	Raw start 0, raw length 104; data start 0, data length 103
-	Raw start 104, raw length 18195; data start 103, data length 65434
-	Raw start 18299, raw length 18190; data start 65537, data length 65409
-	Raw start 36489, raw length 18004; data start 130946, data length 65483
-	Raw start 54493, raw length 17353; data start 196429, data length 65519
-	Raw start 71846, raw length 17708; data start 261948, data length 65411
-	Raw start 89554, raw length 17709; data start 327359, data length 65466
-	Raw start 107263, raw length 17390; data start 392825, data length 63854
-	Raw start 124653, raw length 28; data start 456679, data length 0
-	>>> handle.close()
-
-	"""
+def SummaryBczBlocks(handle):
     if isinstance(handle, Reader):
-        raise TypeError("Function BmzBlocks expects a binary handle")
+        raise TypeError("Function BczBlocks expects a binary handle")
     data_start = 0
     while True:
         start_offset = handle.tell()
         try:
-            block_length, data_len = _load_bmz_block(handle)
+            block_length, data_len = _load_bcz_block(handle)
         except StopIteration:
             break
         yield start_offset, block_length, data_start, data_len
         data_start += data_len
 
 # ==========================================================
-def _load_bmz_block(handle, decompress=False):
-    """Load the next BGZF block of compressed data (PRIVATE).
-
-	Returns a tuple (block size and data), or at end of file
-	will raise StopIteration.
-	"""
+def _load_bcz_block(handle, decompress=False):
     magic = handle.read(2)
     if not magic or magic != _block_magic:  # next chunk or EOF
         raise StopIteration
@@ -244,10 +150,10 @@ def _text_input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
     infile : path
         input file path or sys.stdin.buffer
     formats : list
-        list of formats to pack into .mz file.
+        list of formats to pack into .cz file.
     sep :str
     usecols :list
-        columns index in input file to be packed into .mz file.
+        columns index in input file to be packed into .cz file.
     dim_cols : list
         dimensions column index, default is [0]
     chunksize :int
@@ -362,7 +268,7 @@ class Reader:
         self.header = {}
         f = self._handle
         magic = struct.unpack("<5s", f.read(5))[0]
-        if magic != _bmz_magic:
+        if magic != _bcz_magic:
             raise ValueError("Not a right format?")
         self.header['magic'] = magic
         self.header['version'] = struct.unpack("<f", f.read(4))[0]
@@ -491,7 +397,7 @@ class Reader:
         while r:
             self._handle.seek(self._chunk_start_offset + 10)
             chunk_info = [self._chunk_dims]
-            for block in SummaryBmzBlocks(self._handle):
+            for block in SummaryBczBlocks(self._handle):
                 block = chunk_info + list(block)
                 if printout:
                     try:
@@ -556,7 +462,7 @@ class Reader:
         self._handle.seek(start_offset)
         self._block_start_offset = start_offset
         try:
-            block_size, self._buffer = _load_bmz_block(self._handle, True)
+            block_size, self._buffer = _load_bcz_block(self._handle, True)
         except StopIteration:  # EOF
             block_size = 0
             self._buffer = b""
@@ -578,7 +484,7 @@ class Reader:
     def view(self, show_dim=None, header=True, Dimension=None,
              reference=None):
         """
-		View .bmz file.
+		View .cz file.
 
 		Parameters
 		----------
@@ -589,7 +495,7 @@ class Reader:
 		header : bool
 			whether to print the header.
         Dimension: None, bool, list or file path
-            If None (default): use the default chunk order in .mz file;
+            If None (default): use the default chunk order in .cz file;
             If list: use this Dimension (dims) as order and print records.
             If path: use the first len(Dimension) columns as dim order, there should be
                 no header in file path and use \t as separator.
@@ -752,7 +658,7 @@ class Reader:
 
     def _getRecordsByIdRegions(self, dim=None, IDs=None):
         """
-        Get .mz content for a given dim and IDs
+        Get .cz content for a given dim and IDs
         Parameters
         ----------
         dim : tuple
@@ -779,7 +685,7 @@ class Reader:
 
     def getRecordsByIdRegions(self, dim=None, reference=None, IDs=None):
         """
-        Get .mz content for a given dim and IDs
+        Get .cz content for a given dim and IDs
         Parameters
         ----------
         dim : tuple
@@ -1005,7 +911,7 @@ class Reader:
     def query(self, Dimension=None, start=None, end=None, Regions=None,
               query_col=[0], reference=None, printout=True):
         """
-        query .mz file by Dimension, start and end, if regions provided, Dimension, start and
+        query .cz file by Dimension, start and end, if regions provided, Dimension, start and
         end should be None, regions should be a list, each element of regions
         is a list, for example, regions=[[('cell1','chr1'),1,10],
         [('cell10','chr22'),100,200]],and so on.
@@ -1084,7 +990,7 @@ class Reader:
         else:
             raise ValueError("length of query_col can not be greater then 2.")
 
-        if reference is None:  # query position in this .mz file.
+        if reference is None:  # query position in this .cz file.
             for i in set([s, e]):
                 if self.header['Formats'][i][-1] in ['s', 'c']:
                     raise ValueError("The query_col of Columns is not int or float",
@@ -1297,9 +1203,9 @@ class Reader:
 
 
 # ==========================================================
-def extract(mz_path=None, outfile=None, bmi=None, chunksize=5000):
+def extract(cz_path=None, outfile=None, bmi=None, chunksize=5000):
     bmi_reader = Reader(bmi)
-    reader = Reader(mz_path)
+    reader = Reader(cz_path)
     writer = Writer(outfile, Formats=reader.header['Formats'],
                     Columns=reader.header['Columns'],
                     Dimensions=reader.header['Dimensions'],
@@ -1331,7 +1237,7 @@ class Writer:
                  Columns=['mc', 'cov'], Dimensions=['chrom'], fileobj=None,
                  message='', level=6, verbose=0):
         """
-        czip .mz writer.
+        czip .cz writer.
 
         Parameters
         ----------
@@ -1392,7 +1298,7 @@ class Writer:
             self.Dimensions = Dimensions.split(',')
         else:
             self.Dimensions = list(Dimensions)
-        self._magic_size = len(_bmz_magic)
+        self._magic_size = len(_bcz_magic)
         self.verbose = verbose
         self.message = message
         # if self.verbose > 0:
@@ -1402,7 +1308,7 @@ class Writer:
 
     def write_header(self):
         f = self._handle
-        f.write(struct.pack(f"<{self._magic_size}s", _bmz_magic))  # 5 bytes
+        f.write(struct.pack(f"<{self._magic_size}s", _bcz_magic))  # 5 bytes
         f.write(struct.pack("<f", _version))  # 4 bytes, float
         f.write(struct.pack("<Q", 0))  # 8 bytes, total size, including magic.
         f.write(struct.pack("<H", len(self.message)))  # length of each format, 1 byte
@@ -1425,7 +1331,7 @@ class Writer:
             dname_len = len(dim)
             f.write(struct.pack("<B", dname_len))  # length of each name, 1 byte
             f.write(struct.pack(f"<{dname_len}s", bytes(dim, 'utf-8')))
-        # when multiple .mz are cat into one .mz and a new dimension is added,
+        # when multiple .cz are cat into one .cz and a new dimension is added,
         # such as sampleID, seek to this position (_header_size) and write another
         # two element: new_dname_len (B) and new_dim, then go to
         # _n_dim_offset,rewrite the n_dim (n_dim = n_dim + 1) and
@@ -1558,11 +1464,11 @@ class Writer:
                                      self.usecols, self.dim_cols,
                                      self.chunksize)
 
-    def tomz(self, Input=None, usecols=[4, 5], dim_cols=[0],
+    def tocz(self, Input=None, usecols=[4, 5], dim_cols=[0],
              sep='\t', chunksize=5000, header=None, skiprows=0,
              reference=None):
         """
-        Pack dataframe, stdin or a file path into .mz file with or without reference
+        Pack dataframe, stdin or a file path into .cz file with or without reference
         coordinates file.
 
         Parameters
@@ -1571,7 +1477,7 @@ class Writer:
             list, tuple, np.ndarray or dataframe, stdin (Input is None, "stdin" or "-"),
             or a file path (need to specify sep,header and skiprows).
         usecols : list
-            usecols is the index of columns to be packed into .mz Columns.
+            usecols is the index of columns to be packed into .cz Columns.
         dim_cols : list
             index of columns to be set as Dimensions of Writer, such as chrom
             columns.
@@ -1586,8 +1492,8 @@ class Writer:
         reference : path
             The reference coordinate file used to pack the Input without coordinate,
             for example, we can pack the input file with columns of ["chrom",'pos',"mc",
-            "cov"] into .mz file with usecols=[2,3] (means we only store mc and cov
-            in .mz file) and chrom as dimension column,
+            "cov"] into .cz file with usecols=[2,3] (means we only store mc and cov
+            in .cz file) and chrom as dimension column,
             there is no coordinate, so we use the coordinates of allc as coordinate.
             In this case, we have to map the position of input file onto the reference
             position. Since we don't need to store pos, so we can save lots of
@@ -1642,12 +1548,12 @@ class Writer:
             if not os.path.exists(input_path):
                 raise ValueError("Unknown format for Input")
             if os.path.exists(input_path + '.tbi'):
-                print("Please use allc2mz command to convert input to .mz.")
+                print("Please use allc2cz command to convert input to .cz.")
                 return
             else:
                 if not reference is None:
                     raise ValueError("Please build .tbi index for input file and"
-                                     "use allc2mz to convert input to .mz")
+                                     "use allc2cz to convert input to .cz")
                 data_generator = self._parse_input_no_ref(input_path)
         elif Input is None or Input == 'stdin':
             data_generator = self._parse_input_no_ref(sys.stdin.buffer)
@@ -1670,14 +1576,14 @@ class Writer:
 
     @staticmethod
     def create_new_dim(basename):
-        if basename.endswith('.mz'):
+        if basename.endswith('.cz'):
             return basename[:-3]
         return basename
 
-    def catmz(self, Input=None, dim_order=None,add_dim=False,
+    def catcz(self, Input=None, dim_order=None, add_dim=False,
               title="filename"):
         """
-		Cat multiple .mz files into one .mz file.
+		Cat multiple .cz files into one .cz file.
 
 		Parameters
 		----------
@@ -1686,28 +1592,28 @@ class Writer:
 			double quotation marks if using fire) or a list.
 		dim_order : None, list or path
 			If dim_order=None, Input will be sorted using python sorted.
-			If dim_order is a list, tuple or array of basename.rstrip(.mz), sorted as dim_order.
+			If dim_order is a list, tuple or array of basename.rstrip(.cz), sorted as dim_order.
 			If dim_order is a file path (for example, chrom size path to dim_order chroms
 			or only use selected chroms) will be sorted as
 			the 1st column of the input file path (without header, tab-separated).
 			default is None
         add_dim: bool or function
-            whether to add .mz file names as an new dimension to the merged
-            .mz file. For example, we have multiple .mz files for many cells, in
-            each .mz file, the dimensions are ['chrom'], after merged, we would
-            like to add file name of .mz as a new dimension ['cell_id']. In this case,
+            whether to add .cz file names as an new dimension to the merged
+            .cz file. For example, we have multiple .cz files for many cells, in
+            each .cz file, the dimensions are ['chrom'], after merged, we would
+            like to add file name of .cz as a new dimension ['cell_id']. In this case,
             the dimensions in the merged header would be ["chrom","cell_id"], and
             in each chunk, in addition to the previous dim ['chr1'] or ['chr22'].., a
             new dim would also be append to the previous dim, like ['chr1','cell_1'],
             ['chr22','cell_100'].
 
-            However, if add_dim is a function, the input to this function is the .mz
+            However, if add_dim is a function, the input to this function is the .cz
             file basename, the returned value from this funcion would be used
             as new dim and added into the chunk_dims. The default function to
             convert filename to dim name is self.create_new_dim.
         title: str
             if add_dim is True or a python function, title would be append to
-            the header['Dimensions'] of the merged .mz file's header. If the title of
+            the header['Dimensions'] of the merged .cz file's header. If the title of
             new dimension had already given in Writer Dimensions,
             title can be None, otherwise, title should be provided.
 		Returns
@@ -1730,7 +1636,7 @@ class Writer:
                 dim_order = pd.read_csv(os.path.abspath(os.path.expanduser(dim_order)),
                                     sep='\t', header=None, usecols=[0])[0].tolist()
             if isinstance(dim_order, (list, tuple, np.ndarray)):  # dim_order is a list
-                # Input=[str(i)+'.mz' for i in dim_order]
+                # Input=[str(i)+'.cz' for i in dim_order]
                 Input = [D[str(i)] for i in dim_order]
             else:
                 raise ValueError("input of dim_order is not corrected !")
@@ -1817,7 +1723,7 @@ class Writer:
         self._handle.seek(self._magic_size + 4)  # magic and version
         self._handle.write(struct.pack("<Q", cur_offset))  # real offset.
         self._handle.seek(cur_offset)
-        self._handle.write(_bmz_eof)
+        self._handle.write(_bcz_eof)
         self._handle.flush()
         self._handle.close()
 

@@ -1,25 +1,27 @@
 import fire
-from .bmz import (
+from .cz import (
     Reader,
     Writer,
     test_difference,
     extract
 )
-from .allc import (AllC, generate_ssi, allc2mz, prepare_sky,
-                   merge_mz, extractCG, merge_cell_type)
+from .allc import (AllC, generate_ssi, allc2cz,
+                   merge_cz, extractCG, merge_cell_type)
+
+__version__ = 0.1
+
 
 def main():
-	fire.core.Display = lambda lines, out: print(*lines, file=out)
-	fire.Fire(
+    fire.core.Display = lambda lines, out: print(*lines, file=out)
+    fire.Fire(
         {
             "Writer": Writer,
             'Reader': Reader,
             'AllC': AllC,
-            'allc2mz': allc2mz,
+            'allc2cz': allc2cz,
             'test_diff': test_difference,
             'generate_ssi': generate_ssi,
-            'prepare_sky': prepare_sky,
-            'merge_mz': merge_mz,
+            'merge_cz': merge_cz,
             'merge_cell_type': merge_cell_type,
             'extract': extract,
             'extractCG': extractCG,

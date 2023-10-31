@@ -16,8 +16,8 @@ from Bio import SeqIO
 import numpy as np
 from collections import defaultdict
 import math
-from .bmz import (Reader, Writer, get_dtfuncs,
-                  _BLOCK_MAX_LEN, _chunk_magic)
+from .cz import (Reader, Writer, get_dtfuncs,
+                 _BLOCK_MAX_LEN, _chunk_magic)
 
 
 # ==========================================================
@@ -25,7 +25,7 @@ def WriteC(record, outdir, chunksize=5000):
     # cdef int i, N
     # cdef char* chrom, base, context, strand
     chrom = record.id
-    outfile = os.path.join(outdir, chrom + ".mz")
+    outfile = os.path.join(outdir, chrom + ".cz")
     if os.path.exists(outfile):
         print(f"{outfile} existed, skip.")
         return None
@@ -60,7 +60,7 @@ def WriteC(record, outdir, chunksize=5000):
 
 # ==========================================================
 class AllC:
-    def __init__(self, Genome=None, Output="hg38_allc.mz",
+    def __init__(self, Genome=None, Output="hg38_allc.cz",
                  pattern="C", n_jobs=12, keep_temp=False):
         """
         Extract position of specific pattern in the reference genome, for example C.
@@ -104,7 +104,7 @@ class AllC:
         writer = Writer(Output=self.Output, Formats=['Q', 'c', '3s'],
                         Columns=['pos', 'strand', 'context'],
                         Dimensions=['chrom'], message=self.genome)
-        writer.catmz(Input=f"{self.outdir}/*.mz")
+        writer.catcz(Input=f"{self.outdir}/*.cz")
 
     def run(self):
         self.writePattern()
@@ -112,17 +112,18 @@ class AllC:
         if not self.keep_temp:
             os.system(f"rm -rf {self.outdir}")
 
-def allc2mz(allc_path, outfile, reference=None, missing_value=[0, 0],
+
+def allc2cz(allc_path, outfile, reference=None, missing_value=[0, 0],
             pr=0, pa=1, sep='\t', Path_to_chrom=None, chunksize=2000):
     """
-    convert allc.tsv.gz to .mz file.
+    convert allc.tsv.gz to .cz file.
 
     Parameters
     ----------
     allc_path : path
         path to allc.tsv.gz, should has .tbi index.
     outfile : path
-        output .mz file
+        output .cz file
     reference : path
         path to reference coordinates.
     chunksize : int
@@ -282,11 +283,11 @@ def _isCH(record):
 # ==========================================================
 def generate_ssi(Input, output=None, pattern="+CGN"):
     """
-    Generate ssi (subset index) for a given input .mz
+    Generate ssi (subset index) for a given input .cz
 
     Parameters
     ----------
-    Input : .mz
+    Input : .cz
     output : .bmi
     pattern : CGN, CHN, +CGN, -CGN
 
@@ -312,85 +313,11 @@ def generate_ssi(Input, output=None, pattern="+CGN"):
                         chunksize=2000)
     reader.close()
 
-def prepare_sky(smk=None, sky=None, indir=None, outdir=None, allc_path=None,
-                reference=None, ref_prefix=None, chrom=None, chrom_prefix=None,
-                gcp=False, bucket=None, cpu=24, name=None):
-    if smk is None:
-        smk = os.path.join(os.path.dirname(__file__),
-                           "data/snakemake_template/run_allc2mz.smk")
-    if sky is None:
-        sky = os.path.join(os.path.dirname(__file__),
-                           "data/skypilot_template/run_allc2mz.yaml")
-    if name is None:
-        name = 'allc2mz'
-    workdir = os.path.basename("./")
-    D = {
-        'indir': indir, 'outdir': outdir, 'allc_path': allc_path,
-        'reference': reference, 'ref_prefix': ref_prefix, 'chrom': chrom,
-        'chrom_prefix': chrom_prefix, 'gcp': gcp, 'bucket': bucket,
-        'cpu': cpu
-    }
-    for k in D:
-        if D[k] is None:
-            D[k] = ''
-        else:
-            if k not in ['bucket', 'cpu']:
-                value = D[k]
-                D[k] = f"{k}={value}"
-    # D['smk']=smk
-    D['name'] = name
-    D['workdir'] = workdir
-    with open(sky, 'r') as f:
-        template = f.read()
-    # with open(out_yaml,'w') as f:
-    #     f.write(template.format(**D))
-    print(template.format(**D))
-    print("# sky launch -c test 1.yaml")
-    print("# sky spot launch -y -n job job.yaml")
 
-
-def mzs_merger(outfile, formats, columns, dimensions, message, n_batch, q):
-    finished_jobs = {}
-    N = {}
-    chunk_id_tmp = 0
-    writer = Writer(Output=outfile, Formats=formats,
-                    Columns=columns, Dimensions=dimensions,
-                    message=message)
-    dtfuncs = get_dtfuncs(writer.Formats)
-    while 1:
-        result = q.get()  # if q is empty, it will wait.
-        if result == 'kill':
-            print("Done!")
-            writer.close()
-            break
-        dim, chunk_id, data = result  # chunk_id==''last_one''
-        if dim not in finished_jobs:
-            print(dim)
-            finished_jobs[dim] = {}
-            N[dim] = {}
-        if chunk_id not in finished_jobs[dim]:
-            finished_jobs[dim][chunk_id] = data
-            N[dim][chunk_id] = 0
-            # print(dim,chunk_id,end='\r')
-        else:
-            finished_jobs[dim][chunk_id] += data  # sum this chunk for another 100 files
-            N[dim][chunk_id] += 1  # record how many batch have been processed
-        if N[dim][chunk_id_tmp] == n_batch:
-            data = b''.join([struct.pack(f"<{writer.fmts}",
-                                         *[func(v) for v, func in zip(values, dtfuncs)])
-                             for values in finished_jobs[dim][chunk_id]])
-            print(dim, chunk_id_tmp, N[dim][chunk_id_tmp], n_batch)
-            writer.write_chunk(data, dim)
-            del finished_jobs[dim][chunk_id]  # finished one allc, remove from monitoring
-            chunk_id_tmp += 1
-            if chunk_id_tmp not in N[dim]:
-                chunk_id_tmp = 0
-
-
-def merge_mz_worker(outfile_cat, outdir, chrom, dims, formats,
+def merge_cz_worker(outfile_cat, outdir, chrom, dims, formats,
                     block_idx_start, batch_nblock, chunksize=5000):
     # print(chrom, "started",end='\r')
-    outname = os.path.join(outdir, chrom + f'.{block_idx_start}.mz')
+    outname = os.path.join(outdir, chrom + f'.{block_idx_start}.cz')
     reader1 = Reader(outfile_cat)
     data = None
     for dim in dims:  # each dim is a file of the same chrom
@@ -429,23 +356,23 @@ def merge_mz_worker(outfile_cat, outdir, chrom, dims, formats,
     return
 
 
-def merge_mz(indir=None, mz_paths=None, outfile="merged.mz", n_jobs=12, formats=['I', 'I'],
+def merge_cz(indir=None, cz_paths=None, outfile="merged.cz", n_jobs=12, formats=['I', 'I'],
              Path_to_chrom="~/Ref/mm10/mm10_ucsc_with_chrL.main.chrom.sizes.txt",
              keep_cat=False, batchsize=10):
     outfile = os.path.abspath(os.path.expanduser(outfile))
     if os.path.exists(outfile):
         print(f"{outfile} existed, skip.")
         return
-    if mz_paths is None:
-        mz_paths = os.listdir(indir)
-    reader = Reader(os.path.join(indir, mz_paths[0]))
+    if cz_paths is None:
+        cz_paths = os.listdir(indir)
+    reader = Reader(os.path.join(indir, cz_paths[0]))
     header = reader.header
     reader.close()
-    outfile_cat = outfile + '.cat.mz'
+    outfile_cat = outfile + '.cat.cz'
     writer = Writer(Output=outfile_cat, Formats=header['Formats'],
                     Columns=header['Columns'], Dimensions=header['Dimensions'],
-                    message="catmz")
-    writer.catmz(Input=[os.path.join(indir, mz_path) for mz_path in mz_paths],
+                    message="catcz")
+    writer.catcz(Input=[os.path.join(indir, cz_path) for cz_path in cz_paths],
                  add_dim=True)
     Path_to_chrom = os.path.abspath(os.path.expanduser(Path_to_chrom))
     df = pd.read_csv(Path_to_chrom, sep='\t', header=None, usecols=[0])
@@ -465,7 +392,7 @@ def merge_mz(indir=None, mz_paths=None, outfile="merged.mz", n_jobs=12, formats=
     # manager = multiprocessing.Manager()
     # queue1 = manager.Queue()
     pool = multiprocessing.Pool(n_jobs)
-    # watcher = pool.apply_async(mzs_merger, (outfile, formats, columns,
+    # watcher = pool.apply_async(czs_merger, (outfile, formats, columns,
     #                                         dimensions, message, n_batch, queue1))
     jobs = []
     outdir = outfile + '.tmp'
@@ -477,7 +404,7 @@ def merge_mz(indir=None, mz_paths=None, outfile="merged.mz", n_jobs=12, formats=
             continue
         block_idx_start = 0
         while block_idx_start < chrom_nblocks[chrom]:
-            job = pool.apply_async(merge_mz_worker,
+            job = pool.apply_async(merge_cz_worker,
                                    (outfile_cat, outdir, chrom, dims, formats,
                                     block_idx_start, batch_nblock))
             jobs.append(job)
@@ -494,7 +421,7 @@ def merge_mz(indir=None, mz_paths=None, outfile="merged.mz", n_jobs=12, formats=
     # First, merge different batch for each chrom
     for chrom in chroms:
         # print(chrom,end='\t')
-        outname = os.path.join(outdir, chrom + '.mz')
+        outname = os.path.join(outdir, chrom + '.cz')
         writer = Writer(Output=outname, Formats=formats,
                         Columns=header['Columns'], Dimensions=header['Dimensions'],
                         message=outfile_cat)
@@ -506,7 +433,7 @@ def merge_mz(indir=None, mz_paths=None, outfile="merged.mz", n_jobs=12, formats=
         writer._block_1st_record_virtual_offsets = []
         writer._chunk_dims = [chrom]
         block_idx_start = 0
-        infile = os.path.join(outdir, chrom + f'.{block_idx_start}.mz')
+        infile = os.path.join(outdir, chrom + f'.{block_idx_start}.cz')
         while os.path.exists(infile):
             reader = Reader(infile)
             reader._load_chunk(reader.header['header_size'])
@@ -523,7 +450,7 @@ def merge_mz(indir=None, mz_paths=None, outfile="merged.mz", n_jobs=12, formats=
                         writer._buffer = writer._buffer[_BLOCK_MAX_LEN:]
                 block_start_offset = None
             block_idx_start += batch_nblock
-            infile = os.path.join(outdir, chrom + f'.{block_idx_start}.mz')
+            infile = os.path.join(outdir, chrom + f'.{block_idx_start}.cz')
             reader.close()
         # write chunk tail
         writer.close()
@@ -532,11 +459,12 @@ def merge_mz(indir=None, mz_paths=None, outfile="merged.mz", n_jobs=12, formats=
     writer = Writer(Output=outfile, Formats=formats,
                     Columns=header['Columns'], Dimensions=header['Dimensions'],
                     message="merged")
-    writer.catmz(Input=[f"{outdir}/{chrom}.mz" for chrom in chroms])
+    writer.catcz(Input=[f"{outdir}/{chrom}.cz" for chrom in chroms])
     os.system(f"rm -rf {outdir}")
 
+
 def merge_cell_type(indir=None, cell_table=None, outdir=None,
-                    n_jobs=64, Path_to_chrom=None, ext='.CGN.merged.mz'):
+                    n_jobs=64, Path_to_chrom=None, ext='.CGN.merged.cz'):
     indir = os.path.abspath(os.path.expanduser(indir))
     outdir = os.path.abspath(os.path.expanduser(outdir))
     if not os.path.exists(outdir):
@@ -544,14 +472,14 @@ def merge_cell_type(indir=None, cell_table=None, outdir=None,
     Path_to_chrom = os.path.abspath(os.path.expanduser(Path_to_chrom))
     df_ct = pd.read_csv(cell_table, sep='\t', header=None, names=['cell', 'ct'])
     for ct in df_ct.ct.unique():
-        outfile = os.path.join(outdir, ct + '.mz')
+        outfile = os.path.join(outdir, ct + '.cz')
         if os.path.exists(outfile):
             print(f"{outfile} existed.")
             continue
         print(ct)
         snames = df_ct.loc[df_ct.ct == ct, 'cell'].tolist()
-        mz_paths = [os.path.join(indir, sname + ext) for sname in snames]
-        merge_mz(indir=indir, mz_paths=mz_paths,
+        cz_paths = [os.path.join(indir, sname + ext) for sname in snames]
+        merge_cz(indir=indir, cz_paths=cz_paths,
                  outfile=outfile, n_jobs=n_jobs, Path_to_chrom=Path_to_chrom)
 # ==========================================================
 def extractCG(Input=None, outfile=None, bmi=None, chunksize=5000,
@@ -560,17 +488,17 @@ def extractCG(Input=None, outfile=None, bmi=None, chunksize=5000,
 
     Parameters
     ----------
-    mz_path :
+    cz_path :
     outfile :
     bmi : path
-        bmi should be bmi to mm10_with_chrL.allc.mz.CGN.bmi, not forward
+        bmi should be bmi to mm10_with_chrL.allc.cz.CGN.bmi, not forward
         strand bmi, but after merge (if merge_strand is True), forward bmi
-        mm10_with_chrL.allc.mz.+CGN.bmi should be used to generate
+        mm10_with_chrL.allc.cz.+CGN.bmi should be used to generate
          reference, one can
-        run: czip extract -m mm10_with_chrL.allc.mz
-        -o mm10_with_chrL.allCG.forward.mz
-        -b mm10_with_chrL.allc.mz.+CGN.bmi and use
-        mm10_with_chrL.allCG.forward.mz as new reference.
+        run: czip extract -m mm10_with_chrL.allc.cz
+        -o mm10_with_chrL.allCG.forward.cz
+        -b mm10_with_chrL.allc.cz.+CGN.bmi and use
+        mm10_with_chrL.allCG.forward.cz as new reference.
     chunksize :int
     merge_strand: bool
         after merging, only forward strand would be kept, reverse strand values
@@ -580,10 +508,10 @@ def extractCG(Input=None, outfile=None, bmi=None, chunksize=5000,
     -------
 
     """
-    mz_path = os.path.abspath(os.path.expanduser(Input))
+    cz_path = os.path.abspath(os.path.expanduser(Input))
     bmi_path = os.path.abspath(os.path.expanduser(bmi))
     bmi_reader = Reader(bmi_path)
-    reader = Reader(mz_path)
+    reader = Reader(cz_path)
     writer = Writer(outfile, Formats=reader.header['Formats'],
                     Columns=reader.header['Columns'],
                     Dimensions=reader.header['Dimensions'],

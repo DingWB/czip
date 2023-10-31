@@ -8,24 +8,24 @@ except ImportError:
     from distutils.core import setup, find_packages
 from Cython.Build import cythonize
 from pathlib import Path
-__version__=0.1
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
+__version__ = 0.1
 
 setup(
     name="czip",
     version=__version__,
-    description="czip: A Python package for single cell DNA methylation storage",
+    description="czip: Chunk based ZIP",
     long_description=long_description,
     long_description_content_type='text/markdown',
     author="Wubin Ding",
     author_email="ding.wu.bin.gm@gmail.com",
-    url="https://github.com/DingWB/bmzip",
+    url="https://github.com/DingWB/czip",
     packages=find_packages(exclude=('docs',)),
     install_requires=['pandas', 'fire', 'numpy'],
     include_package_data=True,
     package_data={
-        '': ['*.txt', '*.tsv', '*.csv', '*.fa', '*Snakefile', '*ipynb', '*yaml', '*.smk']
+        '': ['*.txt', '*.tsv', '*.csv', '*.fa', '*Snakefile', '*ipynb']
     },
     entry_points={
         'console_scripts':
