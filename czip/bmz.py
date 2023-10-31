@@ -1331,7 +1331,7 @@ class Writer:
                  Columns=['mc', 'cov'], Dimensions=['chrom'], fileobj=None,
                  message='', level=6, verbose=0):
         """
-        bmzip .mz writer.
+        czip .mz writer.
 
         Parameters
         ----------

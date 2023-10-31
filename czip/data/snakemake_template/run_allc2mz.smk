@@ -117,5 +117,5 @@ rule run_allc2mz:
 
     shell:
         """
-        bmzip allc2mz {input.allc_file} {output} {params.reference} {params.chrom}
+        czip allc2mz {input.allc_file} {output} {params.reference} {params.chrom}
         """

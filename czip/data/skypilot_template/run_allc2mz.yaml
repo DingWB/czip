@@ -11,7 +11,7 @@ resources:
   image_id: projects/ecker-wding/global/images/myimage
 
 file_mounts:
-  ~/bmzip: ~/Projects/Github/bmzip
+  ~/bmzip: ~/Projects/Github/czip
 
 setup: |
   conda activate yap && cd ~/bmzip && python setup.py install

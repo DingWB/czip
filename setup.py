@@ -13,9 +13,9 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
 setup(
-    name="bmzip",
+    name="czip",
     version=__version__,
-    description="bmzip: A Python package for single cell DNA methylation storage",
+    description="czip: A Python package for single cell DNA methylation storage",
     long_description=long_description,
     long_description_content_type='text/markdown',
     author="Wubin Ding",
@@ -30,9 +30,9 @@ setup(
     entry_points={
         'console_scripts':
             [
-                'bmzip=bmzip:main',
+                'czip=czip:main',
             ],
-		},
+    },
 
-	# ext_modules=cythonize("bmzip/utils.py"), #python setup.py build_ext --inplace
+    # ext_modules=cythonize("czip/utils.py"), #python setup.py build_ext --inplace
 )

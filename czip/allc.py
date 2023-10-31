@@ -535,6 +535,24 @@ def merge_mz(indir=None, mz_paths=None, outfile="merged.mz", n_jobs=12, formats=
     writer.catmz(Input=[f"{outdir}/{chrom}.mz" for chrom in chroms])
     os.system(f"rm -rf {outdir}")
 
+def merge_cell_type(indir=None, cell_table=None, outdir=None,
+                    n_jobs=64, Path_to_chrom=None, ext='.CGN.merged.mz'):
+    indir = os.path.abspath(os.path.expanduser(indir))
+    outdir = os.path.abspath(os.path.expanduser(outdir))
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
+    Path_to_chrom = os.path.abspath(os.path.expanduser(Path_to_chrom))
+    df_ct = pd.read_csv(cell_table, sep='\t', header=None, names=['cell', 'ct'])
+    for ct in df_ct.ct.unique():
+        outfile = os.path.join(outdir, ct + '.mz')
+        if os.path.exists(outfile):
+            print(f"{outfile} existed.")
+            continue
+        print(ct)
+        snames = df_ct.loc[df_ct.ct == ct, 'cell'].tolist()
+        mz_paths = [os.path.join(indir, sname + ext) for sname in snames]
+        merge_mz(indir=indir, mz_paths=mz_paths,
+                 outfile=outfile, n_jobs=n_jobs, Path_to_chrom=Path_to_chrom)
 # ==========================================================
 def extractCG(Input=None, outfile=None, bmi=None, chunksize=5000,
               merge_strand=True):
@@ -549,7 +567,7 @@ def extractCG(Input=None, outfile=None, bmi=None, chunksize=5000,
         strand bmi, but after merge (if merge_strand is True), forward bmi
         mm10_with_chrL.allc.mz.+CGN.bmi should be used to generate
          reference, one can
-        run: bmzip extract -m mm10_with_chrL.allc.mz
+        run: czip extract -m mm10_with_chrL.allc.mz
         -o mm10_with_chrL.allCG.forward.mz
         -b mm10_with_chrL.allc.mz.+CGN.bmi and use
         mm10_with_chrL.allCG.forward.mz as new reference.

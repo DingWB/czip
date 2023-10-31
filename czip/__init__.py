@@ -5,7 +5,8 @@ from .bmz import (
     test_difference,
     extract
 )
-from .allc import AllC, generate_ssi, allc2mz, prepare_sky, merge_mz, extractCG
+from .allc import (AllC, generate_ssi, allc2mz, prepare_sky,
+                   merge_mz, extractCG, merge_cell_type)
 
 def main():
 	fire.core.Display = lambda lines, out: print(*lines, file=out)
@@ -19,6 +20,7 @@ def main():
             'generate_ssi': generate_ssi,
             'prepare_sky': prepare_sky,
             'merge_mz': merge_mz,
+            'merge_cell_type': merge_cell_type,
             'extract': extract,
             'extractCG': extractCG,
         }
