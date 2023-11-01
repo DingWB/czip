@@ -152,7 +152,6 @@ rule bmzip_extract:
         bmzip extractCG -i {input.mz_file} -o {output.mz_file} -b {params.bmi}
         """
 
-
     # allcools:
     # snakemake --use-conda --printshellcmds -s allc2mz.smk --config {indir} {outdir} {allc_path}".0$SKYPILOT_NODE_RANK" {reference} {ref_prefix} {chrom} {chrom_prefix} {gcp} --default-remote-prefix {bucket} --default-remote-provider GS --google-lifesciences-region us-west1 --scheduler greedy -j {cpu}
     # bmzip
