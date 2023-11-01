@@ -13,6 +13,7 @@ Chunk ZIP
 
   quick_start
   dnam
+  benchmark
   modules
 
 Credits and Thanks

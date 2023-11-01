@@ -82,7 +82,7 @@
    "id": "4534bf44-0bc6-429b-81b9-756e1729cfb6",
    "metadata": {},
    "source": [
-    "## 2.Writer"
+    "## 2. Writer"
    ]
   },
   {
@@ -367,7 +367,7 @@
    "id": "812dbe63-d723-4ebf-bb96-254c04f46553",
    "metadata": {},
    "source": [
-    "## 2. Reader"
+    "## 3. Reader"
    ]
   },
   {
@@ -561,7 +561,7 @@
     "tags": []
    },
    "source": [
-    "## 3. Query"
+    "## 4. Query"
    ]
   },
   {
@@ -641,7 +641,7 @@
    "id": "4cd23b7e-8bb7-4481-b4e1-20903d01fa60",
    "metadata": {},
    "source": [
-    "## 4.Subset"
+    "## 5. Subset"
    ]
   },
   {

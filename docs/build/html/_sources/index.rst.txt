@@ -1,7 +1,7 @@
 .. czip documentation master file, created by
-   sphinx-quickstart on Mon May  9 10:01:26 2022.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+sphinx-quickstart on Mon May  9 10:01:26 2022.
+You can adapt this file completely to your liking, but it should at least
+contain the root `toctree` directive.
 
 Chunk ZIP
 ======================================
@@ -13,6 +13,7 @@ Chunk ZIP
 
   quick_start
   dnam
+  benchmark
   modules
 
 Credits and Thanks
