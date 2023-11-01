@@ -10,7 +10,6 @@ from .allc import (AllC, generate_ssi, bed2cz,
 
 __version__ = "0.2"
 
-
 def main():
     fire.core.Display = lambda lines, out: print(*lines, file=out)
     fire.Fire(
@@ -29,4 +28,4 @@ def main():
 	)
 
 if __name__=="_main__":
-	main()
+    main()
