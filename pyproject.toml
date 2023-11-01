@@ -9,7 +9,7 @@ authors = [
     { name = "Wubin Ding", email = "ding.wu.bin.gm@gmail.com" },
 ]
 description = "ChunkZIP: Chunk based ZIP"
-keywords = ["ChunkZIP", "ChunkZIP"]
+keywords = ["ChunkZIP", "czip"]
 readme = "README.md"
 requires-python = ">=3.0"
 classifiers = [
