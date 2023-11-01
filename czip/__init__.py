@@ -5,7 +5,7 @@ from .cz import (
     test_difference,
     extract
 )
-from .allc import (AllC, generate_ssi, allc2cz,
+from .allc import (AllC, generate_ssi, bed2cz,
                    merge_cz, extractCG, merge_cell_type)
 
 __version__ = 0.1
@@ -18,7 +18,7 @@ def main():
             "Writer": Writer,
             'Reader': Reader,
             'AllC': AllC,
-            'allc2cz': allc2cz,
+            'bed2cz': bed2cz,
             'test_diff': test_difference,
             'generate_ssi': generate_ssi,
             'merge_cz': merge_cz,

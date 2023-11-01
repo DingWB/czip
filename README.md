@@ -12,32 +12,6 @@ python setup.py install
 
 ## Usage
 
-### generate ALLC coordinates (.cz file was created by ALLC class)
-
-```shell
-czip AllC -G ~/Ref/mm10/mm10_ucsc_with_chrL.fa -O mm10_with_chrL.allc.cz -n 20 -k True run
-# took 15 minutes using 20 cpus
-
-czip generate_ssi ~/Ref/mm10/annotations/mm10_with_chrL.allc.cz
-# output is ~/Ref/mm10/annotations/mm10_with_chrL.allc.cz.+CGN.bmi
-
-czip extract -m ~/Ref/mm10/annotations/mm10_with_chrL.allc.cz -o ~/Ref/mm10/annotations/mm10_with_chrL.allCG.forward.cz -b ~/Ref/mm10/annotations/mm10_with_chrL.allc.cz.+CGN.bmi
-#output is: mm10_with_chrL.allCG.forward.cz
-```
-
-### Create .cz using `czip Writer`
-
-```shell
-/usr/bin/time -f "%e\t%M\t%P" czip Writer  -O test.cz -F H,H -C mc,cov -D chrom -v 1 tomz -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 4,5 -d 0 -c 5000
-
-# pack from stdin
-zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |cut -f 1,5,6 | czip Writer -O test.cz -F H,H -C mc,cov -D chrom -v 1 tomz -I stdin -u 1,2 -d 0
-
-/usr/bin/time -f "%e\t%M\t%P" czip Writer -O test_bed.cz -F Q,H,H -C pos,mc,cov -D chrom tomz -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u 1,4,5 -d 0
-
-czip Reader -I test_bed.cz summary_blocks
-czip Reader -I test_bed.cz view -s 0
-```
 
 #### cat multiple .cz files into one .cz file
 
@@ -85,10 +59,10 @@ time czip allc2mz 1.allc.tsv.gz 1.cz -r mm10_with_chrL.allc.cz
 ### Extract CG from .cz and merge strand
 
 ```shell
-czip extractCG -I cz/FC_P13a_3C_2-1-E5-D13.cz -o FC_P13a_3C_2-1-E5-D13.CGN.cz -b ~/Ref/mm10/annotations/mm10_with_chrL.allc.cz.CGN.bmi
+czip extractCG -I cz/FC_P13a_3C_2-1-E5-D13.cz -o FC_P13a_3C_2-1-E5-D13.CGN.cz -b ~/Ref/mm10/annotations/mm10_with_chrL.allc.cz.CGN.ssi
 
 # create reference for forward CGN
-czip extract -m ~/Ref/mm10/annotations/mm10_with_chrL.allc.cz -o ~/Ref/mm10/annotations/mm10_with_chrL.allCG.forward.cz -b ~/Ref/mm10/annotations/mm10_with_chrL.allc.cz.+CGN.bmi -o mm10_with_chrL.allCG.forward.cz
+czip extract -m ~/Ref/mm10/annotations/mm10_with_chrL.allc.cz -o ~/Ref/mm10/annotations/mm10_with_chrL.allCG.forward.cz -b ~/Ref/mm10/annotations/mm10_with_chrL.allc.cz.+CGN.ssi -o mm10_with_chrL.allCG.forward.cz
 
 # view CG .cz
 czip Reader -I FC_P13a_3C_2-1-E5-D13.CGN.cz view -s 0 -r ~/Ref/mm10/annotations/mm10_with_chrL.allCG.forward.cz
@@ -356,7 +330,7 @@ czip generate_context_ssi -I ~/Ref/mm10/annotations/mm10_with_chrL.allc.cz -p CG
 #### view subset
 
 ```shell
-czip Reader -I FC_E17a_3C_1-1-I3-F13.cz subset -d chr1 -b mm10_with_chrL.allc.cz.CGN.bmi -r mm10_with_chrL.allc.cz |head
+czip Reader -I FC_E17a_3C_1-1-I3-F13.cz subset -d chr1 -b mm10_with_chrL.allc.cz.CGN.ssi -r mm10_with_chrL.allc.cz |head
 
 zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |awk '$4 ~ "^CG" && $5 > 3' |head
 

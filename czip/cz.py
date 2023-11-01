@@ -116,7 +116,7 @@ def _gz_input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
                  chunksize=5000):
     f = open1(infile)
     data, i, pre_dims = [], 0, None
-    dtfuncs = get_dtfuncs(formats,tobytes=False)
+    dtfuncs = get_dtfuncs(formats)
     line = f.readline()
     while line:
         line = line.decode('utf-8')
@@ -168,7 +168,7 @@ def _text_input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
     # cdef int i, N
     f = open1(infile)
     data, i, pre_dims = [], 0, None
-    dtfuncs = get_dtfuncs(formats,tobytes=False)
+    dtfuncs = get_dtfuncs(formats)
     line = f.readline()
     while line:
         values = line.rstrip('\n').split(sep)
@@ -193,7 +193,9 @@ def _text_input_parser(infile,formats,sep='\t',usecols=[1,4,5],dim_cols=[0],
 # ==========================================================
 def _input_parser(infile, formats, sep='\t', usecols=[1, 4, 5], dim_cols=[0],
                   chunksize=5000):
-    if infile.endswith('.gz'):
+    if hasattr(infile, 'readline'):
+        yield from _text_input_parser(infile, formats, sep, usecols, dim_cols, chunksize)
+    elif infile.endswith('.gz'):
         yield from _gz_input_parser(infile, formats, sep, usecols, dim_cols, chunksize)
     else:
         yield from _text_input_parser(infile, formats, sep, usecols, dim_cols, chunksize)
@@ -583,7 +585,7 @@ class Reader:
                      dimensions=['chrom'], match_func=_isForwardCG,
                      chunksize=2000):
         if output is None:
-            output = self.Input + '.' + match_func.__name__ + '.bmi'
+            output = self.Input + '.' + match_func.__name__ + '.ssi'
         else:
             output = os.path.abspath(os.path.expanduser(output))
         writer = Writer(output, Formats=formats, Columns=columns,
@@ -603,7 +605,7 @@ class Reader:
                 data = b''
         writer.close()
 
-    def get_ids_from_bmi(self, dim):
+    def get_ids_from_ssi(self, dim):
         if len(self.header['Columns']) == 1:
             s, e = 0, 1  # only one columns, ID
             return np.array([record[0] for record in self.__fetch__(dim, s=s, e=e)])
@@ -714,15 +716,15 @@ class Reader:
                 yield np.hstack((ref_record, record))
             ref_reader.close()
 
-    def subset(self, dim, bmi=None, IDs=None, reference=None, printout=True):
+    def subset(self, dim, ssi=None, IDs=None, reference=None, printout=True):
         if isinstance(dim, str):
             dim = tuple([dim])
-        if bmi is None and IDs is None:
-            raise ValueError("Please provide either bmi or IDs")
-        if not bmi is None:
-            bmi_reader = Reader(bmi)
-            IDs = bmi_reader.get_ids_from_bmi(dim)
-            bmi_reader.close()
+        if ssi is None and IDs is None:
+            raise ValueError("Please provide either ssi or IDs")
+        if not ssi is None:
+            ssi_reader = Reader(ssi)
+            IDs = ssi_reader.get_ids_from_ssi(dim)
+            ssi_reader.close()
         if not reference is None:
             ref_reader = Reader(os.path.abspath(os.path.expanduser(reference)))
             ref_header = ref_reader.header['Columns']
@@ -842,7 +844,8 @@ class Reader:
         dim_tmp = None
         for dim, start, end in regions:
             if dim != dim_tmp:
-                start_block_index_tmp = 0
+                # start_block_index_tmp = 0
+                start_block_index = 0
                 dim_tmp = dim
                 r = self._load_chunk(self.dim2chunk_start[dim], jump=False)
                 # find the closest block to a given start position
@@ -850,11 +853,15 @@ class Reader:
                     self._seek_and_read_1record(offset)[s]
                     for offset in self._chunk_block_1st_record_virtual_offsets
                 ])
-            for idx in range(start_block_index_tmp, self._chunk_nblocks - 1):
-                if block_1st_starts[idx + 1] > start:
-                    start_block_index = idx
+            # for idx in range(start_block_index_tmp, self._chunk_nblocks-1):
+            #     if block_1st_starts[idx + 1] > start:
+            #         start_block_index = idx
+            #         break
+            #     start_block_index = self._chunk_nblocks - 1
+            while start_block_index < self._chunk_nblocks - 1:
+                if block_1st_starts[start_block_index + 1] > start:
                     break
-                start_block_index = self._chunk_nblocks - 1
+                start_block_index += 1
             # start_block_index=np.argmax(block_1st_starts > start)-1
             virtual_offset = self._chunk_block_1st_record_virtual_offsets[start_block_index]
             self.seek(virtual_offset)  # seek to the target block, self._buffer
@@ -1203,19 +1210,19 @@ class Reader:
 
 
 # ==========================================================
-def extract(cz_path=None, outfile=None, bmi=None, chunksize=5000):
-    bmi_reader = Reader(bmi)
-    reader = Reader(cz_path)
+def extract(input=None, outfile=None, ssi=None, chunksize=5000):
+    ssi_reader = Reader(os.path.abspath(os.path.expanduser(ssi)))
+    reader = Reader(os.path.abspath(os.path.expanduser(input)))
     writer = Writer(outfile, Formats=reader.header['Formats'],
                     Columns=reader.header['Columns'],
                     Dimensions=reader.header['Dimensions'],
-                    message=bmi)
+                    message=ssi)
     # dtfuncs = get_dtfuncs(writer.Formats)
     for dim in reader.dim2chunk_start.keys():
         print(dim)
-        IDs = bmi_reader.get_ids_from_bmi(dim)
+        IDs = ssi_reader.get_ids_from_ssi(dim)
         if len(IDs.shape) != 1:
-            raise ValueError("Only support 1D bmi now!")
+            raise ValueError("Only support 1D ssi now!")
         records = reader._getRecordsByIds(dim, IDs)
         data, i = b'', 0
         for record in records:  # unpacked bytes
@@ -1228,7 +1235,7 @@ def extract(cz_path=None, outfile=None, bmi=None, chunksize=5000):
             writer.write_chunk(data, dim)
     writer.close()
     reader.close()
-    bmi_reader.close()
+    ssi_reader.close()
 
 
 # ==========================================================
@@ -1465,8 +1472,7 @@ class Writer:
                                      self.chunksize)
 
     def tocz(self, Input=None, usecols=[4, 5], dim_cols=[0],
-             sep='\t', chunksize=5000, header=None, skiprows=0,
-             reference=None):
+             sep='\t', chunksize=5000, header=None, skiprows=0):
         """
         Pack dataframe, stdin or a file path into .cz file with or without reference
         coordinates file.
@@ -1489,18 +1495,6 @@ class Writer:
             whether the input file path contain header.
         skiprows : int
             number of rows to skip for input file path.
-        reference : path
-            The reference coordinate file used to pack the Input without coordinate,
-            for example, we can pack the input file with columns of ["chrom",'pos',"mc",
-            "cov"] into .cz file with usecols=[2,3] (means we only store mc and cov
-            in .cz file) and chrom as dimension column,
-            there is no coordinate, so we use the coordinates of allc as coordinate.
-            In this case, we have to map the position of input file onto the reference
-            position. Since we don't need to store pos, so we can save lots of
-            disk storage.
-
-            If reference was given, the first len(dim_cols) must match the input
-            columns[dim_cols] and p1 must match p.
         pr: int or str
             If reference was given, use the `pr` column as coordinates, which
             would be used to match the `p` column in the Input file or df.
@@ -1543,20 +1537,17 @@ class Writer:
         # if self.verbose > 0:
         #     print("Input: ", type(Input), Input)
 
-        if isinstance(Input, str):
+        if Input is None or Input == 'stdin':
+            data_generator = self._parse_input_no_ref(sys.stdin)
+        elif isinstance(Input, str):
             input_path = os.path.abspath(os.path.expanduser(Input))
             if not os.path.exists(input_path):
                 raise ValueError("Unknown format for Input")
             if os.path.exists(input_path + '.tbi'):
-                print("Please use allc2cz command to convert input to .cz.")
+                print("Please use bed2cz command to convert input to .cz.")
                 return
             else:
-                if not reference is None:
-                    raise ValueError("Please build .tbi index for input file and"
-                                     "use allc2cz to convert input to .cz")
                 data_generator = self._parse_input_no_ref(input_path)
-        elif Input is None or Input == 'stdin':
-            data_generator = self._parse_input_no_ref(sys.stdin.buffer)
         elif isinstance(Input, (list, tuple, np.ndarray)):
             Input = pd.DataFrame(Input)
             data_generator = self._parse_input_no_ref(Input)

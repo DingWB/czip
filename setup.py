@@ -6,7 +6,7 @@ try:
     from setuptools import setup, find_packages
 except ImportError:
     from distutils.core import setup, find_packages
-from Cython.Build import cythonize
+# from Cython.Build import cythonize
 from pathlib import Path
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
@@ -22,7 +22,7 @@ setup(
     author_email="ding.wu.bin.gm@gmail.com",
     url="https://github.com/DingWB/czip",
     packages=find_packages(exclude=('docs',)),
-    install_requires=['pandas', 'fire', 'numpy'],
+    # install_requires=['pandas', 'fire', 'numpy'],
     include_package_data=True,
     package_data={
         '': ['*.txt', '*.tsv', '*.csv', '*.fa', '*Snakefile', '*ipynb']

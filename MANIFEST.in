@@ -1,3 +1,2 @@
 recursive-include czip *
-recursive-include czip/data *
 exclude docs

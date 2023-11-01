@@ -113,19 +113,40 @@ class AllC:
             os.system(f"rm -rf {self.outdir}")
 
 
-def allc2cz(allc_path, outfile, reference=None, missing_value=[0, 0],
-            pr=0, pa=1, sep='\t', Path_to_chrom=None, chunksize=2000):
+def bed2cz(input, outfile, reference=None, missing_value=[0, 0],
+           Formats=['H', 'H'], Columns=['mc', 'cov'], Dimensions=['chrom'],
+           usecols=[4, 5], pr=0, pa=1, sep='\t', Path_to_chrom=None,
+           chunksize=2000):
     """
     convert allc.tsv.gz to .cz file.
 
     Parameters
     ----------
-    allc_path : path
+    input : path
         path to allc.tsv.gz, should has .tbi index.
     outfile : path
         output .cz file
     reference : path
         path to reference coordinates.
+    Formats: list
+        When reference is provided, we only need to pack mc and cov,
+        ['H', 'H'] is suggested (H is unsigned short integer, only 2 bytes),
+        if reference is not provided, we also need to pack position (Q is
+        recommanded), in this case, Formats should be ['Q','H','H'].
+    Columns: list
+        Columns names, in default is ['mc','cov'] (reference is provided), if no
+        referene provided, one should use ['pos','mc','cov'].
+    Dimensions: list
+        Dimensions passed to czip.Writer, dimension name, for allc file, dimension
+        is chrom.
+    usecols: list
+        default is [4, 5], for a typical .allc.tsv.gz, if no reference is provided,
+        the columns to be packed should be [1,4,5] (pos, mv and cov).
+        If reference is provided, then we only need to pack [4,5] (mc and cov).
+    pr: int
+        index of position column in reference .mz header columns [0]
+    pa: int
+        index of position column in input input or bed column.
     chunksize : int
         default is 5000
     Path_to_chrom : path
@@ -139,7 +160,7 @@ def allc2cz(allc_path, outfile, reference=None, missing_value=[0, 0],
     if os.path.exists(outfile):
         print(f"{outfile} existed, skip.")
         return
-    allc_path = os.path.abspath(os.path.expanduser(allc_path))
+    allc_path = os.path.abspath(os.path.expanduser(input))
     if not os.path.exists(allc_path + '.tbi'):
         raise ValueError(f"index file .tbi not existed, please create index first.")
     print(allc_path)
@@ -155,15 +176,13 @@ def allc2cz(allc_path, outfile, reference=None, missing_value=[0, 0],
     if not reference is None:
         reference = os.path.abspath(os.path.expanduser(reference))
         message = os.path.basename(reference)
-        formats, columns, dimensions = ['H', 'H'], ['mc', 'cov'], ['chrom']
-        usecols = [4, 5]
     else:
         message = ''
-        formats, columns, dimensions = ['Q', 'H', 'H'], ['pos', 'mc', 'cov'], ['chrom']
-        usecols = [1, 4, 5]
-    writer = Writer(outfile, Formats=formats, Columns=columns,
-                    Dimensions=dimensions, message=message)
-    dtfuncs = get_dtfuncs(formats, tobytes=False)
+        # formats, columns, dimensions = ['Q', 'H', 'H'], ['pos', 'mc', 'cov'], ['chrom']
+        # usecols = [1, 4, 5]
+    writer = Writer(outfile, Formats=Formats, Columns=Columns,
+                    Dimensions=Dimensions, message=message)
+    dtfuncs = get_dtfuncs(Formats, tobytes=False)
 
     if not reference is None:
         ref_reader = Reader(reference)
@@ -281,14 +300,14 @@ def _isCH(record):
 
 
 # ==========================================================
-def generate_ssi(Input, output=None, pattern="+CGN"):
+def generate_ssi(Input, output=None, pattern="CGN"):
     """
     Generate ssi (subset index) for a given input .cz
 
     Parameters
     ----------
     Input : .cz
-    output : .bmi
+    output : .ssi
     pattern : CGN, CHN, +CGN, -CGN
 
     Returns
@@ -304,7 +323,7 @@ def generate_ssi(Input, output=None, pattern="+CGN"):
     else:
         raise ValueError("Currently, only CGN, CHN, +CGN supported")
     if output is None:
-        output = Input + '.' + pattern + '.bmi'
+        output = Input + '.' + pattern + '.ssi'
     else:
         output = os.path.abspath(os.path.expanduser(output))
     reader = Reader(Input)
@@ -482,7 +501,7 @@ def merge_cell_type(indir=None, cell_table=None, outdir=None,
         merge_cz(indir=indir, cz_paths=cz_paths,
                  outfile=outfile, n_jobs=n_jobs, Path_to_chrom=Path_to_chrom)
 # ==========================================================
-def extractCG(Input=None, outfile=None, bmi=None, chunksize=5000,
+def extractCG(Input=None, outfile=None, ssi=None, chunksize=5000,
               merge_strand=True):
     """
 
@@ -490,14 +509,14 @@ def extractCG(Input=None, outfile=None, bmi=None, chunksize=5000,
     ----------
     cz_path :
     outfile :
-    bmi : path
-        bmi should be bmi to mm10_with_chrL.allc.cz.CGN.bmi, not forward
-        strand bmi, but after merge (if merge_strand is True), forward bmi
-        mm10_with_chrL.allc.cz.+CGN.bmi should be used to generate
+    ssi : path
+        ssi should be ssi to mm10_with_chrL.allc.cz.CGN.ssi, not forward
+        strand ssi, but after merge (if merge_strand is True), forward ssi
+        mm10_with_chrL.allc.cz.+CGN.ssi should be used to generate
          reference, one can
         run: czip extract -m mm10_with_chrL.allc.cz
         -o mm10_with_chrL.allCG.forward.cz
-        -b mm10_with_chrL.allc.cz.+CGN.bmi and use
+        -b mm10_with_chrL.allc.cz.+CGN.ssi and use
         mm10_with_chrL.allCG.forward.cz as new reference.
     chunksize :int
     merge_strand: bool
@@ -509,19 +528,19 @@ def extractCG(Input=None, outfile=None, bmi=None, chunksize=5000,
 
     """
     cz_path = os.path.abspath(os.path.expanduser(Input))
-    bmi_path = os.path.abspath(os.path.expanduser(bmi))
-    bmi_reader = Reader(bmi_path)
+    ssi_path = os.path.abspath(os.path.expanduser(ssi))
+    ssi_reader = Reader(ssi_path)
     reader = Reader(cz_path)
     writer = Writer(outfile, Formats=reader.header['Formats'],
                     Columns=reader.header['Columns'],
                     Dimensions=reader.header['Dimensions'],
-                    message=bmi_path)
+                    message=ssi_path)
     dtfuncs = get_dtfuncs(writer.Formats)
     for dim in reader.dim2chunk_start.keys():
         # print(dim)
-        IDs = bmi_reader.get_ids_from_bmi(dim)
+        IDs = ssi_reader.get_ids_from_ssi(dim)
         if len(IDs.shape) != 1:
-            raise ValueError("Only support 1D bmi now!")
+            raise ValueError("Only support 1D ssi now!")
         records = reader._getRecordsByIds(dim, IDs)
         data, count = b'', 0
         # for CG, if pos is forward (+), then pos+1 is reverse strand (-)
@@ -549,7 +568,7 @@ def extractCG(Input=None, outfile=None, bmi=None, chunksize=5000,
             writer.write_chunk(data, dim)
     writer.close()
     reader.close()
-    bmi_reader.close()
+    ssi_reader.close()
 
 
 # ==========================================================
