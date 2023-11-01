@@ -11,3 +11,4 @@ python setup.py install
 ![docs/images/img.png](docs/images/img.png)
 
 ## Usage
+[Documentation](https://dingwb.github.io/czip)
