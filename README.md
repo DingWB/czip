@@ -11,69 +11,7 @@ python setup.py install
 ![docs/images/img.png](docs/images/img.png)
 
 ## Usage
-
-
-#### cat multiple .cz files into one .cz file
-
-```shell
-czip Writer -O mm10_with_chrL.allc.cz -F Q,c,3s -C pos,strand,context -D chrom catmz -I "mm10_with_chrL.allc.cz.tmp/*.cz"
-
-czip Writer -O mm10_with_chrL.allc.cz -F Q,c,3s -C pos,strand,context -D chrom catmz -I "mm10_with_chrL.allc.cz.tmp/*.cz" --dim_order ~/Ref/mm10/mm10_ucsc_with_chrL.chrom.sizes
-```
-
-### Using reference coordinates when create .cz file (without coordinates)
-
-For single cell DNA methylation datasets, we can create .cz files only contain mv and cov, no coordinates, cause all
-cells share the same set of coordinates, which can be created using czip AllC.
-
-```shell
-czip Writer  -O test.cz -F H,H -C mc,cov -D chrom -v 1 tomz -I /anvil/scratch/x-wding2/Projects/mouse-pfc/test_ballc/test_bmzip/FC_E17a_3C_1-1-I3-F13.allc.tsv.gz -u '[4,5]' -d '[0]' -r mm10_with_chrL.allc.cz -pr "['pos']" -p '[1]' -j 8
-```
-
-### convert allc to .cz
-
-```shell
-# with reference
-time czip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz FC_E17a_3C_1-1-I3-F13.cz -r mm10_with_chrL.allc.cz
-time czip allc2mz FC_P13a_3C_4-4-C7-E19.allc.tsv.gz FC_P13a_3C_4-4-C7-E19.cz -r mm10_with_chrL.allc.cz
-
-# without reference
-czip allc2mz FC_E17a_3C_1-1-I3-F13.allc.tsv.gz test.cz -v 1
-
-# allc2mz in parallel
-time czip allc2mz -r mm10_with_chrL.allc.cz -n 48 -P ~/Ref/mm10/mm10_ucsc_with_chrL.main.chrom.sizes.txt allc_path.txt test
-
-# make a small example allc file in which there is only 1 record in each chrom
-zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |awk 'BEGIN{chrom=""};{if ($1!=chrom) {print($0); chrom=$1}}' | bgzip > 1.allc.tsv.gz
-tabix -b 2 -e 2 1.allc.tsv.gz
-time czip allc2mz 1.allc.tsv.gz 1.cz -r mm10_with_chrL.allc.cz
-
-# file sizes
-24514 allc.tsg.gz + .tbi
-2.83TiB
-
-.cz files:
-769.21GiB
-```
-
-### Extract CG from .cz and merge strand
-
-```shell
-czip extractCG -I cz/FC_P13a_3C_2-1-E5-D13.cz -o FC_P13a_3C_2-1-E5-D13.CGN.cz -b ~/Ref/mm10/annotations/mm10_with_chrL.allc.cz.CGN.ssi
-
-# create reference for forward CGN
-czip extract -m ~/Ref/mm10/annotations/mm10_with_chrL.allc.cz -o ~/Ref/mm10/annotations/mm10_with_chrL.allCG.forward.cz -b ~/Ref/mm10/annotations/mm10_with_chrL.allc.cz.+CGN.ssi -o mm10_with_chrL.allCG.forward.cz
-
-# view CG .cz
-czip Reader -I FC_P13a_3C_2-1-E5-D13.CGN.cz view -s 0 -r ~/Ref/mm10/annotations/mm10_with_chrL.allCG.forward.cz
-```
-
 ### Merge .cz files
-
-```shell
-czip merge_mz -i cz-CGN/ -o merged.cz
-
-```
 
 ### Run allc2mz using snakemake
 
@@ -338,9 +276,9 @@ zcat FC_E17a_3C_1-1-I3-F13.allc.tsv.gz |awk '$4 ~ "^CG" && $5 > 3' |head
 
 ### Aggregration
 
-#### catmz
+#### catcz
 
 ```shell
-bmzip1 Writer -O two_samples.cz -F H,H -C mc,cov -D chrom,filename catmz -I "raw/*.cz" -a
+bmzip1 Writer -O two_samples.cz -F H,H -C mc,cov -D chrom,filename catcz -I "raw/*.cz" -a
 bmzip1 Reader -I two_samples.cz summary_chunks
 ```

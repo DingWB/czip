@@ -501,7 +501,7 @@ def merge_cell_type(indir=None, cell_table=None, outdir=None,
         merge_cz(indir=indir, cz_paths=cz_paths,
                  outfile=outfile, n_jobs=n_jobs, Path_to_chrom=Path_to_chrom)
 # ==========================================================
-def extractCG(Input=None, outfile=None, ssi=None, chunksize=5000,
+def extractCG(input=None, outfile=None, ssi=None, chunksize=5000,
               merge_strand=True):
     """
 
@@ -527,7 +527,7 @@ def extractCG(Input=None, outfile=None, ssi=None, chunksize=5000,
     -------
 
     """
-    cz_path = os.path.abspath(os.path.expanduser(Input))
+    cz_path = os.path.abspath(os.path.expanduser(input))
     ssi_path = os.path.abspath(os.path.expanduser(ssi))
     ssi_reader = Reader(ssi_path)
     reader = Reader(cz_path)
