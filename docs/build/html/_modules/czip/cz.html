@@ -2329,8 +2329,8 @@
             class="p">(</span><span class="n">start_offset</span><span class="o">=</span><span
             class="bp">self</span><span class="o">.</span><span class="n">_chunk_start_offset</span> <span
             class="o">+</span> <span class="mi">10</span><span class="p">)</span>  <span class="c1">#</span>
-        <span class="n">i</span><span class="p">,</span><span class="n">_cached_data</span> <span
-            class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="bp">self</span><span
+        <span class="n">i</span><span class="p">,</span> <span class="n">_cached_data</span> <span
+            class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span
             class="o">.</span><span class="n">_buffer</span>
         <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">_block_raw_length</span> <span
             class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -2340,7 +2340,7 @@
             class="n">unit_nblock</span><span class="p">:</span>
                 <span class="n">_cached_data</span> <span class="o">+=</span> <span class="bp">self</span><span
             class="o">.</span><span class="n">_buffer</span>
-                <span class="n">i</span><span class="o">+=</span><span class="mi">1</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">struct</span><span
             class="o">.</span><span class="n">iter_unpack</span><span class="p">(</span><span class="sa">f</span><span
@@ -2350,11 +2350,11 @@
                     <span class="k">yield</span> <span class="n">result</span><span class="p">[</span><span
             class="n">s</span><span class="p">:</span><span class="n">e</span><span class="p">]</span>  <span
             class="c1"># a tuple</span>
-                <span class="n">i</span><span class="p">,</span><span class="n">_cached_data</span> <span
-            class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="bp">self</span><span
+                <span class="n">i</span><span class="p">,</span> <span class="n">_cached_data</span> <span
+            class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span
             class="o">.</span><span class="n">_buffer</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">_cached_data</span><span
-            class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+            class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span
             class="n">struct</span><span class="o">.</span><span class="n">iter_unpack</span><span
             class="p">(</span><span class="sa">f</span><span class="s2">&quot;&lt;</span><span class="si">{</span><span
