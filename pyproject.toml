@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0", 'pandas', 'fire', 'numpy', "pysam", 'biopython']
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "czip"
+version = "0.1"
+authors = [
+    { name = "Wubin Ding", email = "ding.wu.bin.gm@gmail.com" },
+]
+description = "czip: Chunk based ZIP"
+keywords = ["czip", "ChunkZIP"]
+readme = "README.md"
+requires-python = ">=3.0"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+]
+license = { file = "LICENSE" }
+
+[project.urls]
+"Homepage" = "https://github.com/DingWB/czip"
+repository = "https://github.com/DingWB/czip"
+"Bug Tracker" = "https://github.com/DingWB/czip/issues"
+documentation = "https://dingwb.github.io/czip"
+

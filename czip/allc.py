@@ -504,11 +504,12 @@ def merge_cell_type(indir=None, cell_table=None, outdir=None,
 def extractCG(input=None, outfile=None, ssi=None, chunksize=5000,
               merge_strand=True):
     """
+    Extract CG context from .cz file
 
     Parameters
     ----------
-    cz_path :
-    outfile :
+    cz_path :path
+    outfile :path
     ssi : path
         ssi should be ssi to mm10_with_chrL.allc.cz.CGN.ssi, not forward
         strand ssi, but after merge (if merge_strand is True), forward ssi

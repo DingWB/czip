@@ -497,11 +497,11 @@ class Reader:
 		header : bool
 			whether to print the header.
         Dimension: None, bool, list or file path
-            If None (default): use the default chunk order in .cz file;
-            If list: use this Dimension (dims) as order and print records.
-            If path: use the first len(Dimension) columns as dim order, there should be
-                no header in file path and use \t as separator.
-            If Dimension is dictionary,such as -D "{'sampleID':'cell1','chrom':'chr1'}",
+            If None (default): use the default chunk order in .cz file; \
+            If list: use this Dimension (dims) as order and print records.\
+            If path: use the first len(Dimension) columns as dim order, there should be\
+                no header in file path and use \t as separator.\
+            If Dimension is dictionary,such as -D "{'sampleID':'cell1','chrom':'chr1'}",\
             will filter chunk using sampleID=cell1 and chrom=chr1.
 
 		Returns
@@ -648,8 +648,8 @@ class Reader:
                 ))
         else:
             ref_reader = Reader(os.path.abspath(os.path.expanduser(reference)))
-            ref_records = ref_reader.getRecordsByIds(dim=dim, IDs=IDs)
-            records = self.getRecordsByIds(dim=dim, IDs=IDs)
+            ref_records = ref_reader._getRecordsByIds(dim=dim, IDs=IDs)
+            records = self._getRecordsByIds(dim=dim, IDs=IDs)
             for ref_record, record in zip(ref_records, records):
                 yield ref_reader._byte2real(struct.unpack(
                     f"<{ref_reader.fmts}", ref_record
@@ -1579,7 +1579,7 @@ class Writer:
 		Parameters
 		----------
 		Input : str or list
-			Either a str (including *, as input for glob, should be inside the
+			Either a str (including *, as input for glob, should be inside the\
 			double quotation marks if using fire) or a list.
 		dim_order : None, list or path
 			If dim_order=None, Input will be sorted using python sorted.
@@ -1597,7 +1597,6 @@ class Writer:
             in each chunk, in addition to the previous dim ['chr1'] or ['chr22'].., a
             new dim would also be append to the previous dim, like ['chr1','cell_1'],
             ['chr22','cell_100'].
-
             However, if add_dim is a function, the input to this function is the .cz
             file basename, the returned value from this funcion would be used
             as new dim and added into the chunk_dims. The default function to
@@ -1607,6 +1606,7 @@ class Writer:
             the header['Dimensions'] of the merged .cz file's header. If the title of
             new dimension had already given in Writer Dimensions,
             title can be None, otherwise, title should be provided.
+
 		Returns
 		-------
 
