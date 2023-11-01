@@ -9,6 +9,7 @@ Submodules
 
    czip.allc
    czip.cz
+   czip.test
 
 Module contents
 ---------------

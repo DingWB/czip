@@ -144,7 +144,7 @@ def bed2cz(input, outfile, reference=None, missing_value=[0, 0],
         the columns to be packed should be [1,4,5] (pos, mv and cov).
         If reference is provided, then we only need to pack [4,5] (mc and cov).
     pr: int
-        index of position column in reference .mz header columns [0]
+        index of position column in reference .cz header columns [0]
     pa: int
         index of position column in input input or bed column.
     chunksize : int
@@ -570,11 +570,8 @@ def extractCG(input=None, outfile=None, ssi=None, chunksize=5000,
     writer.close()
     reader.close()
     ssi_reader.close()
-
-
 # ==========================================================
 if __name__ == "__main__":
     import fire
-
     fire.core.Display = lambda lines, out: print(*lines, file=out)
     fire.Fire()

@@ -7,6 +7,7 @@ from builtins import open as _open
 import numpy as np
 import pandas as pd
 import gzip
+import math
 
 _bcz_magic = b'BMZIP'
 _block_magic = b"MB"
@@ -761,7 +762,7 @@ class Reader:
             else:  # each element is a data array (multiple records)
                 yield from self.getRecordsByIdRegions(dim, reference, IDs)
 
-    def __fetch__(self, dims, s=None, e=None):
+    def __fetch_deprecated__(self, dims, s=None, e=None):
         """
         Generator for a given dims
 
@@ -778,6 +779,7 @@ class Reader:
         e = len(self.header['Columns']) if e is None else e  # 1-based
         r = self._load_chunk(self.dim2chunk_start[dims], jump=True)
         self._cached_data = b''
+        # unit_nblock = int(self._unit_size / (math.gcd(self._unit_size, _BLOCK_MAX_LEN)))
         self._load_block(start_offset=self._chunk_start_offset + 10)  #
         while self._block_raw_length > 0:
             self._cached_data += self._buffer
@@ -787,6 +789,38 @@ class Reader:
                 # print(result)
             self._cached_data = self._cached_data[end_index:]
             self._load_block()
+
+    def __fetch__(self, dims, s=None, e=None):
+        """
+        Generator for a given dims
+
+        Parameters
+        ----------
+        dims : tuple
+            element length of dims should match the Dimensions in header['Dimensions']
+
+        Returns
+        -------
+
+        """
+        s = 0 if s is None else s  # 0-based
+        e = len(self.header['Columns']) if e is None else e  # 1-based
+        r = self._load_chunk(self.dim2chunk_start[dims], jump=True)
+        unit_nblock = int(self._unit_size / (math.gcd(self._unit_size, _BLOCK_MAX_LEN)))
+        self._load_block(start_offset=self._chunk_start_offset + 10)  #
+        i, _cached_data = 1, self._buffer
+        while self._block_raw_length > 0:
+            self._load_block()
+            if i < unit_nblock:
+                _cached_data += self._buffer
+                i += 1
+            else:
+                for result in struct.iter_unpack(f"<{self.fmts}", _cached_data):
+                    yield result[s:e]  # a tuple
+                i, _cached_data = 1, self._buffer
+        if len(_cached_data) > 0:
+            for result in struct.iter_unpack(f"<{self.fmts}", _cached_data):
+                yield result[s:e]  # a tuple
 
     def fetch(self, dims):
         for record in self.__fetch__(dims):

@@ -399,6 +399,15 @@
                                                     </li>
                                                 </ul>
                                             </li>
+                                            <li class="toctree-l4"><a class="reference internal"
+                                                                      href="../czip.test.html">czip.test module</a>
+                                                <ul>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../czip.test.html#czip.test.test_bed2cz"><code
+                                                            class="docutils literal notranslate"><span class="pre">test_bed2cz()</span></code></a>
+                                                    </li>
+                                                </ul>
+                                            </li>
                                         </ul>
                                     </li>
                                     <li class="toctree-l3"><a class="reference internal"
@@ -610,7 +619,7 @@ chr17   1146843557      108852498       1255753437      7170    39153472
                                                                         title="Permalink to this heading">¶</a></h1>
                             <div class="nbinput docutils container">
                                 <div class="prompt highlight-none notranslate">
-                                    <div class="highlight"><pre><span></span>[4]:
+                                    <div class="highlight"><pre><span></span>[3]:
 </pre>
                                     </div>
                                 </div>
@@ -664,7 +673,7 @@ INFO: Showing help with the command &#39;czip bed2cz -- --help&#39;.
         default is [4, 5], for a typical .allc.tsv.gz, if no reference is provided, the columns to be packed should be [1,4,5] (pos, mv and cov). If reference is provided, then we only need to pack [4,5] (mc and cov).
     --pr=<span class="ansi-underline">PR</span>
         Default: 0
-        index of position column in reference .mz header columns [0]
+        index of position column in reference .cz header columns [0]
     --pa=<span class="ansi-underline">PA</span>
         Default: 1
         index of position column in input input or bed column.
@@ -1304,7 +1313,7 @@ INFO: Showing help with the command &#39;czip merge_cell_type -- --help&#39;.
                                             class="s2">&quot;.0</span><span class="nv">$SKYPILOT_NODE_RANK</span><span
                                             class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">          </span><span class="nv">outdir</span><span class="o">=</span>pfc_mz-CGN<span
-                                            class="w"> </span><span class="nv">bmi</span><span class="o">=</span>mm10_with_chrL.allc.mz.CGN.bmi<span
+                                            class="w"> </span><span class="nv">bmi</span><span class="o">=</span>mm10_with_chrL.allc.cz.CGN.bmi<span
                                             class="w"> </span><span class="nv">bmi_prefix</span><span class="o">=</span>gs://wubin_ref/mm10/annotations<span
                                             class="w"> </span><span class="se">\</span>
 <span class="w">          </span><span class="nv">gcp</span><span class="o">=</span>True<span class="w"> </span>--default-remote-prefix<span
