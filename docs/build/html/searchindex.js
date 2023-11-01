@@ -637,6 +637,7 @@ Search.setIndex({
         "github": 8,
         "link": 8,
         "pip": 8,
+        "chunkzip": 8,
         "git": 8,
         "follow": 8,
         "test_diff": 8,

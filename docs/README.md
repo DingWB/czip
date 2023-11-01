@@ -10,3 +10,9 @@ rm -rf source/notebooks
 cd ..
 ls
 ```
+
+```shell
+rm -rf dist && rm -rf czip.egg-info/
+python setup.py sdist bdist_wheel
+twine upload dist/*
+```

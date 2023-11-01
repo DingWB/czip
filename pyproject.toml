@@ -3,13 +3,13 @@ requires = ["setuptools>=61.0", 'pandas', 'fire', 'numpy', "pysam", 'biopython']
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "czip"
+name = "ChunkZIP"
 version = "0.1"
 authors = [
     { name = "Wubin Ding", email = "ding.wu.bin.gm@gmail.com" },
 ]
-description = "czip: Chunk based ZIP"
-keywords = ["czip", "ChunkZIP"]
+description = "ChunkZIP: Chunk based ZIP"
+keywords = ["ChunkZIP", "ChunkZIP"]
 readme = "README.md"
 requires-python = ">=3.0"
 classifiers = [

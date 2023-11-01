@@ -3,9 +3,9 @@
 ## Installation
 
 ```shell
+pip install ChunkZIP
+#or
 pip install git+http://github.com/DingWB/czip
-
-python setup.py install
 ```
 
 ## Implementation
