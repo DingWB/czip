@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>czip.allc &mdash; czip 0.1 documentation</title>
+    <link href="../../_static/pygments.css" rel="stylesheet" type="text/css"/>
+    <link href="../../_static/css/theme.css" rel="stylesheet" type="text/css"/>
+    <link href="../../_static/css/rtd_sphinx_search.min.css" rel="stylesheet" type="text/css"/>
+    <link href="../../_static/css/custom.css" rel="stylesheet" type="text/css"/>
+    <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+    <![endif]-->
+
+    <script src="../../_static/jquery.js?v=5d32c60e"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+    <script data-url_root="../../" id="documentation_options"
+            src="../../_static/documentation_options.js?v=e031e9a9"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/js/rtd_search_config.js"></script>
+    <script src="../../_static/js/rtd_sphinx_search.min.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA="
+            src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link href="../../genindex.html" rel="index" title="Index"/>
+    <link href="../../search.html" rel="search" title="Search"/>
+</head>
+
+<body class="wy-body-for-nav">
+<div class="wy-grid-for-nav">
+    <nav class="wy-nav-side" data-toggle="wy-nav-shift">
+        <div class="wy-side-scroll">
+            <div class="wy-side-nav-search">
+
+
+                <a class="icon icon-home" href="../../index.html">
+                    czip
+                </a>
+                <div role="search">
+                    <form action="../../search.html" class="wy-form" id="rtd-search-form" method="get">
+                        <input aria-label="Search docs" name="q" placeholder="Search docs" type="text"/>
+                        <input name="check_keywords" type="hidden" value="yes"/>
+                        <input name="area" type="hidden" value="default"/>
+                    </form>
+                </div>
+            </div>
+            <div aria-label="Navigation menu" class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation">
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../quick_start.html">Quick Started</a>
+                        <ul>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="../../notebooks/quick_start.html">1. Installation</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="../../notebooks/quick_start.html#2.Writer">2.Writer</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="../../notebooks/quick_start.html#2.-Reader">2. Reader</a>
+                            </li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="../../notebooks/quick_start.html#3.-Query">3. Query</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="../../notebooks/quick_start.html#4.Subset">4.Subset</a></li>
+                        </ul>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../../dnam.html">DNA methylation data</a>
+                        <ul>
+                            <li class="toctree-l2"><a class="reference internal" href="../../notebooks/dnam.html">Generate
+                                allc coordinate reference .cz file</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="../../notebooks/dnam.html#View-reference-.cz-file">View
+                                reference .cz file</a>
+                                <ul>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="../../notebooks/dnam.html#view-header">view
+                                        header</a></li>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="../../notebooks/dnam.html#summary-chunks">summary
+                                        chunks</a></li>
+                                </ul>
+                            </li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="../../notebooks/dnam.html#Converting-.allc.tsv.gz-into-.cz-file">Converting
+                                .allc.tsv.gz into .cz file</a>
+                                <ul>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="../../notebooks/dnam.html#Pack-.allc.tsv.gz-to-.cz-with-coordinates">Pack
+                                        .allc.tsv.gz to .cz with coordinates</a></li>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="../../notebooks/dnam.html#Pack-.allc.tsv.gz-to-.cz-without-coordinates-(using-reference)">Pack
+                                        .allc.tsv.gz to .cz without coordinates (using reference)</a></li>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="../../notebooks/dnam.html#Query">Query</a>
+                                        <ul>
+                                            <li class="toctree-l4"><a class="reference internal"
+                                                                      href="../../notebooks/dnam.html#query-allc.tsv.gz-using-tabix">query
+                                                allc.tsv.gz using tabix</a></li>
+                                            <li class="toctree-l4"><a class="reference internal"
+                                                                      href="../../notebooks/dnam.html#query-allc.cz-using-czip">query
+                                                allc.cz using czip</a></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="../../notebooks/dnam.html#Cat-multiple-.cz-files-into-one-.cz-file">Cat
+                                multiple .cz files into one .cz file</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="../../notebooks/dnam.html#Extract-CG-from-.cz-and-merge-strand">Extract
+                                CG from .cz and merge strand</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="../../notebooks/dnam.html#Merge-multiple-.cz-files-into-one-.cz-file">Merge
+                                multiple .cz files into one .cz file</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="../../notebooks/dnam.html#Merge-.cz-files-belonging-to-the-same-cell-type">Merge
+                                .cz files belonging to the same cell type</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="../../notebooks/dnam.html#Run-czip-allc2cz-on-GCP">Run czip
+                                allc2cz on GCP</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="../../notebooks/dnam.html#Run-czip-extractCG-on-GCP">Run
+                                czip extractCG on GCP</a></li>
+                        </ul>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../../modules.html">czip</a>
+                        <ul>
+                            <li class="toctree-l2"><a class="reference internal" href="../../czip.html">czip package</a>
+                                <ul>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="../../czip.html#submodules">Submodules</a>
+                                        <ul>
+                                            <li class="toctree-l4"><a class="reference internal"
+                                                                      href="../../czip.allc.html">czip.allc module</a>
+                                                <ul>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.allc.html#czip.allc.AllC"><code
+                                                            class="docutils literal notranslate"><span
+                                                            class="pre">AllC</span></code></a>
+                                                        <ul>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.allc.html#czip.allc.AllC.merge"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">AllC.merge()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.allc.html#czip.allc.AllC.run"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">AllC.run()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.allc.html#czip.allc.AllC.writePattern"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">AllC.writePattern()</span></code></a>
+                                                            </li>
+                                                        </ul>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.allc.html#czip.allc.WriteC"><code
+                                                            class="docutils literal notranslate"><span class="pre">WriteC()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.allc.html#czip.allc.bed2cz"><code
+                                                            class="docutils literal notranslate"><span class="pre">bed2cz()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.allc.html#czip.allc.extractCG"><code
+                                                            class="docutils literal notranslate"><span class="pre">extractCG()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.allc.html#czip.allc.generate_ssi"><code
+                                                            class="docutils literal notranslate"><span class="pre">generate_ssi()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.allc.html#czip.allc.merge_cell_type"><code
+                                                            class="docutils literal notranslate"><span class="pre">merge_cell_type()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.allc.html#czip.allc.merge_cz"><code
+                                                            class="docutils literal notranslate"><span class="pre">merge_cz()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.allc.html#czip.allc.merge_cz_worker"><code
+                                                            class="docutils literal notranslate"><span class="pre">merge_cz_worker()</span></code></a>
+                                                    </li>
+                                                </ul>
+                                            </li>
+                                            <li class="toctree-l4"><a class="reference internal"
+                                                                      href="../../czip.cz.html">czip.cz module</a>
+                                                <ul>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.cz.html#czip.cz.Reader"><code
+                                                            class="docutils literal notranslate"><span class="pre">Reader</span></code></a>
+                                                        <ul>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.batch_fetch"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.batch_fetch()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.category_ssi"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.category_ssi()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.chunk2df"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.chunk2df()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.close"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.close()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.fetch"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.fetch()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.fetchByStartID"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.fetchByStartID()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.fileno"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.fileno()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.getRecordsByIdRegions"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.getRecordsByIdRegions()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.getRecordsByIds"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.getRecordsByIds()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.get_chunks"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.get_chunks()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.get_ids_from_ssi"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.get_ids_from_ssi()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.isatty"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.isatty()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.pos2id"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.pos2id()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.print_header"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.print_header()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.query"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.query()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.read"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.read()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.read_header"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.read_header()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.readline"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.readline()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.seek"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.seek()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.seekable"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.seekable()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.subset"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.subset()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.summary_blocks"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.summary_blocks()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.summary_chunks"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.summary_chunks()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.tell"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.tell()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Reader.view"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.view()</span></code></a></li>
+                                                        </ul>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.cz.html#czip.cz.SummaryBczBlocks"><code
+                                                            class="docutils literal notranslate"><span class="pre">SummaryBczBlocks()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.cz.html#czip.cz.Writer"><code
+                                                            class="docutils literal notranslate"><span class="pre">Writer</span></code></a>
+                                                        <ul>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Writer.catcz"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.catcz()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Writer.close"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.close()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Writer.create_new_dim"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.create_new_dim()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Writer.fileno"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.fileno()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Writer.flush"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.flush()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Writer.isatty"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.isatty()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Writer.seekable"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.seekable()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Writer.tell"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.tell()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Writer.tocz"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.tocz()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Writer.write_chunk"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.write_chunk()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="../../czip.cz.html#czip.cz.Writer.write_header"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.write_header()</span></code></a>
+                                                            </li>
+                                                        </ul>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.cz.html#czip.cz.extract"><code
+                                                            class="docutils literal notranslate"><span class="pre">extract()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.cz.html#czip.cz.get_dtfuncs"><code
+                                                            class="docutils literal notranslate"><span class="pre">get_dtfuncs()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.cz.html#czip.cz.make_virtual_offset"><code
+                                                            class="docutils literal notranslate"><span class="pre">make_virtual_offset()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.cz.html#czip.cz.open1"><code
+                                                            class="docutils literal notranslate"><span class="pre">open1()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.cz.html#czip.cz.split_virtual_offset"><code
+                                                            class="docutils literal notranslate"><span class="pre">split_virtual_offset()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.cz.html#czip.cz.str2byte"><code
+                                                            class="docutils literal notranslate"><span class="pre">str2byte()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="../../czip.cz.html#czip.cz.test_difference"><code
+                                                            class="docutils literal notranslate"><span class="pre">test_difference()</span></code></a>
+                                                    </li>
+                                                </ul>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="../../czip.html#module-czip">Module contents</a>
+                                        <ul>
+                                            <li class="toctree-l4"><a class="reference internal"
+                                                                      href="../../czip.html#czip.main"><code
+                                                    class="docutils literal notranslate"><span class="pre">main()</span></code></a>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="toctree-l2"><a class="reference internal" href="../../setup.html">setup
+                                module</a></li>
+                        </ul>
+                    </li>
+                </ul>
+
+            </div>
+        </div>
+    </nav>
+
+    <section class="wy-nav-content-wrap" data-toggle="wy-nav-shift">
+        <nav aria-label="Mobile navigation menu" class="wy-nav-top">
+            <i class="fa fa-bars" data-toggle="wy-nav-top"></i>
+            <a href="../../index.html">czip</a>
+        </nav>
+
+        <div class="wy-nav-content">
+            <div class="rst-content">
+                <div aria-label="Page navigation" role="navigation">
+                    <ul class="wy-breadcrumbs">
+                        <li><a aria-label="Home" class="icon icon-home" href="../../index.html"></a></li>
+                        <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+                        <li class="breadcrumb-item"><a href="../czip.html">czip</a></li>
+                        <li class="breadcrumb-item active">czip.allc</li>
+                        <li class="wy-breadcrumbs-aside">
+                        </li>
+                    </ul>
+                    <hr/>
+                </div>
+                <div class="document" itemscope="itemscope" itemtype="http://schema.org/Article" role="main">
+                    <div itemprop="articleBody">
+
+                        <h1>Source code for czip.allc</h1>
+                        <div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Created on Tue Sep  8 17:34:38 2020</span>
+
+<span class="sd">@author: DingWB</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">pysam</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span>
+<span class="kn">from</span> <span class="nn">Bio</span> <span class="kn">import</span> <span class="n">SeqIO</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">from</span> <span class="nn">.cz</span> <span class="kn">import</span> <span class="p">(</span><span
+                                class="n">Reader</span><span class="p">,</span> <span class="n">Writer</span><span
+                                class="p">,</span> <span class="n">get_dtfuncs</span><span class="p">,</span>
+                 <span class="n">_BLOCK_MAX_LEN</span><span class="p">,</span> <span class="n">_chunk_magic</span><span
+                                class="p">)</span>
+
+
+<span class="c1"># ==========================================================</span>
+<div class="viewcode-block" id="WriteC"><a class="viewcode-back" href="../../czip.allc.html#czip.allc.WriteC">[docs]</a><span
+        class="k">def</span> <span class="nf">WriteC</span><span class="p">(</span><span class="n">record</span><span
+        class="p">,</span> <span class="n">outdir</span><span class="p">,</span> <span class="n">chunksize</span><span
+        class="o">=</span><span class="mi">5000</span><span class="p">):</span>
+    <span class="c1"># cdef int i, N</span>
+    <span class="c1"># cdef char* chrom, base, context, strand</span>
+    <span class="n">chrom</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span
+            class="n">id</span>
+    <span class="n">outfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span
+            class="n">outdir</span><span class="p">,</span> <span class="n">chrom</span> <span class="o">+</span> <span
+            class="s2">&quot;.cz&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span
+            class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">outfile</span><span
+            class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span
+            class="s2">&quot;</span><span class="si">{</span><span class="n">outfile</span><span
+            class="si">}</span><span class="s2"> existed, skip.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">chrom</span><span class="p">)</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">Writer</span><span class="p">(</span><span
+            class="n">outfile</span><span class="p">,</span> <span class="n">Formats</span><span class="o">=</span><span
+            class="p">[</span><span class="s1">&#39;Q&#39;</span><span class="p">,</span> <span
+            class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="s1">&#39;3s&#39;</span><span
+            class="p">],</span>
+                    <span class="n">Columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;pos&#39;</span><span
+            class="p">,</span> <span class="s1">&#39;strand&#39;</span><span class="p">,</span> <span class="s1">&#39;context&#39;</span><span
+            class="p">],</span>
+                    <span class="n">Dimensions</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;chrom&#39;</span><span
+            class="p">])</span>
+    <span class="n">dtfuncs</span> <span class="o">=</span> <span class="n">get_dtfuncs</span><span
+            class="p">(</span><span class="n">writer</span><span class="o">.</span><span class="n">Formats</span><span
+            class="p">)</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span
+            class="n">seq</span><span class="o">.</span><span class="fm">__len__</span><span class="p">()</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span
+            class="p">(</span><span class="n">N</span><span class="p">):</span>  <span class="c1"># 0-based</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span
+            class="n">seq</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span
+            class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span
+            class="p">()</span>
+        <span class="k">if</span> <span class="n">base</span><span class="o">.</span><span
+            class="fm">__str__</span><span class="p">()</span> <span class="o">==</span> <span
+            class="s1">&#39;C&#39;</span><span class="p">:</span>  <span class="c1"># forward strand</span>
+            <span class="n">context</span> <span class="o">=</span> <span class="n">record</span><span
+            class="o">.</span><span class="n">seq</span><span class="p">[</span><span class="n">i</span><span class="p">:</span> <span
+            class="n">i</span> <span class="o">+</span> <span class="mi">3</span><span class="p">]</span><span
+            class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="o">.</span><span
+            class="fm">__str__</span><span class="p">()</span>  <span class="c1"># pos, left l1 base pair and right l2 base pair</span>
+            <span class="n">strand</span> <span class="o">=</span> <span class="s1">&#39;+&#39;</span>
+        <span class="k">elif</span> <span class="n">base</span><span class="o">.</span><span class="n">reverse_complement</span><span
+            class="p">()</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span> <span
+            class="o">==</span> <span class="s1">&#39;C&#39;</span><span class="p">:</span>  <span class="c1"># reverse strand</span>
+            <span class="n">context</span> <span class="o">=</span> <span class="n">record</span><span
+            class="o">.</span><span class="n">seq</span><span class="p">[</span><span class="n">i</span> <span
+            class="o">-</span> <span class="mi">2</span><span class="p">:</span><span class="n">i</span> <span
+            class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">reverse_complement</span><span
+            class="p">()</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span
+            class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+            <span class="n">strand</span> <span class="o">=</span> <span class="s1">&#39;-&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="c1"># f.write(f&quot;{chrom}\t{i}\t{i + 1}\t{context}\t{strand}\n&quot;)</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="n">func</span><span
+            class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span
+            class="n">v</span><span class="p">,</span> <span class="n">func</span> <span class="ow">in</span> <span
+            class="nb">zip</span><span class="p">([</span><span class="n">i</span> <span class="o">+</span> <span
+            class="mi">1</span><span class="p">,</span> <span class="n">strand</span><span class="p">,</span> <span
+            class="n">context</span><span class="p">],</span> <span class="n">dtfuncs</span><span class="p">)]</span>
+        <span class="n">data</span> <span class="o">+=</span> <span class="n">struct</span><span class="o">.</span><span
+            class="n">pack</span><span class="p">(</span><span class="n">writer</span><span class="o">.</span><span
+            class="n">fmts</span><span class="p">,</span> <span class="o">*</span><span class="n">values</span><span
+            class="p">)</span>
+        <span class="c1"># position is 0-based (start) 1-based (end position, i+1)</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span
+            class="n">chunksize</span> <span class="o">==</span> <span class="mi">0</span> <span
+            class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span
+            class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">write_chunk</span><span
+            class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">[</span><span
+            class="n">chrom</span><span class="p">])</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="sa">b</span><span
+            class="s1">&#39;&#39;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span
+            class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">write_chunk</span><span
+            class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">[</span><span
+            class="n">chrom</span><span class="p">])</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1"># ==========================================================</span>
+<div class="viewcode-block" id="AllC"><a class="viewcode-back"
+                                         href="../../czip.allc.html#czip.allc.AllC">[docs]</a><span
+        class="k">class</span> <span class="nc">AllC</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">Genome</span><span class="o">=</span><span class="kc">None</span><span
+            class="p">,</span> <span class="n">Output</span><span class="o">=</span><span class="s2">&quot;hg38_allc.cz&quot;</span><span
+            class="p">,</span>
+                 <span class="n">pattern</span><span class="o">=</span><span class="s2">&quot;C&quot;</span><span
+            class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">12</span><span
+            class="p">,</span> <span class="n">keep_temp</span><span class="o">=</span><span
+            class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extract position of specific pattern in the reference genome, for example C.</span>
+<span class="sd">            Example: python ~/Scripts/python/tbmate.py AllC -g ~/genome/hg38/hg38.fa --n_jobs 10 run</span>
+<span class="sd">            Or call within python: ac=AllC(genome=&quot;/gale/netapp/home2/wding/genome/hg38/hg38.fa&quot;)</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        genome: path</span>
+<span class="sd">            reference genome.</span>
+<span class="sd">        out: path</span>
+<span class="sd">            path for output</span>
+<span class="sd">        pattern: str</span>
+<span class="sd">            pattern [C]</span>
+<span class="sd">        n_jobs: int</span>
+<span class="sd">            number of CPU used for Pool.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">genome</span><span class="o">=</span><span
+            class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span
+            class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span
+            class="n">Genome</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Output</span><span class="o">=</span><span
+            class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span
+            class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span
+            class="n">Output</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outdir</span><span class="o">=</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">Output</span><span class="o">+</span><span
+            class="s1">&#39;.tmp&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">outdir</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">outdir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span><span class="o">=</span><span
+            class="n">pattern</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">records</span> <span
+            class="o">=</span> <span class="n">SeqIO</span><span class="o">.</span><span class="n">parse</span><span
+            class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">genome</span><span
+            class="p">,</span> <span class="s2">&quot;fasta&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span
+            class="n">n_jobs</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">n_jobs</span> <span
+            class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">os</span><span
+            class="o">.</span><span class="n">cpu_count</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keep_temp</span> <span
+            class="o">=</span> <span class="n">keep_temp</span>
+        <span class="k">if</span> <span class="n">pattern</span><span class="o">==</span><span
+            class="s1">&#39;C&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">=</span><span
+            class="n">WriteC</span>
+
+<div class="viewcode-block" id="AllC.writePattern"><a class="viewcode-back"
+                                                      href="../../czip.allc.html#czip.allc.AllC.writePattern">[docs]</a>    <span
+        class="k">def</span> <span class="nf">writePattern</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">):</span>
+        <span class="n">pool</span> <span class="o">=</span> <span class="n">multiprocessing</span><span
+            class="o">.</span><span class="n">Pool</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">n_jobs</span><span class="p">)</span>
+        <span class="n">jobs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">records</span><span class="p">:</span>
+            <span class="n">job</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span
+            class="n">apply_async</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">func</span><span class="p">,</span> <span class="p">(</span><span
+            class="n">record</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">outdir</span><span class="p">))</span>
+            <span class="n">jobs</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span><span class="n">job</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">job</span> <span class="ow">in</span> <span
+            class="n">jobs</span><span class="p">:</span>
+            <span class="n">job</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="AllC.merge"><a class="viewcode-back" href="../../czip.allc.html#czip.allc.AllC.merge">[docs]</a>    <span
+        class="k">def</span> <span class="nf">merge</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">):</span>
+        <span class="n">writer</span> <span class="o">=</span> <span class="n">Writer</span><span
+            class="p">(</span><span class="n">Output</span><span class="o">=</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">Output</span><span class="p">,</span> <span class="n">Formats</span><span
+            class="o">=</span><span class="p">[</span><span class="s1">&#39;Q&#39;</span><span class="p">,</span> <span
+            class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="s1">&#39;3s&#39;</span><span
+            class="p">],</span>
+                        <span class="n">Columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;pos&#39;</span><span
+            class="p">,</span> <span class="s1">&#39;strand&#39;</span><span class="p">,</span> <span class="s1">&#39;context&#39;</span><span
+            class="p">],</span>
+                        <span class="n">Dimensions</span><span class="o">=</span><span class="p">[</span><span
+            class="s1">&#39;chrom&#39;</span><span class="p">],</span> <span class="n">message</span><span
+            class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">genome</span><span
+            class="p">)</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">catcz</span><span class="p">(</span><span
+            class="n">Input</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span
+            class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">outdir</span><span
+            class="si">}</span><span class="s2">/*.cz&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AllC.run"><a class="viewcode-back"
+                                             href="../../czip.allc.html#czip.allc.AllC.run">[docs]</a>    <span
+        class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">writePattern</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">merge</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">keep_temp</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span
+            class="sa">f</span><span class="s2">&quot;rm -rf </span><span class="si">{</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">outdir</span><span class="si">}</span><span
+            class="s2">&quot;</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="bed2cz"><a class="viewcode-back" href="../../czip.allc.html#czip.allc.bed2cz">[docs]</a><span
+        class="k">def</span> <span class="nf">bed2cz</span><span class="p">(</span><span class="nb">input</span><span
+        class="p">,</span> <span class="n">outfile</span><span class="p">,</span> <span class="n">reference</span><span
+        class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">missing_value</span><span
+        class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span
+        class="mi">0</span><span class="p">],</span>
+           <span class="n">Formats</span><span class="o">=</span><span class="p">[</span><span
+            class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="s1">&#39;H&#39;</span><span
+            class="p">],</span> <span class="n">Columns</span><span class="o">=</span><span class="p">[</span><span
+            class="s1">&#39;mc&#39;</span><span class="p">,</span> <span class="s1">&#39;cov&#39;</span><span class="p">],</span> <span
+            class="n">Dimensions</span><span class="o">=</span><span class="p">[</span><span
+            class="s1">&#39;chrom&#39;</span><span class="p">],</span>
+           <span class="n">usecols</span><span class="o">=</span><span class="p">[</span><span class="mi">4</span><span
+            class="p">,</span> <span class="mi">5</span><span class="p">],</span> <span class="n">pr</span><span
+            class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">pa</span><span
+            class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">sep</span><span
+            class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span
+            class="p">,</span> <span class="n">Path_to_chrom</span><span class="o">=</span><span
+            class="kc">None</span><span class="p">,</span>
+           <span class="n">chunksize</span><span class="o">=</span><span class="mi">2000</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    convert allc.tsv.gz to .cz file.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    input : path</span>
+<span class="sd">        path to allc.tsv.gz, should has .tbi index.</span>
+<span class="sd">    outfile : path</span>
+<span class="sd">        output .cz file</span>
+<span class="sd">    reference : path</span>
+<span class="sd">        path to reference coordinates.</span>
+<span class="sd">    Formats: list</span>
+<span class="sd">        When reference is provided, we only need to pack mc and cov,</span>
+<span class="sd">        [&#39;H&#39;, &#39;H&#39;] is suggested (H is unsigned short integer, only 2 bytes),</span>
+<span class="sd">        if reference is not provided, we also need to pack position (Q is</span>
+<span class="sd">        recommanded), in this case, Formats should be [&#39;Q&#39;,&#39;H&#39;,&#39;H&#39;].</span>
+<span class="sd">    Columns: list</span>
+<span class="sd">        Columns names, in default is [&#39;mc&#39;,&#39;cov&#39;] (reference is provided), if no</span>
+<span class="sd">        referene provided, one should use [&#39;pos&#39;,&#39;mc&#39;,&#39;cov&#39;].</span>
+<span class="sd">    Dimensions: list</span>
+<span class="sd">        Dimensions passed to czip.Writer, dimension name, for allc file, dimension</span>
+<span class="sd">        is chrom.</span>
+<span class="sd">    usecols: list</span>
+<span class="sd">        default is [4, 5], for a typical .allc.tsv.gz, if no reference is provided,</span>
+<span class="sd">        the columns to be packed should be [1,4,5] (pos, mv and cov).</span>
+<span class="sd">        If reference is provided, then we only need to pack [4,5] (mc and cov).</span>
+<span class="sd">    pr: int</span>
+<span class="sd">        index of position column in reference .mz header columns [0]</span>
+<span class="sd">    pa: int</span>
+<span class="sd">        index of position column in input input or bed column.</span>
+<span class="sd">    chunksize : int</span>
+<span class="sd">        default is 5000</span>
+<span class="sd">    Path_to_chrom : path</span>
+<span class="sd">        path to chrom_size path or similar file containing chromosomes order,</span>
+<span class="sd">        the first columns should be chromosomes, tab separated and no header.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span
+            class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">outfile</span><span
+            class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span
+            class="s2">&quot;</span><span class="si">{</span><span class="n">outfile</span><span
+            class="si">}</span><span class="s2"> existed, skip.&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="n">allc_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span
+            class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span
+            class="n">expanduser</span><span class="p">(</span><span class="nb">input</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span
+            class="n">allc_path</span> <span class="o">+</span> <span class="s1">&#39;.tbi&#39;</span><span
+            class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span
+            class="s2">&quot;index file .tbi not existed, please create index first.&quot;</span><span
+            class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">allc_path</span><span class="p">)</span>
+    <span class="n">tbi</span> <span class="o">=</span> <span class="n">pysam</span><span class="o">.</span><span
+            class="n">TabixFile</span><span class="p">(</span><span class="n">allc_path</span><span class="p">)</span>
+    <span class="n">contigs</span> <span class="o">=</span> <span class="n">tbi</span><span class="o">.</span><span
+            class="n">contigs</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">Path_to_chrom</span> <span
+            class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">Path_to_chrom</span> <span class="o">=</span> <span class="n">os</span><span
+            class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span
+            class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span
+            class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span
+            class="n">Path_to_chrom</span><span class="p">))</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span
+            class="n">read_csv</span><span class="p">(</span><span class="n">Path_to_chrom</span><span
+            class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span
+            class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">header</span><span
+            class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">usecols</span><span
+            class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">chroms</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span
+            class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span
+            class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">all_chroms</span> <span class="o">=</span> <span class="p">[</span><span
+            class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span
+            class="n">chroms</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span
+            class="n">contigs</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">all_chroms</span> <span class="o">=</span> <span class="n">contigs</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">reference</span> <span
+            class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">reference</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span
+            class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span
+            class="n">expanduser</span><span class="p">(</span><span class="n">reference</span><span class="p">))</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span
+            class="n">reference</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="c1"># formats, columns, dimensions = [&#39;Q&#39;, &#39;H&#39;, &#39;H&#39;], [&#39;pos&#39;, &#39;mc&#39;, &#39;cov&#39;], [&#39;chrom&#39;]</span>
+        <span class="c1"># usecols = [1, 4, 5]</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">Writer</span><span class="p">(</span><span
+            class="n">outfile</span><span class="p">,</span> <span class="n">Formats</span><span class="o">=</span><span
+            class="n">Formats</span><span class="p">,</span> <span class="n">Columns</span><span class="o">=</span><span
+            class="n">Columns</span><span class="p">,</span>
+                    <span class="n">Dimensions</span><span class="o">=</span><span class="n">Dimensions</span><span
+            class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="n">message</span><span
+            class="p">)</span>
+    <span class="n">dtfuncs</span> <span class="o">=</span> <span class="n">get_dtfuncs</span><span
+            class="p">(</span><span class="n">Formats</span><span class="p">,</span> <span class="n">tobytes</span><span
+            class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">reference</span> <span
+            class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">ref_reader</span> <span class="o">=</span> <span class="n">Reader</span><span class="p">(</span><span
+            class="n">reference</span><span class="p">)</span>
+        <span class="n">na_value_bytes</span> <span class="o">=</span> <span class="n">struct</span><span
+            class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="sa">f</span><span
+            class="s2">&quot;&lt;</span><span class="si">{</span><span class="n">writer</span><span
+            class="o">.</span><span class="n">fmts</span><span class="si">}</span><span class="s2">&quot;</span><span
+            class="p">,</span> <span class="o">*</span><span class="n">missing_value</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">chrom</span> <span class="ow">in</span> <span
+            class="n">all_chroms</span><span class="p">:</span>
+            <span class="c1"># print(chrom,&#39;\t&#39;*4,end=&#39;\r&#39;)</span>
+            <span class="c1"># method 1</span>
+            <span class="n">ref_positions</span> <span class="o">=</span> <span class="n">ref_reader</span><span
+            class="o">.</span><span class="n">__fetch__</span><span class="p">(</span><span class="nb">tuple</span><span
+            class="p">([</span><span class="n">chrom</span><span class="p">]),</span> <span class="n">s</span><span
+            class="o">=</span><span class="n">pr</span><span class="p">,</span> <span class="n">e</span><span class="o">=</span><span
+            class="n">pr</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">records</span> <span class="o">=</span> <span class="n">tbi</span><span
+            class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="n">chrom</span><span
+            class="p">)</span>
+            <span class="n">data</span><span class="p">,</span> <span class="n">i</span> <span class="o">=</span> <span
+            class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="mi">0</span>
+            <span class="n">row_query</span> <span class="o">=</span> <span class="nb">next</span><span
+            class="p">(</span><span class="n">records</span><span class="p">)</span><span class="o">.</span><span
+            class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span
+            class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span
+            class="p">(</span><span class="n">sep</span><span class="p">)</span>
+            <span class="n">row_query_pos</span> <span class="o">=</span> <span class="nb">int</span><span
+            class="p">(</span><span class="n">row_query</span><span class="p">[</span><span class="n">pa</span><span
+            class="p">])</span>
+            <span class="k">for</span> <span class="n">ref_pos</span> <span class="ow">in</span> <span class="n">ref_positions</span><span
+            class="p">:</span>
+                <span class="k">if</span> <span class="n">ref_pos</span><span class="p">[</span><span
+            class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">row_query_pos</span><span
+            class="p">:</span>
+                    <span class="n">data</span> <span class="o">+=</span> <span class="n">na_value_bytes</span>
+                    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">ref_pos</span><span class="p">[</span><span
+            class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span
+            class="n">row_query_pos</span><span class="p">:</span>  <span class="c1"># match</span>
+                        <span class="n">data</span> <span class="o">+=</span> <span class="n">struct</span><span
+            class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="sa">f</span><span
+            class="s2">&quot;&lt;</span><span class="si">{</span><span class="n">writer</span><span
+            class="o">.</span><span class="n">fmts</span><span class="si">}</span><span class="s2">&quot;</span><span
+            class="p">,</span>
+                                            <span class="o">*</span><span class="p">[</span><span
+            class="n">func</span><span class="p">(</span><span class="n">row_query</span><span class="p">[</span><span
+            class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span><span
+            class="p">,</span> <span class="n">func</span> <span class="ow">in</span>
+                                              <span class="nb">zip</span><span class="p">(</span><span
+            class="n">usecols</span><span class="p">,</span> <span class="n">dtfuncs</span><span class="p">)</span>
+                                              <span class="p">])</span>
+                        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">row_query</span> <span class="o">=</span> <span class="nb">next</span><span
+            class="p">(</span><span class="n">records</span><span class="p">)</span><span class="o">.</span><span
+            class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span
+            class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span
+            class="p">(</span><span class="n">sep</span><span class="p">)</span>
+                        <span class="n">row_query_pos</span> <span class="o">=</span> <span class="nb">int</span><span
+            class="p">(</span><span class="n">row_query</span><span class="p">[</span><span class="n">pa</span><span
+            class="p">])</span>
+                    <span class="k">except</span><span class="p">:</span>
+                        <span class="k">break</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span
+            class="n">chunksize</span><span class="p">:</span>
+                    <span class="n">writer</span><span class="o">.</span><span class="n">write_chunk</span><span
+            class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">[</span><span
+            class="n">chrom</span><span class="p">])</span>
+                    <span class="n">data</span><span class="p">,</span> <span class="n">i</span> <span
+            class="o">=</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span
+            class="mi">0</span>
+            <span class="c1"># when break: write all the rest reference positions (na_value_bytes)</span>
+            <span class="k">for</span> <span class="n">ref_pos</span> <span class="ow">in</span> <span class="n">ref_positions</span><span
+            class="p">:</span>
+                <span class="n">data</span> <span class="o">+=</span> <span class="n">na_value_bytes</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span
+            class="n">chunksize</span><span class="p">:</span>
+                    <span class="n">writer</span><span class="o">.</span><span class="n">write_chunk</span><span
+            class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">[</span><span
+            class="n">chrom</span><span class="p">])</span>
+                    <span class="n">data</span><span class="p">,</span> <span class="n">i</span> <span
+            class="o">=</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span
+            class="mi">0</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span
+            class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span
+            class="p">:</span>
+                <span class="n">writer</span><span class="o">.</span><span class="n">write_chunk</span><span
+            class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">[</span><span
+            class="n">chrom</span><span class="p">])</span>
+
+            <span class="c1"># methd 2, similar speed, but larger memory requirement.</span>
+            <span class="c1"># ref_positions = np.array([pos[0] for pos in ref_reader.__fetch__(tuple([chrom]), s=pr, e=pr + 1)])</span>
+            <span class="c1"># records = [line.rstrip(&#39;\n&#39;).split(sep) for line in tbi.fetch(chrom)]</span>
+            <span class="c1"># query_positions = np.array([int(record[pa]) for record in records])</span>
+            <span class="c1"># indices = np.where(np.in1d(ref_positions, query_positions))[0]</span>
+            <span class="c1"># # indices is the indice where element of query_positions in ref_positions</span>
+            <span class="c1"># indice_start = 0</span>
+            <span class="c1"># # sum=0</span>
+            <span class="c1"># for indice, record in zip(indices, records):</span>
+            <span class="c1">#     for i in range((indice - indice_start) // chunksize):</span>
+            <span class="c1">#         writer.write_chunk(na_value_bytes * chunksize, [chrom])</span>
+            <span class="c1">#         # sum+=chunksize</span>
+            <span class="c1">#     i = (indice - indice_start) % chunksize</span>
+            <span class="c1">#     data = b&#39;&#39;</span>
+            <span class="c1">#     if i &gt; 0:</span>
+            <span class="c1">#         data += na_value_bytes * i</span>
+            <span class="c1">#         # sum += i</span>
+            <span class="c1">#     data += struct.pack(f&quot;&lt;{writer.fmts}&quot;, *[func(record[i]) for i, func in</span>
+            <span class="c1">#                                              zip(usecols, dtfuncs)])</span>
+            <span class="c1">#     writer.write_chunk(data, [chrom])</span>
+            <span class="c1">#     # sum += 1</span>
+            <span class="c1">#     indice_start = indice + 1</span>
+            <span class="c1"># indice = len(ref_positions)</span>
+            <span class="c1"># for i in range((indice - indice_start) // chunksize):</span>
+            <span class="c1">#     writer.write_chunk(na_value_bytes * chunksize, [chrom])</span>
+            <span class="c1">#     # sum += chunksize</span>
+            <span class="c1"># i = (indice - indice_start) % chunksize</span>
+            <span class="c1"># if i &gt; 0:</span>
+            <span class="c1">#     writer.write_chunk(na_value_bytes * i, [chrom])</span>
+            <span class="c1">#     # sum += i</span>
+        <span class="n">ref_reader</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">chrom</span> <span class="ow">in</span> <span
+            class="n">all_chroms</span><span class="p">:</span>
+            <span class="c1"># print(chrom)</span>
+            <span class="c1"># records = tbi.fetch(chrom)</span>
+            <span class="c1"># data, i = b&#39;&#39;, 0</span>
+            <span class="c1"># while True:</span>
+            <span class="c1">#     try:</span>
+            <span class="c1">#         values = records.__next__().rstrip(&#39;\n&#39;).split(sep)</span>
+            <span class="c1">#     except:</span>
+            <span class="c1">#         break</span>
+            <span class="c1">#     if i &gt;= chunksize:  # dims are the same, but reach chunksize</span>
+            <span class="c1">#         writer.write_chunk(data, [chrom])</span>
+            <span class="c1">#         data, i = b&#39;&#39;, 0</span>
+            <span class="c1">#     values = [func(values[i]) for i, func in zip(usecols, dtfuncs)]</span>
+            <span class="c1">#     data += struct.pack(f&quot;&lt;{writer.fmts}&quot;, *values)</span>
+            <span class="c1">#     i += 1</span>
+            <span class="c1"># if len(data) &gt; 0:</span>
+            <span class="c1">#     writer.write_chunk(data, [chrom])</span>
+
+            <span class="c1"># method 2</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">tbi</span><span
+            class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="n">chrom</span><span
+            class="p">):</span>
+                <span class="n">values</span> <span class="o">=</span> <span class="n">line</span><span
+            class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;</span><span
+            class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span
+            class="n">split</span><span class="p">(</span><span class="n">sep</span><span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">struct</span><span
+            class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="sa">f</span><span
+            class="s2">&quot;&lt;</span><span class="si">{</span><span class="n">writer</span><span
+            class="o">.</span><span class="n">fmts</span><span class="si">}</span><span class="s2">&quot;</span><span
+            class="p">,</span>
+                                   <span class="o">*</span><span class="p">[</span><span class="n">func</span><span
+            class="p">(</span><span class="n">values</span><span class="p">[</span><span class="n">i</span><span
+            class="p">])</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span
+            class="n">func</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span
+            class="n">usecols</span><span class="p">,</span> <span class="n">dtfuncs</span><span class="p">)])</span>
+                <span class="n">writer</span><span class="o">.</span><span class="n">write_chunk</span><span
+            class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">[</span><span
+            class="n">chrom</span><span class="p">])</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">tbi</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1"># ==========================================================</span>
+<span class="k">def</span> <span class="nf">_isCG</span><span class="p">(</span><span class="n">record</span><span
+                                class="p">):</span>
+    <span class="k">return</span> <span class="n">record</span><span class="p">[</span><span class="mi">2</span><span
+                                class="p">][:</span><span class="mi">2</span><span class="p">]</span> <span
+                                class="o">==</span> <span class="sa">b</span><span class="s1">&#39;CG&#39;</span>
+
+
+<span class="c1"># ==========================================================</span>
+<span class="k">def</span> <span class="nf">_isForwardCG</span><span class="p">(</span><span
+                                class="n">record</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">record</span><span class="p">[</span><span class="mi">2</span><span
+                                class="p">][:</span><span class="mi">2</span><span class="p">]</span> <span
+                                class="o">==</span> <span class="sa">b</span><span class="s1">&#39;CG&#39;</span> <span
+                                class="ow">and</span> <span class="n">record</span><span class="p">[</span><span
+                                class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span
+                                class="sa">b</span><span class="s1">&#39;+&#39;</span>
+
+
+<span class="c1"># ==========================================================</span>
+<span class="k">def</span> <span class="nf">_isCH</span><span class="p">(</span><span class="n">record</span><span
+                                class="p">):</span>
+    <span class="k">return</span> <span class="ow">not</span> <span class="n">_isCG</span><span class="p">(</span><span
+                                class="n">record</span><span class="p">)</span>
+
+
+<span class="c1"># ==========================================================</span>
+<div class="viewcode-block" id="generate_ssi"><a class="viewcode-back"
+                                                 href="../../czip.allc.html#czip.allc.generate_ssi">[docs]</a><span
+        class="k">def</span> <span class="nf">generate_ssi</span><span class="p">(</span><span
+        class="n">Input</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span
+        class="kc">None</span><span class="p">,</span> <span class="n">pattern</span><span class="o">=</span><span
+        class="s2">&quot;CGN&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate ssi (subset index) for a given input .cz</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Input : .cz</span>
+<span class="sd">    output : .ssi</span>
+<span class="sd">    pattern : CGN, CHN, +CGN, -CGN</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">pattern</span> <span class="o">==</span> <span
+            class="s1">&#39;CGN&#39;</span><span class="p">:</span>
+        <span class="n">judge_func</span> <span class="o">=</span> <span class="n">_isCG</span>
+    <span class="k">elif</span> <span class="n">pattern</span> <span class="o">==</span> <span
+            class="s1">&#39;CHN&#39;</span><span class="p">:</span>  <span class="c1"># CH</span>
+        <span class="n">judge_func</span> <span class="o">=</span> <span class="n">_isCH</span>
+    <span class="k">elif</span> <span class="n">pattern</span> <span class="o">==</span> <span
+            class="s1">&#39;+CGN&#39;</span><span class="p">:</span>
+        <span class="n">judge_func</span> <span class="o">=</span> <span class="n">_isForwardCG</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Currently, only CGN, CHN, +CGN supported&quot;</span><span
+            class="p">)</span>
+    <span class="k">if</span> <span class="n">output</span> <span class="ow">is</span> <span class="kc">None</span><span
+            class="p">:</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">Input</span> <span
+            class="o">+</span> <span class="s1">&#39;.&#39;</span> <span class="o">+</span> <span
+            class="n">pattern</span> <span class="o">+</span> <span class="s1">&#39;.ssi&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span
+            class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span
+            class="n">expanduser</span><span class="p">(</span><span class="n">output</span><span class="p">))</span>
+    <span class="n">reader</span> <span class="o">=</span> <span class="n">Reader</span><span class="p">(</span><span
+            class="n">Input</span><span class="p">)</span>
+    <span class="n">reader</span><span class="o">.</span><span class="n">category_ssi</span><span
+            class="p">(</span><span class="n">output</span><span class="o">=</span><span class="n">output</span><span
+            class="p">,</span> <span class="n">formats</span><span class="o">=</span><span class="p">[</span><span
+            class="s1">&#39;I&#39;</span><span class="p">],</span> <span class="n">columns</span><span
+            class="o">=</span><span class="p">[</span><span class="s1">&#39;ID&#39;</span><span class="p">],</span>
+                        <span class="n">dimensions</span><span class="o">=</span><span class="p">[</span><span
+            class="s1">&#39;chrom&#39;</span><span class="p">],</span> <span class="n">match_func</span><span class="o">=</span><span
+            class="n">judge_func</span><span class="p">,</span>
+                        <span class="n">chunksize</span><span class="o">=</span><span class="mi">2000</span><span
+            class="p">)</span>
+    <span class="n">reader</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="merge_cz_worker"><a class="viewcode-back"
+                                                    href="../../czip.allc.html#czip.allc.merge_cz_worker">[docs]</a><span
+        class="k">def</span> <span class="nf">merge_cz_worker</span><span class="p">(</span><span
+        class="n">outfile_cat</span><span class="p">,</span> <span class="n">outdir</span><span class="p">,</span> <span
+        class="n">chrom</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span
+        class="n">formats</span><span class="p">,</span>
+                    <span class="n">block_idx_start</span><span class="p">,</span> <span
+            class="n">batch_nblock</span><span class="p">,</span> <span class="n">chunksize</span><span
+            class="o">=</span><span class="mi">5000</span><span class="p">):</span>
+    <span class="c1"># print(chrom, &quot;started&quot;,end=&#39;\r&#39;)</span>
+    <span class="n">outname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span
+            class="n">outdir</span><span class="p">,</span> <span class="n">chrom</span> <span class="o">+</span> <span
+            class="sa">f</span><span class="s1">&#39;.</span><span class="si">{</span><span
+            class="n">block_idx_start</span><span class="si">}</span><span class="s1">.cz&#39;</span><span
+            class="p">)</span>
+    <span class="n">reader1</span> <span class="o">=</span> <span class="n">Reader</span><span class="p">(</span><span
+            class="n">outfile_cat</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">dims</span><span
+            class="p">:</span>  <span class="c1"># each dim is a file of the same chrom</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">reader1</span><span class="o">.</span><span
+            class="n">_load_chunk</span><span class="p">(</span><span class="n">reader1</span><span
+            class="o">.</span><span class="n">dim2chunk_start</span><span class="p">[</span><span
+            class="n">dim</span><span class="p">],</span> <span class="n">jump</span><span class="o">=</span><span
+            class="kc">False</span><span class="p">)</span>
+        <span class="n">block_start_offset</span> <span class="o">=</span> <span class="n">reader1</span><span
+            class="o">.</span><span class="n">_chunk_block_1st_record_virtual_offsets</span><span class="p">[</span>
+                                 <span class="n">block_idx_start</span><span class="p">]</span> <span
+            class="o">&gt;&gt;</span> <span class="mi">16</span>
+        <span class="n">buffer</span> <span class="o">=</span> <span class="sa">b</span><span
+            class="s1">&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span
+            class="nb">range</span><span class="p">(</span><span class="n">batch_nblock</span><span class="p">):</span>
+            <span class="n">reader1</span><span class="o">.</span><span class="n">_load_block</span><span
+            class="p">(</span><span class="n">start_offset</span><span class="o">=</span><span class="n">block_start_offset</span><span
+            class="p">)</span>
+            <span class="n">buffer</span> <span class="o">+=</span> <span class="n">reader1</span><span
+            class="o">.</span><span class="n">_buffer</span>
+            <span class="n">block_start_offset</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span
+            class="n">array</span><span class="p">([</span><span class="n">result</span><span class="p">[:</span><span
+            class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">result</span> <span
+            class="ow">in</span> <span class="n">struct</span><span class="o">.</span><span class="n">iter_unpack</span><span
+            class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;&lt;</span><span class="si">{</span><span
+            class="n">reader1</span><span class="o">.</span><span class="n">fmts</span><span class="si">}</span><span
+            class="s2">&quot;</span><span class="p">,</span> <span class="n">buffer</span><span
+            class="p">)])</span>  <span class="c1"># values for batch_nblock (23) blocks</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span
+            class="kc">None</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">values</span><span
+            class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">+=</span> <span class="n">values</span>
+        <span class="c1"># q.put(tuple([dim, chunk_id, data]))</span>
+    <span class="n">writer1</span> <span class="o">=</span> <span class="n">Writer</span><span class="p">(</span><span
+            class="n">outname</span><span class="p">,</span> <span class="n">Formats</span><span class="o">=</span><span
+            class="n">formats</span><span class="p">,</span>
+                     <span class="n">Columns</span><span class="o">=</span><span class="n">reader1</span><span
+            class="o">.</span><span class="n">header</span><span class="p">[</span><span
+            class="s1">&#39;Columns&#39;</span><span class="p">],</span>
+                     <span class="n">Dimensions</span><span class="o">=</span><span class="n">reader1</span><span
+            class="o">.</span><span class="n">header</span><span class="p">[</span><span
+            class="s1">&#39;Dimensions&#39;</span><span class="p">][:</span><span class="mi">1</span><span
+            class="p">],</span>
+                     <span class="n">message</span><span class="o">=</span><span class="n">outfile_cat</span><span
+            class="p">)</span>
+    <span class="n">byte_data</span><span class="p">,</span> <span class="n">i</span> <span class="o">=</span> <span
+            class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">data</span><span
+            class="o">.</span><span class="n">tolist</span><span class="p">():</span>
+        <span class="n">byte_data</span> <span class="o">+=</span> <span class="n">struct</span><span class="o">.</span><span
+            class="n">pack</span><span class="p">(</span><span class="sa">f</span><span
+            class="s2">&quot;&lt;</span><span class="si">{</span><span class="n">writer1</span><span
+            class="o">.</span><span class="n">fmts</span><span class="si">}</span><span class="s2">&quot;</span><span
+            class="p">,</span>
+                                 <span class="o">*</span><span class="n">values</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span
+            class="n">chunksize</span><span class="p">:</span>
+            <span class="n">writer1</span><span class="o">.</span><span class="n">write_chunk</span><span
+            class="p">(</span><span class="n">byte_data</span><span class="p">,</span> <span class="p">[</span><span
+            class="n">chrom</span><span class="p">])</span>
+            <span class="n">byte_data</span><span class="p">,</span> <span class="n">i</span> <span
+            class="o">=</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span
+            class="mi">0</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">byte_data</span><span
+            class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">writer1</span><span class="o">.</span><span class="n">write_chunk</span><span class="p">(</span><span
+            class="n">byte_data</span><span class="p">,</span> <span class="p">[</span><span class="n">chrom</span><span
+            class="p">])</span>
+    <span class="n">writer1</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">reader1</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">chrom</span><span class="p">,</span> <span
+            class="n">block_idx_start</span><span class="p">,</span> <span class="s2">&quot;done&quot;</span><span
+            class="p">)</span>
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="merge_cz"><a class="viewcode-back"
+                                             href="../../czip.allc.html#czip.allc.merge_cz">[docs]</a><span class="k">def</span> <span
+        class="nf">merge_cz</span><span class="p">(</span><span class="n">indir</span><span class="o">=</span><span
+        class="kc">None</span><span class="p">,</span> <span class="n">cz_paths</span><span class="o">=</span><span
+        class="kc">None</span><span class="p">,</span> <span class="n">outfile</span><span class="o">=</span><span
+        class="s2">&quot;merged.cz&quot;</span><span class="p">,</span> <span class="n">n_jobs</span><span
+        class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">formats</span><span
+        class="o">=</span><span class="p">[</span><span class="s1">&#39;I&#39;</span><span class="p">,</span> <span
+        class="s1">&#39;I&#39;</span><span class="p">],</span>
+             <span class="n">Path_to_chrom</span><span class="o">=</span><span class="s2">&quot;~/Ref/mm10/mm10_ucsc_with_chrL.main.chrom.sizes.txt&quot;</span><span
+            class="p">,</span>
+             <span class="n">keep_cat</span><span class="o">=</span><span class="kc">False</span><span
+            class="p">,</span> <span class="n">batchsize</span><span class="o">=</span><span class="mi">10</span><span
+            class="p">):</span>
+    <span class="n">outfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span
+            class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span
+            class="n">expanduser</span><span class="p">(</span><span class="n">outfile</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span
+            class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">outfile</span><span
+            class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span
+            class="s2">&quot;</span><span class="si">{</span><span class="n">outfile</span><span
+            class="si">}</span><span class="s2"> existed, skip.&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">cz_paths</span> <span class="ow">is</span> <span
+            class="kc">None</span><span class="p">:</span>
+        <span class="n">cz_paths</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">listdir</span><span class="p">(</span><span class="n">indir</span><span class="p">)</span>
+    <span class="n">reader</span> <span class="o">=</span> <span class="n">Reader</span><span class="p">(</span><span
+            class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span
+            class="n">join</span><span class="p">(</span><span class="n">indir</span><span class="p">,</span> <span
+            class="n">cz_paths</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="n">header</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span
+            class="n">header</span>
+    <span class="n">reader</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">outfile_cat</span> <span class="o">=</span> <span class="n">outfile</span> <span class="o">+</span> <span
+            class="s1">&#39;.cat.cz&#39;</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">Writer</span><span class="p">(</span><span
+            class="n">Output</span><span class="o">=</span><span class="n">outfile_cat</span><span
+            class="p">,</span> <span class="n">Formats</span><span class="o">=</span><span class="n">header</span><span
+            class="p">[</span><span class="s1">&#39;Formats&#39;</span><span class="p">],</span>
+                    <span class="n">Columns</span><span class="o">=</span><span class="n">header</span><span
+            class="p">[</span><span class="s1">&#39;Columns&#39;</span><span class="p">],</span> <span class="n">Dimensions</span><span
+            class="o">=</span><span class="n">header</span><span class="p">[</span><span
+            class="s1">&#39;Dimensions&#39;</span><span class="p">],</span>
+                    <span class="n">message</span><span class="o">=</span><span class="s2">&quot;catcz&quot;</span><span
+            class="p">)</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">catcz</span><span class="p">(</span><span
+            class="n">Input</span><span class="o">=</span><span class="p">[</span><span class="n">os</span><span
+            class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span
+            class="p">(</span><span class="n">indir</span><span class="p">,</span> <span class="n">cz_path</span><span
+            class="p">)</span> <span class="k">for</span> <span class="n">cz_path</span> <span
+            class="ow">in</span> <span class="n">cz_paths</span><span class="p">],</span>
+                 <span class="n">add_dim</span><span class="o">=</span><span class="kc">True</span><span
+            class="p">)</span>
+    <span class="n">Path_to_chrom</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span
+            class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span
+            class="n">expanduser</span><span class="p">(</span><span class="n">Path_to_chrom</span><span
+            class="p">))</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span
+            class="p">(</span><span class="n">Path_to_chrom</span><span class="p">,</span> <span
+            class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span
+            class="s1">&#39;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span
+            class="kc">None</span><span class="p">,</span> <span class="n">usecols</span><span class="o">=</span><span
+            class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">chroms</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span
+            class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span
+            class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+    <span class="n">reader</span> <span class="o">=</span> <span class="n">Reader</span><span class="p">(</span><span
+            class="n">outfile_cat</span><span class="p">)</span>
+    <span class="n">chrom_col</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span
+            class="n">header</span><span class="p">[</span><span class="s1">&#39;Dimensions&#39;</span><span class="p">][</span><span
+            class="mi">0</span><span class="p">]</span>
+    <span class="n">chunk_info</span> <span class="o">=</span> <span class="n">reader</span><span
+            class="o">.</span><span class="n">chunk_info</span>
+    <span class="n">reader</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">chrom_nblocks</span> <span class="o">=</span> <span class="n">chunk_info</span><span
+            class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span
+            class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="n">chrom_col</span><span
+            class="p">,</span> <span class="s1">&#39;chunk_nblocks&#39;</span><span class="p">]</span>
+                    <span class="p">]</span><span class="o">.</span><span class="n">drop_duplicates</span><span
+            class="p">()</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span
+            class="n">chrom_col</span><span class="p">)</span><span class="o">.</span><span
+            class="n">chunk_nblocks</span><span class="o">.</span><span class="n">to_dict</span><span
+            class="p">()</span>
+    <span class="c1"># chunk_info.set_index(chrom_col)</span>
+    <span class="n">unit_nblock</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span
+            class="n">writer</span><span class="o">.</span><span class="n">_unit_size</span> <span
+            class="o">/</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span
+            class="n">gcd</span><span class="p">(</span><span class="n">writer</span><span class="o">.</span><span
+            class="n">_unit_size</span><span class="p">,</span> <span class="n">_BLOCK_MAX_LEN</span><span
+            class="p">)))</span>
+    <span class="n">nunit_perbatch</span> <span class="o">=</span> <span class="nb">int</span><span
+            class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span
+            class="p">((</span><span class="n">chunk_info</span><span class="o">.</span><span
+            class="n">chunk_nblocks</span><span class="o">.</span><span class="n">max</span><span
+            class="p">()</span> <span class="o">/</span> <span class="n">batchsize</span>
+                                  <span class="p">)</span> <span class="o">/</span> <span
+            class="n">unit_nblock</span><span class="p">))</span>
+    <span class="n">batch_nblock</span> <span class="o">=</span> <span class="n">nunit_perbatch</span> <span
+            class="o">*</span> <span class="n">unit_nblock</span>  <span
+            class="c1"># how many block for each batch</span>
+    <span class="c1"># manager = multiprocessing.Manager()</span>
+    <span class="c1"># queue1 = manager.Queue()</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">multiprocessing</span><span
+            class="o">.</span><span class="n">Pool</span><span class="p">(</span><span class="n">n_jobs</span><span
+            class="p">)</span>
+    <span class="c1"># watcher = pool.apply_async(czs_merger, (outfile, formats, columns,</span>
+    <span class="c1">#                                         dimensions, message, n_batch, queue1))</span>
+    <span class="n">jobs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">outdir</span> <span class="o">=</span> <span class="n">outfile</span> <span class="o">+</span> <span
+            class="s1">&#39;.tmp&#39;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span
+            class="n">outdir</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span
+            class="n">outdir</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">chrom</span> <span class="ow">in</span> <span
+            class="n">chroms</span><span class="p">:</span>
+        <span class="n">dims</span> <span class="o">=</span> <span class="n">chunk_info</span><span
+            class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">chunk_info</span><span
+            class="p">[</span><span class="n">chrom_col</span><span class="p">]</span> <span class="o">==</span> <span
+            class="n">chrom</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span
+            class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims</span><span
+            class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">block_idx_start</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">block_idx_start</span> <span class="o">&lt;</span> <span class="n">chrom_nblocks</span><span
+            class="p">[</span><span class="n">chrom</span><span class="p">]:</span>
+            <span class="n">job</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span
+            class="n">apply_async</span><span class="p">(</span><span class="n">merge_cz_worker</span><span
+            class="p">,</span>
+                                   <span class="p">(</span><span class="n">outfile_cat</span><span
+            class="p">,</span> <span class="n">outdir</span><span class="p">,</span> <span class="n">chrom</span><span
+            class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">formats</span><span
+            class="p">,</span>
+                                    <span class="n">block_idx_start</span><span class="p">,</span> <span class="n">batch_nblock</span><span
+            class="p">))</span>
+            <span class="n">jobs</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span><span class="n">job</span><span class="p">)</span>
+            <span class="n">block_idx_start</span> <span class="o">+=</span> <span class="n">batch_nblock</span>
+    <span class="k">for</span> <span class="n">job</span> <span class="ow">in</span> <span class="n">jobs</span><span
+            class="p">:</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">job</span><span class="o">.</span><span
+            class="n">get</span><span class="p">()</span>
+    <span class="c1"># queue1.put(&#39;kill&#39;)</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+    <span class="c1"># manager._process.terminate()</span>
+    <span class="c1"># manager.shutdown()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">keep_cat</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span
+            class="n">outfile_cat</span><span class="p">)</span>
+    <span class="c1"># First, merge different batch for each chrom</span>
+    <span class="k">for</span> <span class="n">chrom</span> <span class="ow">in</span> <span
+            class="n">chroms</span><span class="p">:</span>
+        <span class="c1"># print(chrom,end=&#39;\t&#39;)</span>
+        <span class="n">outname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span
+            class="n">outdir</span><span class="p">,</span> <span class="n">chrom</span> <span class="o">+</span> <span
+            class="s1">&#39;.cz&#39;</span><span class="p">)</span>
+        <span class="n">writer</span> <span class="o">=</span> <span class="n">Writer</span><span
+            class="p">(</span><span class="n">Output</span><span class="o">=</span><span class="n">outname</span><span
+            class="p">,</span> <span class="n">Formats</span><span class="o">=</span><span class="n">formats</span><span
+            class="p">,</span>
+                        <span class="n">Columns</span><span class="o">=</span><span class="n">header</span><span
+            class="p">[</span><span class="s1">&#39;Columns&#39;</span><span class="p">],</span> <span class="n">Dimensions</span><span
+            class="o">=</span><span class="n">header</span><span class="p">[</span><span
+            class="s1">&#39;Dimensions&#39;</span><span class="p">],</span>
+                        <span class="n">message</span><span class="o">=</span><span class="n">outfile_cat</span><span
+            class="p">)</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">_chunk_start_offset</span> <span class="o">=</span> <span
+            class="n">writer</span><span class="o">.</span><span class="n">_handle</span><span class="o">.</span><span
+            class="n">tell</span><span class="p">()</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">_handle</span><span class="o">.</span><span
+            class="n">write</span><span class="p">(</span><span class="n">_chunk_magic</span><span class="p">)</span>
+        <span class="c1"># chunk total size place holder: 0</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">_handle</span><span class="o">.</span><span
+            class="n">write</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span
+            class="n">pack</span><span class="p">(</span><span class="s2">&quot;&lt;Q&quot;</span><span
+            class="p">,</span> <span class="mi">0</span><span class="p">))</span>  <span class="c1"># 8 bytes; including this chunk_size</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">_chunk_data_len</span> <span
+            class="o">=</span> <span class="mi">0</span>
+        <span class="n">writer</span><span class="o">.</span><span
+            class="n">_block_1st_record_virtual_offsets</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">_chunk_dims</span> <span class="o">=</span> <span
+            class="p">[</span><span class="n">chrom</span><span class="p">]</span>
+        <span class="n">block_idx_start</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">infile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span
+            class="n">outdir</span><span class="p">,</span> <span class="n">chrom</span> <span class="o">+</span> <span
+            class="sa">f</span><span class="s1">&#39;.</span><span class="si">{</span><span
+            class="n">block_idx_start</span><span class="si">}</span><span class="s1">.cz&#39;</span><span
+            class="p">)</span>
+        <span class="k">while</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span
+            class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">infile</span><span
+            class="p">):</span>
+            <span class="n">reader</span> <span class="o">=</span> <span class="n">Reader</span><span class="p">(</span><span
+            class="n">infile</span><span class="p">)</span>
+            <span class="n">reader</span><span class="o">.</span><span class="n">_load_chunk</span><span
+            class="p">(</span><span class="n">reader</span><span class="o">.</span><span class="n">header</span><span
+            class="p">[</span><span class="s1">&#39;header_size&#39;</span><span class="p">])</span>
+            <span class="n">block_start_offset</span> <span class="o">=</span> <span class="n">reader</span><span
+            class="o">.</span><span class="n">_chunk_start_offset</span> <span class="o">+</span> <span
+            class="mi">10</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">_buffer</span> <span class="o">=</span> <span
+            class="sa">b</span><span class="s1">&#39;&#39;</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span
+            class="p">(</span><span class="n">reader</span><span class="o">.</span><span class="n">_chunk_nblocks</span><span
+            class="p">):</span>
+                <span class="n">reader</span><span class="o">.</span><span class="n">_load_block</span><span
+            class="p">(</span><span class="n">start_offset</span><span class="o">=</span><span class="n">block_start_offset</span><span
+            class="p">)</span>  <span class="c1">#</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span
+            class="n">writer</span><span class="o">.</span><span class="n">_buffer</span><span class="p">)</span> <span
+            class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">reader</span><span
+            class="o">.</span><span class="n">_buffer</span><span class="p">)</span> <span class="o">&lt;</span> <span
+            class="n">_BLOCK_MAX_LEN</span><span class="p">:</span>
+                    <span class="n">writer</span><span class="o">.</span><span class="n">_buffer</span> <span class="o">+=</span> <span
+            class="n">reader</span><span class="o">.</span><span class="n">_buffer</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">writer</span><span class="o">.</span><span class="n">_buffer</span> <span class="o">+=</span> <span
+            class="n">reader</span><span class="o">.</span><span class="n">_buffer</span>
+                    <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">writer</span><span
+            class="o">.</span><span class="n">_buffer</span><span class="p">)</span> <span class="o">&gt;=</span> <span
+            class="n">_BLOCK_MAX_LEN</span><span class="p">:</span>
+                        <span class="n">writer</span><span class="o">.</span><span class="n">_write_block</span><span
+            class="p">(</span><span class="n">writer</span><span class="o">.</span><span class="n">_buffer</span><span
+            class="p">[:</span><span class="n">_BLOCK_MAX_LEN</span><span class="p">])</span>
+                        <span class="n">writer</span><span class="o">.</span><span class="n">_buffer</span> <span
+            class="o">=</span> <span class="n">writer</span><span class="o">.</span><span class="n">_buffer</span><span
+            class="p">[</span><span class="n">_BLOCK_MAX_LEN</span><span class="p">:]</span>
+                <span class="n">block_start_offset</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">block_idx_start</span> <span class="o">+=</span> <span class="n">batch_nblock</span>
+            <span class="n">infile</span> <span class="o">=</span> <span class="n">os</span><span
+            class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span
+            class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="n">chrom</span> <span
+            class="o">+</span> <span class="sa">f</span><span class="s1">&#39;.</span><span class="si">{</span><span
+            class="n">block_idx_start</span><span class="si">}</span><span class="s1">.cz&#39;</span><span
+            class="p">)</span>
+            <span class="n">reader</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="c1"># write chunk tail</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># Second, merge chromosomes to outfile</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">Writer</span><span class="p">(</span><span
+            class="n">Output</span><span class="o">=</span><span class="n">outfile</span><span class="p">,</span> <span
+            class="n">Formats</span><span class="o">=</span><span class="n">formats</span><span class="p">,</span>
+                    <span class="n">Columns</span><span class="o">=</span><span class="n">header</span><span
+            class="p">[</span><span class="s1">&#39;Columns&#39;</span><span class="p">],</span> <span class="n">Dimensions</span><span
+            class="o">=</span><span class="n">header</span><span class="p">[</span><span
+            class="s1">&#39;Dimensions&#39;</span><span class="p">],</span>
+                    <span class="n">message</span><span class="o">=</span><span
+            class="s2">&quot;merged&quot;</span><span class="p">)</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">catcz</span><span class="p">(</span><span
+            class="n">Input</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span
+            class="s2">&quot;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span
+            class="s2">/</span><span class="si">{</span><span class="n">chrom</span><span class="si">}</span><span
+            class="s2">.cz&quot;</span> <span class="k">for</span> <span class="n">chrom</span> <span
+            class="ow">in</span> <span class="n">chroms</span><span class="p">])</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span
+            class="sa">f</span><span class="s2">&quot;rm -rf </span><span class="si">{</span><span
+            class="n">outdir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="merge_cell_type"><a class="viewcode-back"
+                                                    href="../../czip.allc.html#czip.allc.merge_cell_type">[docs]</a><span
+        class="k">def</span> <span class="nf">merge_cell_type</span><span class="p">(</span><span class="n">indir</span><span
+        class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cell_table</span><span
+        class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">outdir</span><span
+        class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                    <span class="n">n_jobs</span><span class="o">=</span><span class="mi">64</span><span
+            class="p">,</span> <span class="n">Path_to_chrom</span><span class="o">=</span><span
+            class="kc">None</span><span class="p">,</span> <span class="n">ext</span><span class="o">=</span><span
+            class="s1">&#39;.CGN.merged.cz&#39;</span><span class="p">):</span>
+    <span class="n">indir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span
+            class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span
+            class="n">expanduser</span><span class="p">(</span><span class="n">indir</span><span class="p">))</span>
+    <span class="n">outdir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span
+            class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span
+            class="n">expanduser</span><span class="p">(</span><span class="n">outdir</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span
+            class="n">outdir</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span
+            class="n">outdir</span><span class="p">)</span>
+    <span class="n">Path_to_chrom</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span
+            class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span
+            class="n">expanduser</span><span class="p">(</span><span class="n">Path_to_chrom</span><span
+            class="p">))</span>
+    <span class="n">df_ct</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span
+            class="n">read_csv</span><span class="p">(</span><span class="n">cell_table</span><span
+            class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span
+            class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">header</span><span
+            class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">names</span><span
+            class="o">=</span><span class="p">[</span><span class="s1">&#39;cell&#39;</span><span
+            class="p">,</span> <span class="s1">&#39;ct&#39;</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">ct</span> <span class="ow">in</span> <span class="n">df_ct</span><span
+            class="o">.</span><span class="n">ct</span><span class="o">.</span><span class="n">unique</span><span
+            class="p">():</span>
+        <span class="n">outfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span
+            class="n">outdir</span><span class="p">,</span> <span class="n">ct</span> <span class="o">+</span> <span
+            class="s1">&#39;.cz&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span
+            class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">outfile</span><span
+            class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span
+            class="si">{</span><span class="n">outfile</span><span class="si">}</span><span
+            class="s2"> existed.&quot;</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">ct</span><span class="p">)</span>
+        <span class="n">snames</span> <span class="o">=</span> <span class="n">df_ct</span><span class="o">.</span><span
+            class="n">loc</span><span class="p">[</span><span class="n">df_ct</span><span class="o">.</span><span
+            class="n">ct</span> <span class="o">==</span> <span class="n">ct</span><span class="p">,</span> <span
+            class="s1">&#39;cell&#39;</span><span class="p">]</span><span class="o">.</span><span
+            class="n">tolist</span><span class="p">()</span>
+        <span class="n">cz_paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span
+            class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span
+            class="p">(</span><span class="n">indir</span><span class="p">,</span> <span class="n">sname</span> <span
+            class="o">+</span> <span class="n">ext</span><span class="p">)</span> <span class="k">for</span> <span
+            class="n">sname</span> <span class="ow">in</span> <span class="n">snames</span><span class="p">]</span>
+        <span class="n">merge_cz</span><span class="p">(</span><span class="n">indir</span><span class="o">=</span><span
+            class="n">indir</span><span class="p">,</span> <span class="n">cz_paths</span><span class="o">=</span><span
+            class="n">cz_paths</span><span class="p">,</span>
+                 <span class="n">outfile</span><span class="o">=</span><span class="n">outfile</span><span
+            class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="n">n_jobs</span><span
+            class="p">,</span> <span class="n">Path_to_chrom</span><span class="o">=</span><span
+            class="n">Path_to_chrom</span><span class="p">)</span></div>
+<span class="c1"># ==========================================================</span>
+<div class="viewcode-block" id="extractCG"><a class="viewcode-back" href="../../czip.allc.html#czip.allc.extractCG">[docs]</a><span
+        class="k">def</span> <span class="nf">extractCG</span><span class="p">(</span><span class="nb">input</span><span
+        class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">outfile</span><span
+        class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ssi</span><span
+        class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chunksize</span><span
+        class="o">=</span><span class="mi">5000</span><span class="p">,</span>
+              <span class="n">merge_strand</span><span class="o">=</span><span class="kc">True</span><span
+            class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract CG context from .cz file</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cz_path :path</span>
+<span class="sd">    outfile :path</span>
+<span class="sd">    ssi : path</span>
+<span class="sd">        ssi should be ssi to mm10_with_chrL.allc.cz.CGN.ssi, not forward</span>
+<span class="sd">        strand ssi, but after merge (if merge_strand is True), forward ssi</span>
+<span class="sd">        mm10_with_chrL.allc.cz.+CGN.ssi should be used to generate</span>
+<span class="sd">         reference, one can</span>
+<span class="sd">        run: czip extract -m mm10_with_chrL.allc.cz</span>
+<span class="sd">        -o mm10_with_chrL.allCG.forward.cz</span>
+<span class="sd">        -b mm10_with_chrL.allc.cz.+CGN.ssi and use</span>
+<span class="sd">        mm10_with_chrL.allCG.forward.cz as new reference.</span>
+<span class="sd">    chunksize :int</span>
+<span class="sd">    merge_strand: bool</span>
+<span class="sd">        after merging, only forward strand would be kept, reverse strand values</span>
+<span class="sd">        would be added to the corresponding forward strand.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cz_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span
+            class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span
+            class="n">expanduser</span><span class="p">(</span><span class="nb">input</span><span class="p">))</span>
+    <span class="n">ssi_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span
+            class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span
+            class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span
+            class="n">expanduser</span><span class="p">(</span><span class="n">ssi</span><span class="p">))</span>
+    <span class="n">ssi_reader</span> <span class="o">=</span> <span class="n">Reader</span><span
+            class="p">(</span><span class="n">ssi_path</span><span class="p">)</span>
+    <span class="n">reader</span> <span class="o">=</span> <span class="n">Reader</span><span class="p">(</span><span
+            class="n">cz_path</span><span class="p">)</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">Writer</span><span class="p">(</span><span
+            class="n">outfile</span><span class="p">,</span> <span class="n">Formats</span><span class="o">=</span><span
+            class="n">reader</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span
+            class="s1">&#39;Formats&#39;</span><span class="p">],</span>
+                    <span class="n">Columns</span><span class="o">=</span><span class="n">reader</span><span
+            class="o">.</span><span class="n">header</span><span class="p">[</span><span
+            class="s1">&#39;Columns&#39;</span><span class="p">],</span>
+                    <span class="n">Dimensions</span><span class="o">=</span><span class="n">reader</span><span
+            class="o">.</span><span class="n">header</span><span class="p">[</span><span
+            class="s1">&#39;Dimensions&#39;</span><span class="p">],</span>
+                    <span class="n">message</span><span class="o">=</span><span class="n">ssi_path</span><span
+            class="p">)</span>
+    <span class="n">dtfuncs</span> <span class="o">=</span> <span class="n">get_dtfuncs</span><span
+            class="p">(</span><span class="n">writer</span><span class="o">.</span><span class="n">Formats</span><span
+            class="p">)</span>
+    <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">reader</span><span
+            class="o">.</span><span class="n">dim2chunk_start</span><span class="o">.</span><span
+            class="n">keys</span><span class="p">():</span>
+        <span class="c1"># print(dim)</span>
+        <span class="n">IDs</span> <span class="o">=</span> <span class="n">ssi_reader</span><span
+            class="o">.</span><span class="n">get_ids_from_ssi</span><span class="p">(</span><span
+            class="n">dim</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">IDs</span><span
+            class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span
+            class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Only support 1D ssi now!&quot;</span><span
+            class="p">)</span>
+        <span class="n">records</span> <span class="o">=</span> <span class="n">reader</span><span
+            class="o">.</span><span class="n">_getRecordsByIds</span><span class="p">(</span><span
+            class="n">dim</span><span class="p">,</span> <span class="n">IDs</span><span class="p">)</span>
+        <span class="n">data</span><span class="p">,</span> <span class="n">count</span> <span class="o">=</span> <span
+            class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="mi">0</span>
+        <span class="c1"># for CG, if pos is forward (+), then pos+1 is reverse strand (-)</span>
+        <span class="k">if</span> <span class="n">merge_strand</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span
+            class="n">record</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span
+            class="n">records</span><span class="p">):</span>  <span class="c1"># unpacked bytes</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span
+            class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">v0</span> <span class="o">=</span> <span class="n">struct</span><span
+            class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="sa">f</span><span
+            class="s2">&quot;&lt;</span><span class="si">{</span><span class="n">reader</span><span
+            class="o">.</span><span class="n">fmts</span><span class="si">}</span><span class="s2">&quot;</span><span
+            class="p">,</span> <span class="n">record</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">v1</span> <span class="o">=</span> <span class="n">struct</span><span
+            class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="sa">f</span><span
+            class="s2">&quot;&lt;</span><span class="si">{</span><span class="n">reader</span><span
+            class="o">.</span><span class="n">fmts</span><span class="si">}</span><span class="s2">&quot;</span><span
+            class="p">,</span> <span class="n">record</span><span class="p">)</span>
+                    <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span
+            class="n">r1</span> <span class="o">+</span> <span class="n">r2</span> <span class="k">for</span> <span
+            class="n">r1</span><span class="p">,</span> <span class="n">r2</span> <span class="ow">in</span> <span
+            class="nb">zip</span><span class="p">(</span><span class="n">v0</span><span class="p">,</span> <span
+            class="n">v1</span><span class="p">)]</span>
+                    <span class="n">data</span> <span class="o">+=</span> <span class="n">struct</span><span
+            class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="n">writer</span><span
+            class="o">.</span><span class="n">fmts</span><span class="p">,</span>
+                                        <span class="o">*</span><span class="p">[</span><span class="n">func</span><span
+            class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span
+            class="n">v</span><span class="p">,</span> <span class="n">func</span> <span class="ow">in</span> <span
+            class="nb">zip</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span
+            class="n">dtfuncs</span><span class="p">)])</span>
+                    <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="n">chunksize</span><span
+            class="p">:</span>
+                    <span class="n">writer</span><span class="o">.</span><span class="n">write_chunk</span><span
+            class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dim</span><span
+            class="p">)</span>
+                    <span class="n">data</span><span class="p">,</span> <span class="n">count</span> <span
+            class="o">=</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span
+            class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span
+            class="n">records</span><span class="p">:</span>  <span class="c1"># unpacked bytes</span>
+                <span class="n">data</span> <span class="o">+=</span> <span class="n">record</span>
+                <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="n">chunksize</span><span
+            class="p">:</span>
+                    <span class="n">writer</span><span class="o">.</span><span class="n">write_chunk</span><span
+            class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dim</span><span
+            class="p">)</span>
+                    <span class="n">data</span><span class="p">,</span> <span class="n">count</span> <span
+            class="o">=</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span
+            class="mi">0</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span
+            class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">write_chunk</span><span
+            class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dim</span><span
+            class="p">)</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">reader</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">ssi_reader</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="c1"># ==========================================================</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span
+                                class="p">:</span>
+    <span class="kn">import</span> <span class="nn">fire</span>
+
+    <span class="n">fire</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span
+                                class="n">Display</span> <span class="o">=</span> <span class="k">lambda</span> <span
+                                class="n">lines</span><span class="p">,</span> <span class="n">out</span><span
+                                class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span
+                                class="n">lines</span><span class="p">,</span> <span class="n">file</span><span
+                                class="o">=</span><span class="n">out</span><span class="p">)</span>
+    <span class="n">fire</span><span class="o">.</span><span class="n">Fire</span><span class="p">()</span>
+</pre>
+                        </div>
+
+                    </div>
+                </div>
+                <footer>
+
+                    <hr/>
+
+                    <div role="contentinfo">
+                        <p>&#169; Copyright 2023, Wubin Ding.</p>
+                    </div>
+
+                    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+                    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+                    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+                </footer>
+            </div>
+        </div>
+    </section>
+</div>
+<script>
+    jQuery(function () {
+        SphinxRtdTheme.Navigation.enable(true);
+    });
+</script>
+<!-- Theme Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-F0T1MBS19V"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-F0T1MBS19V', {
+        'anonymize_ip': false,
+    });
+</script>
+
+</body>
+</html>

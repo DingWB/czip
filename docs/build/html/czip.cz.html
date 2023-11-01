@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="Docutils 0.18.1: http://docutils.sourceforge.net/" name="generator"/>
+
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>czip.cz module &mdash; czip 0.1 documentation</title>
+    <link href="_static/pygments.css" rel="stylesheet" type="text/css"/>
+    <link href="_static/css/theme.css" rel="stylesheet" type="text/css"/>
+    <link href="_static/css/rtd_sphinx_search.min.css" rel="stylesheet" type="text/css"/>
+    <link href="_static/css/custom.css" rel="stylesheet" type="text/css"/>
+    <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+    <![endif]-->
+
+    <script src="_static/jquery.js?v=5d32c60e"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=e031e9a9"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/js/rtd_search_config.js"></script>
+    <script src="_static/js/rtd_sphinx_search.min.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA="
+            src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link href="genindex.html" rel="index" title="Index"/>
+    <link href="search.html" rel="search" title="Search"/>
+    <link href="setup.html" rel="next" title="setup module"/>
+    <link href="czip.allc.html" rel="prev" title="czip.allc module"/>
+</head>
+
+<body class="wy-body-for-nav">
+<div class="wy-grid-for-nav">
+    <nav class="wy-nav-side" data-toggle="wy-nav-shift">
+        <div class="wy-side-scroll">
+            <div class="wy-side-nav-search">
+
+
+                <a class="icon icon-home" href="index.html">
+                    czip
+                </a>
+                <div role="search">
+                    <form action="search.html" class="wy-form" id="rtd-search-form" method="get">
+                        <input aria-label="Search docs" name="q" placeholder="Search docs" type="text"/>
+                        <input name="check_keywords" type="hidden" value="yes"/>
+                        <input name="area" type="hidden" value="default"/>
+                    </form>
+                </div>
+            </div>
+            <div aria-label="Navigation menu" class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation">
+                <ul class="current">
+                    <li class="toctree-l1"><a class="reference internal" href="quick_start.html">Quick Started</a>
+                        <ul>
+                            <li class="toctree-l2"><a class="reference internal" href="notebooks/quick_start.html">1.
+                                Installation</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/quick_start.html#2.Writer">2.Writer</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/quick_start.html#2.-Reader">2. Reader</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/quick_start.html#3.-Query">3. Query</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/quick_start.html#4.Subset">4.Subset</a></li>
+                        </ul>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="dnam.html">DNA methylation data</a>
+                        <ul>
+                            <li class="toctree-l2"><a class="reference internal" href="notebooks/dnam.html">Generate
+                                allc coordinate reference .cz file</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/dnam.html#View-reference-.cz-file">View reference
+                                .cz file</a>
+                                <ul>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="notebooks/dnam.html#view-header">view header</a>
+                                    </li>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="notebooks/dnam.html#summary-chunks">summary
+                                        chunks</a></li>
+                                </ul>
+                            </li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/dnam.html#Converting-.allc.tsv.gz-into-.cz-file">Converting
+                                .allc.tsv.gz into .cz file</a>
+                                <ul>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="notebooks/dnam.html#Pack-.allc.tsv.gz-to-.cz-with-coordinates">Pack
+                                        .allc.tsv.gz to .cz with coordinates</a></li>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="notebooks/dnam.html#Pack-.allc.tsv.gz-to-.cz-without-coordinates-(using-reference)">Pack
+                                        .allc.tsv.gz to .cz without coordinates (using reference)</a></li>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="notebooks/dnam.html#Query">Query</a>
+                                        <ul>
+                                            <li class="toctree-l4"><a class="reference internal"
+                                                                      href="notebooks/dnam.html#query-allc.tsv.gz-using-tabix">query
+                                                allc.tsv.gz using tabix</a></li>
+                                            <li class="toctree-l4"><a class="reference internal"
+                                                                      href="notebooks/dnam.html#query-allc.cz-using-czip">query
+                                                allc.cz using czip</a></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/dnam.html#Cat-multiple-.cz-files-into-one-.cz-file">Cat
+                                multiple .cz files into one .cz file</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/dnam.html#Extract-CG-from-.cz-and-merge-strand">Extract
+                                CG from .cz and merge strand</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/dnam.html#Merge-multiple-.cz-files-into-one-.cz-file">Merge
+                                multiple .cz files into one .cz file</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/dnam.html#Merge-.cz-files-belonging-to-the-same-cell-type">Merge
+                                .cz files belonging to the same cell type</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/dnam.html#Run-czip-allc2cz-on-GCP">Run czip
+                                allc2cz on GCP</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/dnam.html#Run-czip-extractCG-on-GCP">Run czip
+                                extractCG on GCP</a></li>
+                        </ul>
+                    </li>
+                    <li class="toctree-l1 current"><a class="reference internal" href="modules.html">czip</a>
+                        <ul class="current">
+                            <li class="toctree-l2 current"><a class="reference internal" href="czip.html">czip
+                                package</a>
+                                <ul class="current">
+                                    <li class="toctree-l3 current"><a class="reference internal"
+                                                                      href="czip.html#submodules">Submodules</a>
+                                        <ul class="current">
+                                            <li class="toctree-l4"><a class="reference internal" href="czip.allc.html">czip.allc
+                                                module</a>
+                                                <ul>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.allc.html#czip.allc.AllC"><code
+                                                            class="docutils literal notranslate"><span
+                                                            class="pre">AllC</span></code></a>
+                                                        <ul>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.allc.html#czip.allc.AllC.merge"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">AllC.merge()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.allc.html#czip.allc.AllC.run"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">AllC.run()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.allc.html#czip.allc.AllC.writePattern"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">AllC.writePattern()</span></code></a>
+                                                            </li>
+                                                        </ul>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.allc.html#czip.allc.WriteC"><code
+                                                            class="docutils literal notranslate"><span class="pre">WriteC()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.allc.html#czip.allc.bed2cz"><code
+                                                            class="docutils literal notranslate"><span class="pre">bed2cz()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.allc.html#czip.allc.extractCG"><code
+                                                            class="docutils literal notranslate"><span class="pre">extractCG()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.allc.html#czip.allc.generate_ssi"><code
+                                                            class="docutils literal notranslate"><span class="pre">generate_ssi()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.allc.html#czip.allc.merge_cell_type"><code
+                                                            class="docutils literal notranslate"><span class="pre">merge_cell_type()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.allc.html#czip.allc.merge_cz"><code
+                                                            class="docutils literal notranslate"><span class="pre">merge_cz()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.allc.html#czip.allc.merge_cz_worker"><code
+                                                            class="docutils literal notranslate"><span class="pre">merge_cz_worker()</span></code></a>
+                                                    </li>
+                                                </ul>
+                                            </li>
+                                            <li class="toctree-l4 current"><a class="current reference internal"
+                                                                              href="#">czip.cz module</a>
+                                                <ul>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="#czip.cz.Reader"><code
+                                                            class="docutils literal notranslate"><span class="pre">Reader</span></code></a>
+                                                        <ul>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.batch_fetch"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.batch_fetch()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.category_ssi"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.category_ssi()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.chunk2df"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.chunk2df()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.close"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.close()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.fetch"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.fetch()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.fetchByStartID"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.fetchByStartID()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.fileno"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.fileno()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.getRecordsByIdRegions"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.getRecordsByIdRegions()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.getRecordsByIds"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.getRecordsByIds()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.get_chunks"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.get_chunks()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.get_ids_from_ssi"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.get_ids_from_ssi()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.isatty"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.isatty()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.pos2id"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.pos2id()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.print_header"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.print_header()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.query"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.query()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.read"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.read()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.read_header"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.read_header()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.readline"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.readline()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.seek"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.seek()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.seekable"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.seekable()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.subset"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.subset()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.summary_blocks"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.summary_blocks()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.summary_chunks"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.summary_chunks()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.tell"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.tell()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Reader.view"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.view()</span></code></a></li>
+                                                        </ul>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="#czip.cz.SummaryBczBlocks"><code
+                                                            class="docutils literal notranslate"><span class="pre">SummaryBczBlocks()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="#czip.cz.Writer"><code
+                                                            class="docutils literal notranslate"><span class="pre">Writer</span></code></a>
+                                                        <ul>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Writer.catcz"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.catcz()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Writer.close"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.close()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Writer.create_new_dim"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.create_new_dim()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Writer.fileno"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.fileno()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Writer.flush"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.flush()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Writer.isatty"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.isatty()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Writer.seekable"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.seekable()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Writer.tell"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.tell()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Writer.tocz"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.tocz()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Writer.write_chunk"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.write_chunk()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="#czip.cz.Writer.write_header"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.write_header()</span></code></a>
+                                                            </li>
+                                                        </ul>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="#czip.cz.extract"><code
+                                                            class="docutils literal notranslate"><span class="pre">extract()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="#czip.cz.get_dtfuncs"><code
+                                                            class="docutils literal notranslate"><span class="pre">get_dtfuncs()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="#czip.cz.make_virtual_offset"><code
+                                                            class="docutils literal notranslate"><span class="pre">make_virtual_offset()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="#czip.cz.open1"><code
+                                                            class="docutils literal notranslate"><span class="pre">open1()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="#czip.cz.split_virtual_offset"><code
+                                                            class="docutils literal notranslate"><span class="pre">split_virtual_offset()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="#czip.cz.str2byte"><code
+                                                            class="docutils literal notranslate"><span class="pre">str2byte()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="#czip.cz.test_difference"><code
+                                                            class="docutils literal notranslate"><span class="pre">test_difference()</span></code></a>
+                                                    </li>
+                                                </ul>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li class="toctree-l3"><a class="reference internal" href="czip.html#module-czip">Module
+                                        contents</a>
+                                        <ul>
+                                            <li class="toctree-l4"><a class="reference internal"
+                                                                      href="czip.html#czip.main"><code
+                                                    class="docutils literal notranslate"><span class="pre">main()</span></code></a>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="toctree-l2"><a class="reference internal" href="setup.html">setup module</a></li>
+                        </ul>
+                    </li>
+                </ul>
+
+            </div>
+        </div>
+    </nav>
+
+    <section class="wy-nav-content-wrap" data-toggle="wy-nav-shift">
+        <nav aria-label="Mobile navigation menu" class="wy-nav-top">
+            <i class="fa fa-bars" data-toggle="wy-nav-top"></i>
+            <a href="index.html">czip</a>
+        </nav>
+
+        <div class="wy-nav-content">
+            <div class="rst-content">
+                <div aria-label="Page navigation" role="navigation">
+                    <ul class="wy-breadcrumbs">
+                        <li><a aria-label="Home" class="icon icon-home" href="index.html"></a></li>
+                        <li class="breadcrumb-item"><a href="modules.html">czip</a></li>
+                        <li class="breadcrumb-item"><a href="czip.html">czip package</a></li>
+                        <li class="breadcrumb-item active">czip.cz module</li>
+                        <li class="wy-breadcrumbs-aside">
+                            <a class="fa fa-github"
+                               href="https://github.com/DingWB/PyComplexHeatmap/blob/main/docs/source/czip.cz.rst"> Edit
+                                on GitHub</a>
+                        </li>
+                    </ul>
+                    <hr/>
+                </div>
+                <div class="document" itemscope="itemscope" itemtype="http://schema.org/Article" role="main">
+                    <div itemprop="articleBody">
+
+                        <section id="module-czip.cz">
+                            <span id="czip-cz-module"></span>
+                            <h1>czip.cz module<a class="headerlink" href="#module-czip.cz"
+                                                 title="Permalink to this heading">¶</a></h1>
+                            <dl class="py class">
+                                <dt class="sig sig-object py" id="czip.cz.Reader">
+                                    <em class="property"><span class="pre">class</span><span
+                                            class="w"> </span></em><span class="sig-prename descclassname"><span
+                                        class="pre">czip.cz.</span></span><span class="sig-name descname"><span
+                                        class="pre">Reader</span></span><span class="sig-paren">(</span><em
+                                        class="sig-param"><span class="n"><span class="pre">Input</span></span></em>,
+                                    <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span
+                                            class="o"><span class="pre">=</span></span><span class="default_value"><span
+                                            class="pre">'rb'</span></span></em>, <em class="sig-param"><span
+                                        class="n"><span class="pre">fileobj</span></span><span class="o"><span
+                                        class="pre">=</span></span><span class="default_value"><span
+                                        class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span
+                                        class="pre">max_cache</span></span><span class="o"><span
+                                        class="pre">=</span></span><span class="default_value"><span
+                                        class="pre">100</span></span></em><span class="sig-paren">)</span><a
+                                        class="reference internal" href="_modules/czip/cz.html#Reader"><span
+                                        class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                        class="headerlink" href="#czip.cz.Reader"
+                                        title="Permalink to this definition">¶</a></dt>
+                                <dd><p>Bases: <code class="xref py py-class hover docutils literal notranslate"><span
+                                        class="pre">object</span></code></p>
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.batch_fetch">
+                                            <span class="sig-name descname"><span
+                                                    class="pre">batch_fetch</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">dims</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">chunksize</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">5000</span></span></em><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.batch_fetch"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.batch_fetch"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.category_ssi">
+                                            <span class="sig-name descname"><span class="pre">category_ssi</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="pre">output=None,</span>
+                                            <span class="pre">formats=['I'],</span> <span
+                                                    class="pre">columns=['ID'],</span> <span class="pre">dimensions=['chrom'],</span>
+                                            <span class="pre">match_func=&lt;function</span> <span class="pre">_isForwardCG&gt;,</span>
+                                            <span class="pre">chunksize=2000</span></em><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.category_ssi"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.category_ssi"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.chunk2df">
+                                            <span class="sig-name descname"><span
+                                                    class="pre">chunk2df</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">dims</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">reformat</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">False</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">chunksize</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em><span class="sig-paren">)</span><a
+                                                class="reference internal" href="_modules/czip/cz.html#Reader.chunk2df"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.chunk2df"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.close">
+                                            <span class="sig-name descname"><span class="pre">close</span></span><span
+                                                class="sig-paren">(</span><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.close"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.close"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>Close BGZF file.</p>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.fetch">
+                                            <span class="sig-name descname"><span class="pre">fetch</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">dims</span></span></em><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.fetch"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.fetch"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.fetchByStartID">
+                                            <span class="sig-name descname"><span
+                                                    class="pre">fetchByStartID</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">dims</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">n</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.fetchByStartID"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.fetchByStartID"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.fileno">
+                                            <span class="sig-name descname"><span class="pre">fileno</span></span><span
+                                                class="sig-paren">(</span><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.fileno"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.fileno"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>Return integer file descriptor.</p>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.getRecordsByIdRegions">
+                                            <span class="sig-name descname"><span
+                                                    class="pre">getRecordsByIdRegions</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span
+                                                class="default_value"><span class="pre">None</span></span></em>, <em
+                                                class="sig-param"><span class="n"><span
+                                                class="pre">reference</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">IDs</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.getRecordsByIdRegions"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.getRecordsByIdRegions"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>Get .cz content for a given dim and IDs
+                                            :param dim:
+                                            :type dim: tuple
+                                            :param reference:
+                                            :type reference: path
+                                            :param IDs: every element of IDs is a list or tuple with length=2, id_start
+                                            and id_end
+                                            :type IDs: list or np.ndarray</p>
+                                            <dl class="field-list simple">
+                                                <dt class="field-odd">Return type<span class="colon">:</span></dt>
+                                                <dd class="field-odd"><p>generator</p>
+                                                </dd>
+                                            </dl>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.getRecordsByIds">
+                                            <span class="sig-name descname"><span
+                                                    class="pre">getRecordsByIds</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span
+                                                class="default_value"><span class="pre">None</span></span></em>, <em
+                                                class="sig-param"><span class="n"><span
+                                                class="pre">reference</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">IDs</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.getRecordsByIds"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.getRecordsByIds"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.get_chunks">
+                                            <span class="sig-name descname"><span
+                                                    class="pre">get_chunks</span></span><span class="sig-paren">(</span><span
+                                                class="sig-paren">)</span><a class="reference internal"
+                                                                             href="_modules/czip/cz.html#Reader.get_chunks"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.get_chunks"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.get_ids_from_ssi">
+                                            <span class="sig-name descname"><span
+                                                    class="pre">get_ids_from_ssi</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">dim</span></span></em><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.get_ids_from_ssi"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.get_ids_from_ssi"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.isatty">
+                                            <span class="sig-name descname"><span class="pre">isatty</span></span><span
+                                                class="sig-paren">(</span><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.isatty"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.isatty"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>Return True if connected to a TTY device.</p>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.pos2id">
+                                            <span class="sig-name descname"><span class="pre">pos2id</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">dim</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">positions</span></span></em>, <em
+                                                class="sig-param"><span class="n"><span class="pre">col_to_query</span></span><span
+                                                class="o"><span class="pre">=</span></span><span
+                                                class="default_value"><span class="pre">0</span></span></em><span
+                                                class="sig-paren">)</span><a class="reference internal"
+                                                                             href="_modules/czip/cz.html#Reader.pos2id"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.pos2id"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.print_header">
+                                            <span class="sig-name descname"><span class="pre">print_header</span></span><span
+                                                class="sig-paren">(</span><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.print_header"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.print_header"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.query">
+                                            <span class="sig-name descname"><span class="pre">query</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">Dimension</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">start</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">end</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">Regions</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">query_col</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">[0]</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">reference</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">printout</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">True</span></span></em><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.query"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.query"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>query .cz file by Dimension, start and end, if regions provided,
+                                            Dimension, start and
+                                            end should be None, regions should be a list, each element of regions
+                                            is a list, for example, regions=[[(‘cell1’,’chr1’),1,10],
+                                            [(‘cell10’,’chr22’),100,200]],and so on.</p>
+                                            <dl class="field-list simple">
+                                                <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                                <dd class="field-odd">
+                                                    <ul class="simple">
+                                                        <li><p><strong>Dimension</strong> (<em class="hover">str</em>) –
+                                                            dimension, such as chr1 (if Dimensions ‘chrom’ is inlcuded
+                                                            in
+                                                            header[‘Dimensions’]), or sample1 (if something like
+                                                            ‘sampleID’ is
+                                                            included in header[‘Dimensions’] and chunk contains such
+                                                            dimension)</p></li>
+                                                        <li><p><strong>start</strong> (<em class="hover">int</em>) –
+                                                            start position, if None, the entire Dimension would be
+                                                            returned.</p></li>
+                                                        <li><p><strong>end</strong> (<em class="hover">int</em>) – end
+                                                            position</p></li>
+                                                        <li><p><strong>regions</strong> (<em class="hover">list</em><em>
+                                                            or </em><em class="hover">file path</em>) –
+                                                            <dl class="simple">
+                                                                <dt>regions=[</dt>
+                                                                <dd><p>[Dimension,start,end], [Dimension,start,end]</p>
+                                                                </dd>
+                                                            </dl>
+                                                            <p>],
+                                                                Dimension is a tuple, for example,
+                                                                Dimension=(‘chr1’);</p>
+                                                            <p>if regions is a file path (separated by tab and no
+                                                                header),
+                                                                the first len(header[‘Dimensions’]) columns would be
+                                                                used as Dimension, and next two columns would be used as
+                                                                start and end.</p>
+                                                            </p></li>
+                                                        <li><p><strong>query_col</strong> (<em class="hover">list</em>)
+                                                            – index of columns (header[‘Columns’]) to be queried,for
+                                                            example,
+                                                            if header[‘Columns’]=[‘pos’,’mv’,’cov’], then pos is what we
+                                                            want to
+                                                            query, so query_col should be [0], but if
+                                                            header[‘Columns’]=[‘start’,’end’,’peak’], then start and end
+                                                            are what
+                                                            we would like to query, query_col should be [0,1]</p></li>
+                                                    </ul>
+                                                </dd>
+                                            </dl>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.read">
+                                            <span class="sig-name descname"><span class="pre">read</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span
+                                                class="default_value"><span class="pre">1</span></span></em><span
+                                                class="sig-paren">)</span><a class="reference internal"
+                                                                             href="_modules/czip/cz.html#Reader.read"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.read"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>Read method for the BGZF module.</p>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.read_header">
+                                            <span class="sig-name descname"><span
+                                                    class="pre">read_header</span></span><span
+                                                class="sig-paren">(</span><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.read_header"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.read_header"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.readline">
+                                            <span class="sig-name descname"><span
+                                                    class="pre">readline</span></span><span
+                                                class="sig-paren">(</span><span class="sig-paren">)</span><a
+                                                class="reference internal" href="_modules/czip/cz.html#Reader.readline"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.readline"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>Read a single line for the BGZF file.</p>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.seek">
+                                            <span class="sig-name descname"><span class="pre">seek</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">virtual_offset</span></span></em><span
+                                                class="sig-paren">)</span><a class="reference internal"
+                                                                             href="_modules/czip/cz.html#Reader.seek"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.seek"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>Seek to a 64-bit unsigned BGZF virtual offset.</p>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.seekable">
+                                            <span class="sig-name descname"><span
+                                                    class="pre">seekable</span></span><span
+                                                class="sig-paren">(</span><span class="sig-paren">)</span><a
+                                                class="reference internal" href="_modules/czip/cz.html#Reader.seekable"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.seekable"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>Return True indicating the BGZF supports random access.</p>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.subset">
+                                            <span class="sig-name descname"><span class="pre">subset</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">dim</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">ssi</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">IDs</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">reference</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">printout</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">True</span></span></em><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.subset"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.subset"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.summary_blocks">
+                                            <span class="sig-name descname"><span
+                                                    class="pre">summary_blocks</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">printout</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">True</span></span></em><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.summary_blocks"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.summary_blocks"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.summary_chunks">
+                                            <span class="sig-name descname"><span
+                                                    class="pre">summary_chunks</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">printout</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">True</span></span></em><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.summary_chunks"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.summary_chunks"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.tell">
+                                            <span class="sig-name descname"><span class="pre">tell</span></span><span
+                                                class="sig-paren">(</span><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.tell"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.tell"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>Return a 64-bit unsigned BGZF virtual offset.</p>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Reader.view">
+                                            <span class="sig-name descname"><span class="pre">view</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">show_dim</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">header</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">True</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">Dimension</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">reference</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Reader.view"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Reader.view"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd>
+                                            <blockquote>
+                                                <div><p>View .cz file.</p>
+                                                    <dl class="simple">
+                                                        <dt>show_dim<span class="classifier">str</span></dt>
+                                                        <dd><p>index of dims given to writer.write_chunk, separated by
+                                                            comma,
+                                                            default is None, dims[show_dim] will be shown in each row
+                                                            (such as sampleID
+                                                            and chrom)</p>
+                                                        </dd>
+                                                        <dt>header<span class="classifier">bool</span></dt>
+                                                        <dd><p>whether to print the header.</p>
+                                                        </dd>
+                                                    </dl>
+                                                </div>
+                                            </blockquote>
+                                            <dl>
+                                                <dt>Dimension: None, bool, list or file path</dt>
+                                                <dd><p>If None (default): use the default chunk order in .cz file; If
+                                                    list: use this Dimension (dims) as order and print records. If path:
+                                                    use the first len(Dimension) columns as dim order, there should be
+                                                    no header in file path and use as separator. If Dimension is
+                                                    dictionary,such as -D “{‘sampleID’:’cell1’,’chrom’:’chr1’}”, will
+                                                    filter chunk using sampleID=cell1 and chrom=chr1.</p>
+                                                    <blockquote>
+                                                        <div></div>
+                                                    </blockquote>
+                                                </dd>
+                                            </dl>
+                                        </dd>
+                                    </dl>
+
+                                </dd>
+                            </dl>
+
+                            <dl class="py function">
+                                <dt class="sig sig-object py" id="czip.cz.SummaryBczBlocks">
+                                    <span class="sig-prename descclassname"><span
+                                            class="pre">czip.cz.</span></span><span class="sig-name descname"><span
+                                        class="pre">SummaryBczBlocks</span></span><span class="sig-paren">(</span><em
+                                        class="sig-param"><span class="n"><span
+                                        class="pre">handle</span></span></em><span class="sig-paren">)</span><a
+                                        class="reference internal" href="_modules/czip/cz.html#SummaryBczBlocks"><span
+                                        class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                        class="headerlink" href="#czip.cz.SummaryBczBlocks"
+                                        title="Permalink to this definition">¶</a></dt>
+                                <dd></dd>
+                            </dl>
+
+                            <dl class="py class">
+                                <dt class="sig sig-object py" id="czip.cz.Writer">
+                                    <em class="property"><span class="pre">class</span><span
+                                            class="w"> </span></em><span class="sig-prename descclassname"><span
+                                        class="pre">czip.cz.</span></span><span class="sig-name descname"><span
+                                        class="pre">Writer</span></span><span class="sig-paren">(</span><em
+                                        class="sig-param"><span class="n"><span class="pre">Output</span></span><span
+                                        class="o"><span class="pre">=</span></span><span class="default_value"><span
+                                        class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span
+                                        class="pre">mode</span></span><span class="o"><span
+                                        class="pre">=</span></span><span class="default_value"><span
+                                        class="pre">'wb'</span></span></em>, <em class="sig-param"><span class="n"><span
+                                        class="pre">Formats</span></span><span class="o"><span
+                                        class="pre">=</span></span><span class="default_value"><span
+                                        class="pre">['H',</span> <span class="pre">'H']</span></span></em>, <em
+                                        class="sig-param"><span class="n"><span class="pre">Columns</span></span><span
+                                        class="o"><span class="pre">=</span></span><span class="default_value"><span
+                                        class="pre">['mc',</span> <span class="pre">'cov']</span></span></em>, <em
+                                        class="sig-param"><span class="n"><span
+                                        class="pre">Dimensions</span></span><span class="o"><span
+                                        class="pre">=</span></span><span class="default_value"><span class="pre">['chrom']</span></span></em>,
+                                    <em class="sig-param"><span class="n"><span class="pre">fileobj</span></span><span
+                                            class="o"><span class="pre">=</span></span><span class="default_value"><span
+                                            class="pre">None</span></span></em>, <em class="sig-param"><span
+                                        class="n"><span class="pre">message</span></span><span class="o"><span
+                                        class="pre">=</span></span><span class="default_value"><span
+                                        class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span
+                                        class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span
+                                        class="default_value"><span class="pre">6</span></span></em>, <em
+                                        class="sig-param"><span class="n"><span class="pre">verbose</span></span><span
+                                        class="o"><span class="pre">=</span></span><span class="default_value"><span
+                                        class="pre">0</span></span></em><span class="sig-paren">)</span><a
+                                        class="reference internal" href="_modules/czip/cz.html#Writer"><span
+                                        class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                        class="headerlink" href="#czip.cz.Writer"
+                                        title="Permalink to this definition">¶</a></dt>
+                                <dd><p>Bases: <code class="xref py py-class hover docutils literal notranslate"><span
+                                        class="pre">object</span></code></p>
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Writer.catcz">
+                                            <span class="sig-name descname"><span class="pre">catcz</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">Input</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">dim_order</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">add_dim</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">False</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">title</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">'filename'</span></span></em><span
+                                                class="sig-paren">)</span><a class="reference internal"
+                                                                             href="_modules/czip/cz.html#Writer.catcz"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Writer.catcz"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd>
+                                            <blockquote>
+                                                <div><p>Cat multiple .cz files into one .cz file.</p>
+                                                    <dl class="simple">
+                                                        <dt>Input<span class="classifier">str or list</span></dt>
+                                                        <dd><p>Either a str (including <a href="#id1"><span
+                                                                class="problematic" id="id2">*</span></a>, as input for
+                                                            glob, should be inside the double quotation marks if using
+                                                            fire) or a list.</p>
+                                                        </dd>
+                                                        <dt>dim_order<span class="classifier">None, list or path</span>
+                                                        </dt>
+                                                        <dd><p>If dim_order=None, Input will be sorted using python
+                                                            sorted.
+                                                            If dim_order is a list, tuple or array of
+                                                            basename.rstrip(.cz), sorted as dim_order.
+                                                            If dim_order is a file path (for example, chrom size path to
+                                                            dim_order chroms
+                                                            or only use selected chroms) will be sorted as
+                                                            the 1st column of the input file path (without header,
+                                                            tab-separated).
+                                                            default is None</p>
+                                                        </dd>
+                                                    </dl>
+                                                </div>
+                                            </blockquote>
+                                            <dl>
+                                                <dt>add_dim: bool or function</dt>
+                                                <dd><p>whether to add .cz file names as an new dimension to the merged
+                                                    .cz file. For example, we have multiple .cz files for many cells, in
+                                                    each .cz file, the dimensions are [‘chrom’], after merged, we would
+                                                    like to add file name of .cz as a new dimension [‘cell_id’]. In this
+                                                    case,
+                                                    the dimensions in the merged header would be [“chrom”,”cell_id”],
+                                                    and
+                                                    in each chunk, in addition to the previous dim [‘chr1’] or
+                                                    [‘chr22’].., a
+                                                    new dim would also be append to the previous dim, like
+                                                    [‘chr1’,’cell_1’],
+                                                    [‘chr22’,’cell_100’].
+                                                    However, if add_dim is a function, the input to this function is the
+                                                    .cz
+                                                    file basename, the returned value from this funcion would be used
+                                                    as new dim and added into the chunk_dims. The default function to
+                                                    convert filename to dim name is self.create_new_dim.</p>
+                                                </dd>
+                                                <dt>title: str</dt>
+                                                <dd><p>if add_dim is True or a python function, title would be append to
+                                                    the header[‘Dimensions’] of the merged .cz file’s header. If the
+                                                    title of
+                                                    new dimension had already given in Writer Dimensions,
+                                                    title can be None, otherwise, title should be provided.</p>
+                                                    <blockquote>
+                                                        <div></div>
+                                                    </blockquote>
+                                                </dd>
+                                            </dl>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Writer.close">
+                                            <span class="sig-name descname"><span class="pre">close</span></span><span
+                                                class="sig-paren">(</span><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Writer.close"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Writer.close"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>Flush data, write 28 bytes BGZF EOF marker, and close BGZF file.</p>
+                                            <p>samtools will look for a magic EOF marker, just a 28 byte empty BGZF
+                                                block, and if it is missing warns the BAM file may be truncated. In
+                                                addition to samtools writing this block, so too does bgzip - so this
+                                                implementation does too.</p>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Writer.create_new_dim">
+                                            <em class="property"><span class="pre">static</span><span class="w"> </span></em><span
+                                                class="sig-name descname"><span class="pre">create_new_dim</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">basename</span></span></em><span
+                                                class="sig-paren">)</span><a class="reference internal"
+                                                                             href="_modules/czip/cz.html#Writer.create_new_dim"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Writer.create_new_dim"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Writer.fileno">
+                                            <span class="sig-name descname"><span class="pre">fileno</span></span><span
+                                                class="sig-paren">(</span><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Writer.fileno"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Writer.fileno"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>Return integer file descriptor.</p>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Writer.flush">
+                                            <span class="sig-name descname"><span class="pre">flush</span></span><span
+                                                class="sig-paren">(</span><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Writer.flush"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Writer.flush"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>Flush data explicitally.</p>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Writer.isatty">
+                                            <span class="sig-name descname"><span class="pre">isatty</span></span><span
+                                                class="sig-paren">(</span><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Writer.isatty"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Writer.isatty"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>Return True if connected to a TTY device.</p>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Writer.seekable">
+                                            <span class="sig-name descname"><span
+                                                    class="pre">seekable</span></span><span
+                                                class="sig-paren">(</span><span class="sig-paren">)</span><a
+                                                class="reference internal" href="_modules/czip/cz.html#Writer.seekable"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Writer.seekable"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Writer.tell">
+                                            <span class="sig-name descname"><span class="pre">tell</span></span><span
+                                                class="sig-paren">(</span><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Writer.tell"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Writer.tell"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>Return a BGZF 64-bit virtual offset.</p>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Writer.tocz">
+                                            <span class="sig-name descname"><span class="pre">tocz</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">Input</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">usecols</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">[4,</span> <span class="pre">5]</span></span></em>, <em
+                                                class="sig-param"><span class="n"><span
+                                                class="pre">dim_cols</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">[0]</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">sep</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">'\t'</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">chunksize</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">5000</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">header</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">None</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">skiprows</span></span><span class="o"><span
+                                                class="pre">=</span></span><span class="default_value"><span
+                                                class="pre">0</span></span></em><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Writer.tocz"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Writer.tocz"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>Pack dataframe, stdin or a file path into .cz file with or without
+                                            reference
+                                            coordinates file.</p>
+                                            <dl class="field-list simple">
+                                                <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                                <dd class="field-odd">
+                                                    <ul class="simple">
+                                                        <li><p><strong>Input</strong> (<em class="hover">input</em>) –
+                                                            list, tuple, np.ndarray or dataframe, stdin (Input is None,
+                                                            “stdin” or “-“),
+                                                            or a file path (need to specify sep,header and skiprows).
+                                                        </p></li>
+                                                        <li><p><strong>usecols</strong> (<em class="hover">list</em>) –
+                                                            usecols is the index of columns to be packed into .cz
+                                                            Columns.</p></li>
+                                                        <li><p><strong>dim_cols</strong> (<em class="hover">list</em>) –
+                                                            index of columns to be set as Dimensions of Writer, such as
+                                                            chrom
+                                                            columns.</p></li>
+                                                        <li><p><strong>sep</strong> (<em class="hover">str</em>) –
+                                                            defauls is ” “, used as separator for the input file path.
+                                                        </p></li>
+                                                        <li><p><strong>chunksize</strong> (<em class="hover">int</em>) –
+                                                            Chunk Input dataframe of file path.</p></li>
+                                                        <li><p><strong>header</strong> (<em class="hover">bool</em>) –
+                                                            whether the input file path contain header.</p></li>
+                                                        <li><p><strong>skiprows</strong> (<em class="hover">int</em>) –
+                                                            number of rows to skip for input file path.</p></li>
+                                                        <li><p><strong>pr</strong> (<em class="hover">int</em><em>
+                                                            or </em><em class="hover">str</em>) – If reference was
+                                                            given, use the <cite>pr</cite> column as coordinates, which
+                                                            would be used to match the <cite>p</cite> column in the
+                                                            Input file or df.
+                                                            If Input is a file path, then <cite>pr</cite> should be int,
+                                                            if Input is a dataframe with
+                                                            custom columns names, then <cite>pr</cite> should be string
+                                                            matching the column
+                                                            name in dataframe.</p></li>
+                                                        <li><p><strong>p</strong> (<em class="hover">int</em><em>
+                                                            or </em><em class="hover">str</em>) – Similar as
+                                                            <cite>pr</cite>, <cite>p</cite> is the column in Input to
+                                                            match the coordinate in
+                                                            the reference file. When Input is a file path or stdin, p
+                                                            should be int,
+                                                            but if Input is a dataframe, p should be the name appear in
+                                                            the dataframe
+                                                            header columns.</p></li>
+                                                    </ul>
+                                                </dd>
+                                            </dl>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Writer.write_chunk">
+                                            <span class="sig-name descname"><span
+                                                    class="pre">write_chunk</span></span><span
+                                                class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                                class="pre">data</span></span></em>, <em class="sig-param"><span
+                                                class="n"><span class="pre">dims</span></span></em><span
+                                                class="sig-paren">)</span><a class="reference internal"
+                                                                             href="_modules/czip/cz.html#Writer.write_chunk"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Writer.write_chunk"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd><p>Write data into one chunk with dimension name (such as
+                                            [‘cell1’,’chr1’])</p>
+                                            <dl class="field-list simple">
+                                                <dt class="field-odd">Parameters<span class="colon">:</span></dt>
+                                                <dd class="field-odd">
+                                                    <ul class="simple">
+                                                        <li><p><strong>data</strong> (<em class="hover">bytes</em>) – In
+                                                            general data should be bytes.</p></li>
+                                                        <li><p><strong>dims</strong> (<em class="hover">list</em><em>
+                                                            or </em><em class="hover">tuple</em>) – dimensions to be
+                                                            written to chunk, length of dims should be the same
+                                                            as Dimensions given to Writer.</p></li>
+                                                    </ul>
+                                                </dd>
+                                            </dl>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="py method">
+                                        <dt class="sig sig-object py" id="czip.cz.Writer.write_header">
+                                            <span class="sig-name descname"><span class="pre">write_header</span></span><span
+                                                class="sig-paren">(</span><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/czip/cz.html#Writer.write_header"><span
+                                                class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                                class="headerlink" href="#czip.cz.Writer.write_header"
+                                                title="Permalink to this definition">¶</a></dt>
+                                        <dd></dd>
+                                    </dl>
+
+                                </dd>
+                            </dl>
+
+                            <dl class="py function">
+                                <dt class="sig sig-object py" id="czip.cz.extract">
+                                    <span class="sig-prename descclassname"><span
+                                            class="pre">czip.cz.</span></span><span class="sig-name descname"><span
+                                        class="pre">extract</span></span><span class="sig-paren">(</span><em
+                                        class="sig-param"><span class="n"><span class="pre">input</span></span><span
+                                        class="o"><span class="pre">=</span></span><span class="default_value"><span
+                                        class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span
+                                        class="pre">outfile</span></span><span class="o"><span
+                                        class="pre">=</span></span><span class="default_value"><span
+                                        class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span
+                                        class="pre">ssi</span></span><span class="o"><span
+                                        class="pre">=</span></span><span class="default_value"><span
+                                        class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span
+                                        class="pre">chunksize</span></span><span class="o"><span
+                                        class="pre">=</span></span><span class="default_value"><span
+                                        class="pre">5000</span></span></em><span class="sig-paren">)</span><a
+                                        class="reference internal" href="_modules/czip/cz.html#extract"><span
+                                        class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                        class="headerlink" href="#czip.cz.extract" title="Permalink to this definition">¶</a>
+                                </dt>
+                                <dd></dd>
+                            </dl>
+
+                            <dl class="py function">
+                                <dt class="sig sig-object py" id="czip.cz.get_dtfuncs">
+                                    <span class="sig-prename descclassname"><span
+                                            class="pre">czip.cz.</span></span><span class="sig-name descname"><span
+                                        class="pre">get_dtfuncs</span></span><span class="sig-paren">(</span><em
+                                        class="sig-param"><span class="n"><span class="pre">formats</span></span></em>,
+                                    <em class="sig-param"><span class="n"><span class="pre">tobytes</span></span><span
+                                            class="o"><span class="pre">=</span></span><span class="default_value"><span
+                                            class="pre">True</span></span></em><span class="sig-paren">)</span><a
+                                        class="reference internal" href="_modules/czip/cz.html#get_dtfuncs"><span
+                                        class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                        class="headerlink" href="#czip.cz.get_dtfuncs"
+                                        title="Permalink to this definition">¶</a></dt>
+                                <dd></dd>
+                            </dl>
+
+                            <dl class="py function">
+                                <dt class="sig sig-object py" id="czip.cz.make_virtual_offset">
+                                    <span class="sig-prename descclassname"><span
+                                            class="pre">czip.cz.</span></span><span class="sig-name descname"><span
+                                        class="pre">make_virtual_offset</span></span><span class="sig-paren">(</span><em
+                                        class="sig-param"><span class="n"><span
+                                        class="pre">block_start_offset</span></span></em>, <em class="sig-param"><span
+                                        class="n"><span class="pre">within_block_offset</span></span></em><span
+                                        class="sig-paren">)</span><a class="reference internal"
+                                                                     href="_modules/czip/cz.html#make_virtual_offset"><span
+                                        class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                        class="headerlink" href="#czip.cz.make_virtual_offset"
+                                        title="Permalink to this definition">¶</a></dt>
+                                <dd></dd>
+                            </dl>
+
+                            <dl class="py function">
+                                <dt class="sig sig-object py" id="czip.cz.open1">
+                                    <span class="sig-prename descclassname"><span
+                                            class="pre">czip.cz.</span></span><span class="sig-name descname"><span
+                                        class="pre">open1</span></span><span class="sig-paren">(</span><em
+                                        class="sig-param"><span class="n"><span
+                                        class="pre">infile</span></span></em><span class="sig-paren">)</span><a
+                                        class="reference internal" href="_modules/czip/cz.html#open1"><span
+                                        class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                        class="headerlink" href="#czip.cz.open1"
+                                        title="Permalink to this definition">¶</a></dt>
+                                <dd></dd>
+                            </dl>
+
+                            <dl class="py function">
+                                <dt class="sig sig-object py" id="czip.cz.split_virtual_offset">
+                                    <span class="sig-prename descclassname"><span
+                                            class="pre">czip.cz.</span></span><span class="sig-name descname"><span
+                                        class="pre">split_virtual_offset</span></span><span
+                                        class="sig-paren">(</span><em class="sig-param"><span class="n"><span
+                                        class="pre">virtual_offset</span></span></em><span class="sig-paren">)</span><a
+                                        class="reference internal"
+                                        href="_modules/czip/cz.html#split_virtual_offset"><span
+                                        class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                        class="headerlink" href="#czip.cz.split_virtual_offset"
+                                        title="Permalink to this definition">¶</a></dt>
+                                <dd></dd>
+                            </dl>
+
+                            <dl class="py function">
+                                <dt class="sig sig-object py" id="czip.cz.str2byte">
+                                    <span class="sig-prename descclassname"><span
+                                            class="pre">czip.cz.</span></span><span class="sig-name descname"><span
+                                        class="pre">str2byte</span></span><span class="sig-paren">(</span><em
+                                        class="sig-param"><span class="n"><span class="pre">x</span></span></em><span
+                                        class="sig-paren">)</span><a class="reference internal"
+                                                                     href="_modules/czip/cz.html#str2byte"><span
+                                        class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                        class="headerlink" href="#czip.cz.str2byte"
+                                        title="Permalink to this definition">¶</a></dt>
+                                <dd></dd>
+                            </dl>
+
+                            <dl class="py function">
+                                <dt class="sig sig-object py" id="czip.cz.test_difference">
+                                    <span class="sig-prename descclassname"><span
+                                            class="pre">czip.cz.</span></span><span class="sig-name descname"><span
+                                        class="pre">test_difference</span></span><span class="sig-paren">(</span><em
+                                        class="sig-param"><span class="n"><span class="pre">file1</span></span></em>,
+                                    <em class="sig-param"><span class="n"><span class="pre">file2</span></span></em>,
+                                    <em class="sig-param"><span class="n"><span class="pre">usecols1</span></span></em>,
+                                    <em class="sig-param"><span class="n"><span class="pre">usecols2</span></span></em>,
+                                    <em class="sig-param"><span class="n"><span class="pre">sep</span></span><span
+                                            class="o"><span class="pre">=</span></span><span class="default_value"><span
+                                            class="pre">'\t'</span></span></em>, <em class="sig-param"><span
+                                        class="n"><span class="pre">header1</span></span><span class="o"><span
+                                        class="pre">=</span></span><span class="default_value"><span
+                                        class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span
+                                        class="pre">header2</span></span><span class="o"><span
+                                        class="pre">=</span></span><span class="default_value"><span
+                                        class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span
+                                        class="pre">intersect</span></span><span class="o"><span
+                                        class="pre">=</span></span><span class="default_value"><span
+                                        class="pre">False</span></span></em>, <em class="sig-param"><span
+                                        class="n"><span class="pre">index_cols</span></span><span class="o"><span
+                                        class="pre">=</span></span><span class="default_value"><span
+                                        class="pre">[0,</span> <span class="pre">1]</span></span></em><span
+                                        class="sig-paren">)</span><a class="reference internal"
+                                                                     href="_modules/czip/cz.html#test_difference"><span
+                                        class="viewcode-link"><span class="pre">[source]</span></span></a><a
+                                        class="headerlink" href="#czip.cz.test_difference"
+                                        title="Permalink to this definition">¶</a></dt>
+                                <dd></dd>
+                            </dl>
+
+                        </section>
+
+
+                    </div>
+                </div>
+                <footer>
+                    <div aria-label="Footer" class="rst-footer-buttons" role="navigation">
+                        <a accesskey="p" class="btn btn-neutral float-left" href="czip.allc.html" rel="prev"
+                           title="czip.allc module"><span aria-hidden="true" class="fa fa-arrow-circle-left"></span>
+                            Previous</a>
+                        <a accesskey="n" class="btn btn-neutral float-right" href="setup.html" rel="next"
+                           title="setup module">Next <span aria-hidden="true"
+                                                           class="fa fa-arrow-circle-right"></span></a>
+                    </div>
+
+                    <hr/>
+
+                    <div role="contentinfo">
+                        <p>&#169; Copyright 2023, Wubin Ding.</p>
+                    </div>
+
+                    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+                    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+                    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+                </footer>
+            </div>
+        </div>
+    </section>
+</div>
+<script>
+    jQuery(function () {
+        SphinxRtdTheme.Navigation.enable(true);
+    });
+</script>
+<!-- Theme Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-F0T1MBS19V"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-F0T1MBS19V', {
+        'anonymize_ip': false,
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Index &mdash; czip 0.1 documentation</title>
+    <link href="_static/pygments.css" rel="stylesheet" type="text/css"/>
+    <link href="_static/css/theme.css" rel="stylesheet" type="text/css"/>
+    <link href="_static/css/rtd_sphinx_search.min.css" rel="stylesheet" type="text/css"/>
+    <link href="_static/css/custom.css" rel="stylesheet" type="text/css"/>
+    <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+    <![endif]-->
+
+    <script src="_static/jquery.js?v=5d32c60e"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=e031e9a9"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/js/rtd_search_config.js"></script>
+    <script src="_static/js/rtd_sphinx_search.min.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA="
+            src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link href="#" rel="index" title="Index"/>
+    <link href="search.html" rel="search" title="Search"/>
+</head>
+
+<body class="wy-body-for-nav">
+<div class="wy-grid-for-nav">
+    <nav class="wy-nav-side" data-toggle="wy-nav-shift">
+        <div class="wy-side-scroll">
+            <div class="wy-side-nav-search">
+
+
+                <a class="icon icon-home" href="index.html">
+                    czip
+                </a>
+                <div role="search">
+                    <form action="search.html" class="wy-form" id="rtd-search-form" method="get">
+                        <input aria-label="Search docs" name="q" placeholder="Search docs" type="text"/>
+                        <input name="check_keywords" type="hidden" value="yes"/>
+                        <input name="area" type="hidden" value="default"/>
+                    </form>
+                </div>
+            </div>
+            <div aria-label="Navigation menu" class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation">
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="quick_start.html">Quick Started</a>
+                        <ul>
+                            <li class="toctree-l2"><a class="reference internal" href="notebooks/quick_start.html">1.
+                                Installation</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/quick_start.html#2.Writer">2.Writer</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/quick_start.html#2.-Reader">2. Reader</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/quick_start.html#3.-Query">3. Query</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/quick_start.html#4.Subset">4.Subset</a></li>
+                        </ul>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="dnam.html">DNA methylation data</a>
+                        <ul>
+                            <li class="toctree-l2"><a class="reference internal" href="notebooks/dnam.html">Generate
+                                allc coordinate reference .cz file</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/dnam.html#View-reference-.cz-file">View reference
+                                .cz file</a>
+                                <ul>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="notebooks/dnam.html#view-header">view header</a>
+                                    </li>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="notebooks/dnam.html#summary-chunks">summary
+                                        chunks</a></li>
+                                </ul>
+                            </li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/dnam.html#Converting-.allc.tsv.gz-into-.cz-file">Converting
+                                .allc.tsv.gz into .cz file</a>
+                                <ul>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="notebooks/dnam.html#Pack-.allc.tsv.gz-to-.cz-with-coordinates">Pack
+                                        .allc.tsv.gz to .cz with coordinates</a></li>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="notebooks/dnam.html#Pack-.allc.tsv.gz-to-.cz-without-coordinates-(using-reference)">Pack
+                                        .allc.tsv.gz to .cz without coordinates (using reference)</a></li>
+                                    <li class="toctree-l3"><a class="reference internal"
+                                                              href="notebooks/dnam.html#Query">Query</a>
+                                        <ul>
+                                            <li class="toctree-l4"><a class="reference internal"
+                                                                      href="notebooks/dnam.html#query-allc.tsv.gz-using-tabix">query
+                                                allc.tsv.gz using tabix</a></li>
+                                            <li class="toctree-l4"><a class="reference internal"
+                                                                      href="notebooks/dnam.html#query-allc.cz-using-czip">query
+                                                allc.cz using czip</a></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/dnam.html#Cat-multiple-.cz-files-into-one-.cz-file">Cat
+                                multiple .cz files into one .cz file</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/dnam.html#Extract-CG-from-.cz-and-merge-strand">Extract
+                                CG from .cz and merge strand</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/dnam.html#Merge-multiple-.cz-files-into-one-.cz-file">Merge
+                                multiple .cz files into one .cz file</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/dnam.html#Merge-.cz-files-belonging-to-the-same-cell-type">Merge
+                                .cz files belonging to the same cell type</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/dnam.html#Run-czip-allc2cz-on-GCP">Run czip
+                                allc2cz on GCP</a></li>
+                            <li class="toctree-l2"><a class="reference internal"
+                                                      href="notebooks/dnam.html#Run-czip-extractCG-on-GCP">Run czip
+                                extractCG on GCP</a></li>
+                        </ul>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="modules.html">czip</a>
+                        <ul>
+                            <li class="toctree-l2"><a class="reference internal" href="czip.html">czip package</a>
+                                <ul>
+                                    <li class="toctree-l3"><a class="reference internal" href="czip.html#submodules">Submodules</a>
+                                        <ul>
+                                            <li class="toctree-l4"><a class="reference internal" href="czip.allc.html">czip.allc
+                                                module</a>
+                                                <ul>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.allc.html#czip.allc.AllC"><code
+                                                            class="docutils literal notranslate"><span
+                                                            class="pre">AllC</span></code></a>
+                                                        <ul>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.allc.html#czip.allc.AllC.merge"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">AllC.merge()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.allc.html#czip.allc.AllC.run"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">AllC.run()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.allc.html#czip.allc.AllC.writePattern"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">AllC.writePattern()</span></code></a>
+                                                            </li>
+                                                        </ul>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.allc.html#czip.allc.WriteC"><code
+                                                            class="docutils literal notranslate"><span class="pre">WriteC()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.allc.html#czip.allc.bed2cz"><code
+                                                            class="docutils literal notranslate"><span class="pre">bed2cz()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.allc.html#czip.allc.extractCG"><code
+                                                            class="docutils literal notranslate"><span class="pre">extractCG()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.allc.html#czip.allc.generate_ssi"><code
+                                                            class="docutils literal notranslate"><span class="pre">generate_ssi()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.allc.html#czip.allc.merge_cell_type"><code
+                                                            class="docutils literal notranslate"><span class="pre">merge_cell_type()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.allc.html#czip.allc.merge_cz"><code
+                                                            class="docutils literal notranslate"><span class="pre">merge_cz()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.allc.html#czip.allc.merge_cz_worker"><code
+                                                            class="docutils literal notranslate"><span class="pre">merge_cz_worker()</span></code></a>
+                                                    </li>
+                                                </ul>
+                                            </li>
+                                            <li class="toctree-l4"><a class="reference internal" href="czip.cz.html">czip.cz
+                                                module</a>
+                                                <ul>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.cz.html#czip.cz.Reader"><code
+                                                            class="docutils literal notranslate"><span class="pre">Reader</span></code></a>
+                                                        <ul>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.batch_fetch"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.batch_fetch()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.category_ssi"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.category_ssi()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.chunk2df"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.chunk2df()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.close"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.close()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.fetch"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.fetch()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.fetchByStartID"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.fetchByStartID()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.fileno"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.fileno()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.getRecordsByIdRegions"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.getRecordsByIdRegions()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.getRecordsByIds"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.getRecordsByIds()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.get_chunks"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.get_chunks()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.get_ids_from_ssi"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.get_ids_from_ssi()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.isatty"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.isatty()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.pos2id"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.pos2id()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.print_header"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.print_header()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.query"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.query()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.read"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.read()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.read_header"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.read_header()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.readline"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.readline()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.seek"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.seek()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.seekable"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.seekable()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.subset"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.subset()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.summary_blocks"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.summary_blocks()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.summary_chunks"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.summary_chunks()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.tell"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.tell()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Reader.view"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Reader.view()</span></code></a></li>
+                                                        </ul>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.cz.html#czip.cz.SummaryBczBlocks"><code
+                                                            class="docutils literal notranslate"><span class="pre">SummaryBczBlocks()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.cz.html#czip.cz.Writer"><code
+                                                            class="docutils literal notranslate"><span class="pre">Writer</span></code></a>
+                                                        <ul>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Writer.catcz"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.catcz()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Writer.close"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.close()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Writer.create_new_dim"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.create_new_dim()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Writer.fileno"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.fileno()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Writer.flush"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.flush()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Writer.isatty"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.isatty()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Writer.seekable"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.seekable()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Writer.tell"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.tell()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Writer.tocz"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.tocz()</span></code></a></li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Writer.write_chunk"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.write_chunk()</span></code></a>
+                                                            </li>
+                                                            <li class="toctree-l6"><a class="reference internal"
+                                                                                      href="czip.cz.html#czip.cz.Writer.write_header"><code
+                                                                    class="docutils literal notranslate"><span
+                                                                    class="pre">Writer.write_header()</span></code></a>
+                                                            </li>
+                                                        </ul>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.cz.html#czip.cz.extract"><code
+                                                            class="docutils literal notranslate"><span class="pre">extract()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.cz.html#czip.cz.get_dtfuncs"><code
+                                                            class="docutils literal notranslate"><span class="pre">get_dtfuncs()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.cz.html#czip.cz.make_virtual_offset"><code
+                                                            class="docutils literal notranslate"><span class="pre">make_virtual_offset()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.cz.html#czip.cz.open1"><code
+                                                            class="docutils literal notranslate"><span class="pre">open1()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.cz.html#czip.cz.split_virtual_offset"><code
+                                                            class="docutils literal notranslate"><span class="pre">split_virtual_offset()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.cz.html#czip.cz.str2byte"><code
+                                                            class="docutils literal notranslate"><span class="pre">str2byte()</span></code></a>
+                                                    </li>
+                                                    <li class="toctree-l5"><a class="reference internal"
+                                                                              href="czip.cz.html#czip.cz.test_difference"><code
+                                                            class="docutils literal notranslate"><span class="pre">test_difference()</span></code></a>
+                                                    </li>
+                                                </ul>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li class="toctree-l3"><a class="reference internal" href="czip.html#module-czip">Module
+                                        contents</a>
+                                        <ul>
+                                            <li class="toctree-l4"><a class="reference internal"
+                                                                      href="czip.html#czip.main"><code
+                                                    class="docutils literal notranslate"><span class="pre">main()</span></code></a>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="toctree-l2"><a class="reference internal" href="setup.html">setup module</a></li>
+                        </ul>
+                    </li>
+                </ul>
+
+            </div>
+        </div>
+    </nav>
+
+    <section class="wy-nav-content-wrap" data-toggle="wy-nav-shift">
+        <nav aria-label="Mobile navigation menu" class="wy-nav-top">
+            <i class="fa fa-bars" data-toggle="wy-nav-top"></i>
+            <a href="index.html">czip</a>
+        </nav>
+
+        <div class="wy-nav-content">
+            <div class="rst-content">
+                <div aria-label="Page navigation" role="navigation">
+                    <ul class="wy-breadcrumbs">
+                        <li><a aria-label="Home" class="icon icon-home" href="index.html"></a></li>
+                        <li class="breadcrumb-item active">Index</li>
+                        <li class="wy-breadcrumbs-aside">
+                            <a class="fa fa-github"
+                               href="https://github.com/DingWB/PyComplexHeatmap/blob/main/docs/source/genindex"> Edit on
+                                GitHub</a>
+                        </li>
+                    </ul>
+                    <hr/>
+                </div>
+                <div class="document" itemscope="itemscope" itemtype="http://schema.org/Article" role="main">
+                    <div itemprop="articleBody">
+
+
+                        <h1 id="index">Index</h1>
+
+                        <div class="genindex-jumpbox">
+                            <a href="#A"><strong>A</strong></a>
+                            | <a href="#B"><strong>B</strong></a>
+                            | <a href="#C"><strong>C</strong></a>
+                            | <a href="#E"><strong>E</strong></a>
+                            | <a href="#F"><strong>F</strong></a>
+                            | <a href="#G"><strong>G</strong></a>
+                            | <a href="#I"><strong>I</strong></a>
+                            | <a href="#M"><strong>M</strong></a>
+                            | <a href="#O"><strong>O</strong></a>
+                            | <a href="#P"><strong>P</strong></a>
+                            | <a href="#Q"><strong>Q</strong></a>
+                            | <a href="#R"><strong>R</strong></a>
+                            | <a href="#S"><strong>S</strong></a>
+                            | <a href="#T"><strong>T</strong></a>
+                            | <a href="#V"><strong>V</strong></a>
+                            | <a href="#W"><strong>W</strong></a>
+
+                        </div>
+                        <h2 id="A">A</h2>
+                        <table class="indextable genindextable" style="width: 100%">
+                            <tr>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.allc.html#czip.allc.AllC">AllC (class in czip.allc)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h2 id="B">B</h2>
+                        <table class="indextable genindextable" style="width: 100%">
+                            <tr>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.batch_fetch">batch_fetch()
+                                            (czip.cz.Reader method)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.allc.html#czip.allc.bed2cz">bed2cz() (in module czip.allc)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h2 id="C">C</h2>
+                        <table class="indextable genindextable" style="width: 100%">
+                            <tr>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.Writer.catcz">catcz() (czip.cz.Writer
+                                            method)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.category_ssi">category_ssi()
+                                            (czip.cz.Reader method)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.chunk2df">chunk2df() (czip.cz.Reader
+                                            method)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.close">close() (czip.cz.Reader
+                                            method)</a>
+
+                                            <ul>
+                                                <li><a href="czip.cz.html#czip.cz.Writer.close">(czip.cz.Writer
+                                                    method)</a>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Writer.create_new_dim">create_new_dim()
+                                            (czip.cz.Writer static method)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li>
+                                            czip
+
+                                            <ul>
+                                                <li><a href="czip.html#module-czip">module</a>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            czip.allc
+
+                                            <ul>
+                                                <li><a href="czip.allc.html#module-czip.allc">module</a>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                        <li>
+                                            czip.cz
+
+                                            <ul>
+                                                <li><a href="czip.cz.html#module-czip.cz">module</a>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h2 id="E">E</h2>
+                        <table class="indextable genindextable" style="width: 100%">
+                            <tr>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.extract">extract() (in module czip.cz)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.allc.html#czip.allc.extractCG">extractCG() (in module
+                                            czip.allc)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h2 id="F">F</h2>
+                        <table class="indextable genindextable" style="width: 100%">
+                            <tr>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.fetch">fetch() (czip.cz.Reader
+                                            method)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.fetchByStartID">fetchByStartID()
+                                            (czip.cz.Reader method)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.fileno">fileno() (czip.cz.Reader
+                                            method)</a>
+
+                                            <ul>
+                                                <li><a href="czip.cz.html#czip.cz.Writer.fileno">(czip.cz.Writer
+                                                    method)</a>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Writer.flush">flush() (czip.cz.Writer
+                                            method)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h2 id="G">G</h2>
+                        <table class="indextable genindextable" style="width: 100%">
+                            <tr>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.allc.html#czip.allc.generate_ssi">generate_ssi() (in module
+                                            czip.allc)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.get_chunks">get_chunks()
+                                            (czip.cz.Reader method)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.get_dtfuncs">get_dtfuncs() (in module
+                                            czip.cz)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.get_ids_from_ssi">get_ids_from_ssi()
+                                            (czip.cz.Reader method)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.getRecordsByIdRegions">getRecordsByIdRegions()
+                                            (czip.cz.Reader method)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.getRecordsByIds">getRecordsByIds()
+                                            (czip.cz.Reader method)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h2 id="I">I</h2>
+                        <table class="indextable genindextable" style="width: 100%">
+                            <tr>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.isatty">isatty() (czip.cz.Reader
+                                            method)</a>
+
+                                            <ul>
+                                                <li><a href="czip.cz.html#czip.cz.Writer.isatty">(czip.cz.Writer
+                                                    method)</a>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h2 id="M">M</h2>
+                        <table class="indextable genindextable" style="width: 100%">
+                            <tr>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.html#czip.main">main() (in module czip)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.make_virtual_offset">make_virtual_offset() (in
+                                            module czip.cz)</a>
+                                        </li>
+                                        <li><a href="czip.allc.html#czip.allc.AllC.merge">merge() (czip.allc.AllC
+                                            method)</a>
+                                        </li>
+                                        <li><a href="czip.allc.html#czip.allc.merge_cell_type">merge_cell_type() (in
+                                            module czip.allc)</a>
+                                        </li>
+                                        <li><a href="czip.allc.html#czip.allc.merge_cz">merge_cz() (in module
+                                            czip.allc)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.allc.html#czip.allc.merge_cz_worker">merge_cz_worker() (in
+                                            module czip.allc)</a>
+                                        </li>
+                                        <li>
+                                            module
+
+                                            <ul>
+                                                <li><a href="czip.html#module-czip">czip</a>
+                                                </li>
+                                                <li><a href="czip.allc.html#module-czip.allc">czip.allc</a>
+                                                </li>
+                                                <li><a href="czip.cz.html#module-czip.cz">czip.cz</a>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h2 id="O">O</h2>
+                        <table class="indextable genindextable" style="width: 100%">
+                            <tr>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.open1">open1() (in module czip.cz)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h2 id="P">P</h2>
+                        <table class="indextable genindextable" style="width: 100%">
+                            <tr>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.pos2id">pos2id() (czip.cz.Reader
+                                            method)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.print_header">print_header()
+                                            (czip.cz.Reader method)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h2 id="Q">Q</h2>
+                        <table class="indextable genindextable" style="width: 100%">
+                            <tr>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.query">query() (czip.cz.Reader
+                                            method)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h2 id="R">R</h2>
+                        <table class="indextable genindextable" style="width: 100%">
+                            <tr>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.read">read() (czip.cz.Reader
+                                            method)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.read_header">read_header()
+                                            (czip.cz.Reader method)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.Reader">Reader (class in czip.cz)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.readline">readline() (czip.cz.Reader
+                                            method)</a>
+                                        </li>
+                                        <li><a href="czip.allc.html#czip.allc.AllC.run">run() (czip.allc.AllC
+                                            method)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h2 id="S">S</h2>
+                        <table class="indextable genindextable" style="width: 100%">
+                            <tr>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.seek">seek() (czip.cz.Reader
+                                            method)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.seekable">seekable() (czip.cz.Reader
+                                            method)</a>
+
+                                            <ul>
+                                                <li><a href="czip.cz.html#czip.cz.Writer.seekable">(czip.cz.Writer
+                                                    method)</a>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.split_virtual_offset">split_virtual_offset()
+                                            (in module czip.cz)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.str2byte">str2byte() (in module czip.cz)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.subset">subset() (czip.cz.Reader
+                                            method)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.summary_blocks">summary_blocks()
+                                            (czip.cz.Reader method)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.summary_chunks">summary_chunks()
+                                            (czip.cz.Reader method)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.SummaryBczBlocks">SummaryBczBlocks() (in
+                                            module czip.cz)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h2 id="T">T</h2>
+                        <table class="indextable genindextable" style="width: 100%">
+                            <tr>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.tell">tell() (czip.cz.Reader
+                                            method)</a>
+
+                                            <ul>
+                                                <li><a href="czip.cz.html#czip.cz.Writer.tell">(czip.cz.Writer
+                                                    method)</a>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </td>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.test_difference">test_difference() (in module
+                                            czip.cz)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Writer.tocz">tocz() (czip.cz.Writer
+                                            method)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h2 id="V">V</h2>
+                        <table class="indextable genindextable" style="width: 100%">
+                            <tr>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.Reader.view">view() (czip.cz.Reader
+                                            method)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h2 id="W">W</h2>
+                        <table class="indextable genindextable" style="width: 100%">
+                            <tr>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.cz.html#czip.cz.Writer.write_chunk">write_chunk()
+                                            (czip.cz.Writer method)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Writer.write_header">write_header()
+                                            (czip.cz.Writer method)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                                <td style="width: 33%; vertical-align: top;">
+                                    <ul>
+                                        <li><a href="czip.allc.html#czip.allc.WriteC">WriteC() (in module czip.allc)</a>
+                                        </li>
+                                        <li><a href="czip.allc.html#czip.allc.AllC.writePattern">writePattern()
+                                            (czip.allc.AllC method)</a>
+                                        </li>
+                                        <li><a href="czip.cz.html#czip.cz.Writer">Writer (class in czip.cz)</a>
+                                        </li>
+                                    </ul>
+                                </td>
+                            </tr>
+                        </table>
+
+
+                    </div>
+                </div>
+                <footer>
+
+                    <hr/>
+
+                    <div role="contentinfo">
+                        <p>&#169; Copyright 2023, Wubin Ding.</p>
+                    </div>
+
+                    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+                    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+                    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+                </footer>
+            </div>
+        </div>
+    </section>
+</div>
+<script>
+    jQuery(function () {
+        SphinxRtdTheme.Navigation.enable(true);
+    });
+</script>
+<!-- Theme Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-F0T1MBS19V"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-F0T1MBS19V', {
+        'anonymize_ip': false,
+    });
+</script>
+
+</body>
+</html>
