@@ -8,7 +8,7 @@ from .cz import (
 from .allc import (AllC, generate_ssi, bed2cz,
                    merge_cz, extractCG, merge_cell_type)
 
-__version__ = "0.2"
+__version__ = "0.2.1"
 
 def main():
     fire.core.Display = lambda lines, out: print(*lines, file=out)
