@@ -594,7 +594,7 @@ class Reader:
                         message=os.path.basename(self.Input))
         data = b''
         for dim in self.dim2chunk_start:
-            print(dim, '\t' * 4, end='\r')
+            print(dim)
             for i, record in enumerate(self.__fetch__(dim)):
                 if match_func(record):
                     data += struct.pack(f"<{writer.fmts}", i + 1)
@@ -790,7 +790,7 @@ class Reader:
             self._cached_data = self._cached_data[end_index:]
             self._load_block()
 
-    def __fetch__(self, dims, s=None, e=None):
+    def __fetch__(self, dim, s=None, e=None):
         """
         Generator for a given dims
 
@@ -805,7 +805,7 @@ class Reader:
         """
         s = 0 if s is None else s  # 0-based
         e = len(self.header['Columns']) if e is None else e  # 1-based
-        r = self._load_chunk(self.dim2chunk_start[dims], jump=True)
+        r = self._load_chunk(self.dim2chunk_start[dim], jump=True)
         unit_nblock = int(self._unit_size / (math.gcd(self._unit_size, _BLOCK_MAX_LEN)))
         self._load_block(start_offset=self._chunk_start_offset + 10)  #
         i, _cached_data = 1, self._buffer
@@ -822,8 +822,8 @@ class Reader:
             for result in struct.iter_unpack(f"<{self.fmts}", _cached_data):
                 yield result[s:e]  # a tuple
 
-    def fetch(self, dims):
-        for record in self.__fetch__(dims):
+    def fetch(self, dim):
+        for record in self.__fetch__(dim):
             yield self._byte2real(record)  # all columns of each row
 
     def batch_fetch(self, dims, chunksize=5000):

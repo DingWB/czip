@@ -6,7 +6,9 @@ from .cz import (
     extract
 )
 from .allc import (AllC, generate_ssi, bed2cz,
-                   merge_cz, extractCG, merge_cell_type)
+                   merge_cz, extractCG,
+                   merge_cell_type,
+                   combp)
 
 __version__ = "0.2.1"
 
@@ -24,6 +26,7 @@ def main():
             'merge_cell_type': merge_cell_type,
             'extract': extract,
             'extractCG': extractCG,
+            "combp": combp,
         }
 	)
 

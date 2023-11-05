@@ -14,7 +14,7 @@ import pysam
 import multiprocessing
 from Bio import SeqIO
 import numpy as np
-from collections import defaultdict
+from scipy import stats
 import math
 from .cz import (Reader, Writer, get_dtfuncs,
                  _BLOCK_MAX_LEN, _chunk_magic)
@@ -46,6 +46,13 @@ def WriteC(record, outdir, chunksize=5000):
             strand = '-'
         else:
             continue
+        L = len(context)
+        if L < 3:
+            if L == 0:
+                context = "CNN"
+            else:
+                context = context + 'N' * (3 - L)
+
         # f.write(f"{chrom}\t{i}\t{i + 1}\t{context}\t{strand}\n")
         values = [func(v) for v, func in zip([i + 1, strand, context], dtfuncs)]
         data += struct.pack(writer.fmts, *values)
@@ -333,10 +340,43 @@ def generate_ssi(Input, output=None, pattern="CGN"):
     reader.close()
 
 
+# ==========================================================
+def _fisher_worker(df):
+    from fast_fisher import fast_fisher_exact, odds_ratio
+    # one verse rest
+    columns = df.columns.tolist()
+    snames = [col[:-3] for col in columns if col.endswith('.mc')]
+    df['mc_sum'] = df.loc[:, [name for name in columns if name.endswith('.mc')]].sum(axis=1)
+    df['cov_sum'] = df.loc[:, [name for name in columns if name.endswith('.cov')]].sum(axis=1)
+    df['uc_sum'] = df.cov_sum - df.mc_sum
+
+    def cal_fisher_or_p(x):
+        uc = int(x[f"{sname}.cov"] - x[f"{sname}.mc"])
+        a, b, c, d = int(x[f"{sname}.mc"]), uc, int(x.mc_sum - x[f"{sname}.mc"]), int(x.uc_sum - uc)
+        Or = odds_ratio(a, b, c, d)
+        Pval = fast_fisher_exact(a, b, c, d)
+        return tuple([Or, Pval])
+
+    for sname in snames:
+        df[sname] = df.apply(cal_fisher_or_p, axis=1)
+        df[f"{sname}.odd_ratio"] = df[sname].apply(lambda x: x[0])
+        df[f"{sname}.pval"] = df[sname].apply(lambda x: x[1])
+        df.drop([f"{sname}.cov", f"{sname}.mc", sname], axis=1, inplace=True)
+    usecols = []
+    for sname in snames:
+        usecols.extend([f"{sname}.odd_ratio", f"{sname}.pval"])
+    return df.reindex(columns=usecols)
+
+
+# ==========================================================
 def merge_cz_worker(outfile_cat, outdir, chrom, dims, formats,
                     block_idx_start, batch_nblock, chunksize=5000):
     # print(chrom, "started",end='\r')
-    outname = os.path.join(outdir, chrom + f'.{block_idx_start}.cz')
+    if formats in ['fraction', '2D', 'fisher']:
+        ext = 'txt'
+    else:
+        ext = 'cz'
+    outname = os.path.join(outdir, chrom + f'.{block_idx_start}.{ext}')
     reader1 = Reader(outfile_cat)
     data = None
     for dim in dims:  # each dim is a file of the same chrom
@@ -350,11 +390,31 @@ def merge_cz_worker(outfile_cat, outdir, chrom, dims, formats,
             block_start_offset = None
         values = np.array([result[:2] for result in struct.iter_unpack(
             f"<{reader1.fmts}", buffer)])  # values for batch_nblock (23) blocks
+        if formats == 'fraction':
+            values = np.array([[0] if v[1] == 0 else [round(v[0] / v[1], 3)] for v in values])
         if data is None:
             data = values.copy()
         else:
-            data += values
+            if formats in ["fraction", "2D", 'fisher']:
+                data = np.hstack((data, values))
+            else:
+                data += values
         # q.put(tuple([dim, chunk_id, data]))
+    if formats in ['fraction', '2D', 'fisher']:
+        snames = [dim[1] for dim in dims]
+        if formats == 'fraction':
+            columns = snames
+        else:
+            columns = []
+            for sname in snames:
+                columns.extend([sname + '.mc', sname + '.cov'])
+        df = pd.DataFrame(data, columns=columns)
+        if formats == 'fisher':
+            df = _fisher_worker(df)
+        df.to_csv(outname, sep='\t', index=False)
+        print(chrom, block_idx_start, "done")
+        return
+
     writer1 = Writer(outname, Formats=formats,
                      Columns=reader1.header['Columns'],
                      Dimensions=reader1.header['Dimensions'][:1],
@@ -375,44 +435,102 @@ def merge_cz_worker(outfile_cat, outdir, chrom, dims, formats,
     return
 
 
-def merge_cz(indir=None, cz_paths=None, outfile="merged.cz", n_jobs=12, formats=['I', 'I'],
-             Path_to_chrom="~/Ref/mm10/mm10_ucsc_with_chrL.main.chrom.sizes.txt",
-             keep_cat=False, batchsize=10):
+def catchr(outdir, chrom, ext, batch_nblock, chunksize):
+    outname = os.path.join(outdir, f"{chrom}.{ext}")
+    block_idx_start = 0
+    infile = os.path.join(outdir, chrom + f'.{block_idx_start}.{ext}')
+    while os.path.exists(infile):
+        for df in pd.read_csv(infile, sep='\t', chunksize=chunksize):
+            if not os.path.exists(outname):
+                df.to_csv(outname, sep='\t', index=False, header=True)
+            else:
+                df.to_csv(outname, sep='\t', index=False, header=False, mode='a')
+        block_idx_start += batch_nblock
+        infile = os.path.join(outdir, chrom + f'.{block_idx_start}.{ext}')
+    return
+
+
+def merge_cz(indir=None, cz_paths=None, outfile=None, n_jobs=12, formats=['I', 'I'],
+             Path_to_chrom=None, reference=None,
+             keep_cat=False, batchsize=10, temp=False, bgzip=True,
+             chunksize=50000):
+    """
+    Merge multiple .cz files. For example:
+    czip merge_cz -i ./ -o major_type.2D.txt -n 96 -f 2D \
+                          -P ~/Ref/mm10/mm10_ucsc_with_chrL.main.chrom.sizes.txt \
+                          -r ~/Ref/mm10/annotations/mm10_with_chrL.allCG.forward.cz
+
+    Parameters
+    ----------
+    indir :path
+        If cz_paths is not provided, indir will be used to get cz_paths.
+    cz_paths :paths
+    outfile : path
+    n_jobs :int
+    formats : str of list
+        Could be fraction, 2D, fisher or list of formats.
+        if formats is a list, then mc and cov will be summed up and write to .cz file.
+        otherwise, if formats=='fraction', summed mc divided by summed cov
+        will be calculated and written to .txt file. If formats=='2D', mc and cov
+        will be kept and write to .txt matrix file.
+    Path_to_chrom : path
+        path to chrom size file.
+    reference : path
+        path to reference .cz file, only need if fraction="fraction" or "2D".
+    keep_cat : bool
+    batchsize :int
+    temp : bool
+    bgzip : bool
+    chunksize : int
+
+    Returns
+    -------
+
+    """
+    if outfile is None:
+        outfile = 'merged.cz' if formats not in ['fraction', '2D'] else 'merged.txt'
     outfile = os.path.abspath(os.path.expanduser(outfile))
     if os.path.exists(outfile):
         print(f"{outfile} existed, skip.")
         return
     if cz_paths is None:
-        cz_paths = os.listdir(indir)
+        cz_paths = [file for file in os.listdir(indir) if file.endswith('.cz')]
     reader = Reader(os.path.join(indir, cz_paths[0]))
     header = reader.header
     reader.close()
     outfile_cat = outfile + '.cat.cz'
+    # cat all .cz files into one .cz file, add a dimension to chunk (filename)
     writer = Writer(Output=outfile_cat, Formats=header['Formats'],
                     Columns=header['Columns'], Dimensions=header['Dimensions'],
                     message="catcz")
     writer.catcz(Input=[os.path.join(indir, cz_path) for cz_path in cz_paths],
                  add_dim=True)
-    Path_to_chrom = os.path.abspath(os.path.expanduser(Path_to_chrom))
-    df = pd.read_csv(Path_to_chrom, sep='\t', header=None, usecols=[0])
-    chroms = df.iloc[:, 0].tolist()
 
     reader = Reader(outfile_cat)
     chrom_col = reader.header['Dimensions'][0]
     chunk_info = reader.chunk_info
     reader.close()
+
+    # get chromosomes order
+    input_chroms = chunk_info[chrom_col].unique().tolist()
+    if not Path_to_chrom is None:
+        Path_to_chrom = os.path.abspath(os.path.expanduser(Path_to_chrom))
+        df = pd.read_csv(Path_to_chrom, sep='\t', header=None, usecols=[0])
+        chroms = [chrom for chrom in df.iloc[:, 0].tolist() if chrom in input_chroms]
+    else:
+        chroms = sorted(input_chroms)
+    # chrom_dims_dict=chunk_info.reset_index().groupby('chrom'
+    #                                                    ).chunk_dims.apply(
+    #     lambda x:x.unique().tolist()).to_dict()
     chrom_nblocks = chunk_info.reset_index().loc[:, [chrom_col, 'chunk_nblocks']
                     ].drop_duplicates().set_index(chrom_col).chunk_nblocks.to_dict()
     # chunk_info.set_index(chrom_col)
+    # how many blocks can be multiplied by self.unit_size
     unit_nblock = int(writer._unit_size / (math.gcd(writer._unit_size, _BLOCK_MAX_LEN)))
     nunit_perbatch = int(np.ceil((chunk_info.chunk_nblocks.max() / batchsize
                                   ) / unit_nblock))
     batch_nblock = nunit_perbatch * unit_nblock  # how many block for each batch
-    # manager = multiprocessing.Manager()
-    # queue1 = manager.Queue()
     pool = multiprocessing.Pool(n_jobs)
-    # watcher = pool.apply_async(czs_merger, (outfile, formats, columns,
-    #                                         dimensions, message, n_batch, queue1))
     jobs = []
     outdir = outfile + '.tmp'
     if not os.path.exists(outdir):
@@ -430,57 +548,114 @@ def merge_cz(indir=None, cz_paths=None, outfile="merged.cz", n_jobs=12, formats=
             block_idx_start += batch_nblock
     for job in jobs:
         r = job.get()
-    # queue1.put('kill')
     pool.close()
     pool.join()
-    # manager._process.terminate()
-    # manager.shutdown()
-    if not keep_cat:
-        os.remove(outfile_cat)
+
     # First, merge different batch for each chrom
-    for chrom in chroms:
-        # print(chrom,end='\t')
-        outname = os.path.join(outdir, chrom + '.cz')
-        writer = Writer(Output=outname, Formats=formats,
-                        Columns=header['Columns'], Dimensions=header['Dimensions'],
-                        message=outfile_cat)
-        writer._chunk_start_offset = writer._handle.tell()
-        writer._handle.write(_chunk_magic)
-        # chunk total size place holder: 0
-        writer._handle.write(struct.pack("<Q", 0))  # 8 bytes; including this chunk_size
-        writer._chunk_data_len = 0
-        writer._block_1st_record_virtual_offsets = []
-        writer._chunk_dims = [chrom]
-        block_idx_start = 0
-        infile = os.path.join(outdir, chrom + f'.{block_idx_start}.cz')
-        while os.path.exists(infile):
-            reader = Reader(infile)
-            reader._load_chunk(reader.header['header_size'])
-            block_start_offset = reader._chunk_start_offset + 10
-            writer._buffer = b''
-            for i in range(reader._chunk_nblocks):
-                reader._load_block(start_offset=block_start_offset)  #
-                if len(writer._buffer) + len(reader._buffer) < _BLOCK_MAX_LEN:
-                    writer._buffer += reader._buffer
-                else:
-                    writer._buffer += reader._buffer
-                    while len(writer._buffer) >= _BLOCK_MAX_LEN:
-                        writer._write_block(writer._buffer[:_BLOCK_MAX_LEN])
-                        writer._buffer = writer._buffer[_BLOCK_MAX_LEN:]
-                block_start_offset = None
-            block_idx_start += batch_nblock
-            infile = os.path.join(outdir, chrom + f'.{block_idx_start}.cz')
-            reader.close()
-        # write chunk tail
-        writer.close()
+    if formats in ['fraction', '2D', 'fisher']:
+        ext = 'txt'
+    else:
+        ext = 'cz'
+    if ext == 'cz':
+        for chrom in chroms:
+            outname = os.path.join(outdir, f"{chrom}.{ext}")
+            writer = Writer(Output=outname, Formats=formats,
+                            Columns=header['Columns'], Dimensions=header['Dimensions'],
+                            message=outfile_cat)
+            writer._chunk_start_offset = writer._handle.tell()
+            writer._handle.write(_chunk_magic)
+            # chunk total size place holder: 0
+            writer._handle.write(struct.pack("<Q", 0))  # 8 bytes; including this chunk_size
+            writer._chunk_data_len = 0
+            writer._block_1st_record_virtual_offsets = []
+            writer._chunk_dims = [chrom]
+            block_idx_start = 0
+            infile = os.path.join(outdir, chrom + f'.{block_idx_start}.{ext}')
+            while os.path.exists(infile):
+                reader = Reader(infile)
+                reader._load_chunk(reader.header['header_size'])
+                block_start_offset = reader._chunk_start_offset + 10
+                writer._buffer = b''
+                for i in range(reader._chunk_nblocks):
+                    reader._load_block(start_offset=block_start_offset)  #
+                    if len(writer._buffer) + len(reader._buffer) < _BLOCK_MAX_LEN:
+                        writer._buffer += reader._buffer
+                    else:
+                        writer._buffer += reader._buffer
+                        while len(writer._buffer) >= _BLOCK_MAX_LEN:
+                            writer._write_block(writer._buffer[:_BLOCK_MAX_LEN])
+                            writer._buffer = writer._buffer[_BLOCK_MAX_LEN:]
+                    block_start_offset = None
+                reader.close()
+                block_idx_start += batch_nblock
+                infile = os.path.join(outdir, chrom + f'.{block_idx_start}.{ext}')
+            # write chunk tail
+            writer.close()
+    else:  # txt
+        pool = multiprocessing.Pool(n_jobs)
+        jobs = []
+        for chrom in chroms:
+            job = pool.apply_async(catchr,
+                                   (outdir, chrom, ext, batch_nblock, chunksize))
+            jobs.append(job)
+        for job in jobs:
+            r = job.get()
+        pool.close()
+        pool.join()
 
     # Second, merge chromosomes to outfile
-    writer = Writer(Output=outfile, Formats=formats,
-                    Columns=header['Columns'], Dimensions=header['Dimensions'],
-                    message="merged")
-    writer.catcz(Input=[f"{outdir}/{chrom}.cz" for chrom in chroms])
-    os.system(f"rm -rf {outdir}")
-
+    if ext == 'cz':
+        writer = Writer(Output=outfile, Formats=formats,
+                        Columns=header['Columns'], Dimensions=header['Dimensions'],
+                        message="merged")
+        writer.catcz(Input=[f"{outdir}/{chrom}.cz" for chrom in chroms])
+    else:  # txt
+        filenames = chunk_info.filename.unique().tolist()
+        if formats == 'fraction':
+            columns = filenames
+        elif formats == '2D':
+            columns = []
+            for sname in filenames:
+                columns.extend([sname + '.mc', sname + '.cov'])
+        else:  # fisher
+            columns = []
+            for sname in filenames:
+                columns.extend([sname + '.odd_ratio', sname + '.pval'])
+        if not reference is None:
+            reference = os.path.abspath(os.path.expanduser(reference))
+            reader = Reader(reference)
+        print("Merging chromosomes..")
+        for chrom in chroms:
+            print(chrom, "\t" * 2, end='\r')
+            infile = os.path.join(outdir, f"{chrom}.{ext}")
+            if not reference is None:
+                df_ref = pd.DataFrame([
+                    record for record in reader.fetch(tuple([chrom]))
+                ], columns=reader.header['Columns'])
+                df_ref.insert(0, chrom_col, chrom)
+                usecols = df_ref.columns.tolist() + columns
+            # df=pd.read_csv(infile,sep='\t')
+            for df in pd.read_csv(infile, sep='\t', chunksize=chunksize):
+                if not reference is None:
+                    df = pd.concat([df_ref.iloc[:chunksize].reset_index(drop=True),
+                                    df.reset_index(drop=True)], axis=1)
+                    df_ref = df_ref.iloc[chunksize:]
+                if not os.path.exists(outfile):
+                    df.reindex(columns=usecols).to_csv(outfile, sep='\t', index=False, header=True)
+                else:
+                    df.reindex(columns=usecols).to_csv(outfile, sep='\t', index=False,
+                                                       header=False, mode='a')
+        if not reference is None:
+            reader.close()
+    if not keep_cat:
+        os.remove(outfile_cat)
+    if not temp:
+        print(f"Removing temp dir {outdir}")
+        os.system(f"rm -rf {outdir}")
+    if bgzip:
+        cmd = f"bgzip {outfile} && tabix -b 2 -e 2 -f -s 1 -S 1 {outfile}.gz"
+        print(f"Run bgzip, CMD: {cmd}")
+        os.system(cmd)
 
 def merge_cell_type(indir=None, cell_table=None, outdir=None,
                     n_jobs=64, Path_to_chrom=None, ext='.CGN.merged.cz'):
@@ -502,7 +677,7 @@ def merge_cell_type(indir=None, cell_table=None, outdir=None,
                  outfile=outfile, n_jobs=n_jobs, Path_to_chrom=Path_to_chrom)
 # ==========================================================
 def extractCG(input=None, outfile=None, ssi=None, chunksize=5000,
-              merge_strand=True):
+              merge_strand=False):
     """
     Extract CG context from .cz file
 
@@ -570,8 +745,84 @@ def extractCG(input=None, outfile=None, ssi=None, chunksize=5000,
     writer.close()
     reader.close()
     ssi_reader.close()
-# ==========================================================
+
+
+def __split_mat(infile, chrom, snames, outdir, n_ref):
+    tbi = pysam.TabixFile(infile)
+    records = tbi.fetch(reference=chrom)
+    N = n_ref + len(snames) * 2
+    fout_dict = {}
+    for sname in snames:
+        fout_dict[sname] = open(os.path.join(outdir, f"{sname}.{chrom}.bed"), 'w')
+    for line in records:
+        values = line.replace('\n', '').split('\t')
+        if len(values) < N:
+            print(infile, chrom)
+            raise ValueError("Number of fields is wrong.")
+        end = int(values[1])
+        beg = end - 1
+        strand, context = values[2], values[3]
+        for sname in snames:
+            fout_dict[sname].write(f"{chrom}\t{beg}\t{end}\t{strand}\t{context}")
+        for i, sname in enumerate(snames):
+            pval = values[n_ref + i * 2 + 1]
+            fout_dict[sname].write(f"\t{pval}\n")
+    for sname in snames:
+        fout_dict[sname].close()
+    tbi.close()
+
+
+def run_cpv(bed_file, db, outdir, sname, chrom):
+    cpv_pipeline(col_num=6, dist=750, seed=0.05,
+                 bed_files=bed_file, db=db,
+                 prefix=os.path.join(outdir, f"{sname}.{chrom}.cpv"))
+
+
+def combp(input, outdir="cpv", n_jobs=24, db="mm10"):
+    try:
+        # import cpv
+        from cpv.pipeline import pipeline as cpv_pipeline
+    except:
+        print("Please install cpv using: pip install git+https://github.com/brentp/combined-pvalues.git")
+    infile = os.path.abspath(os.path.expanduser(input))
+    outdir = os.path.abspath(os.path.expanduser(outdir))
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
+    columns = pd.read_csv(infile, sep='\t', nrows=1).columns.tolist()
+    snames = [col[:-5] for col in columns[4:] if col.endswith('.pval')]
+    tbi = pysam.TabixFile(infile)
+    chroms = tbi.contigs
+    tbi.close()
+    pool = multiprocessing.Pool(n_jobs)
+    jobs = []
+    print("Splitting matrix into different sample and chrom.")
+    for chrom in chroms:
+        job = pool.apply_async(__split_mat,
+                               (infile, chrom, snames, outdir, 4))
+        jobs.append(job)
+    for job in jobs:
+        r = job.get()
+    pool.close()
+    pool.join()
+
+    pool = multiprocessing.Pool(n_jobs)
+    jobs = []
+    print("Running cpv..")
+    for chrom in chroms:
+        for sname in snames:
+            print(sname, chrom, "\t" * 3, end='\r')
+            bed_file = os.path.join(outdir, f"{sname}.{chrom}.bed")
+            job = pool.apply_async(run_cpv,
+                                   (bed_file, db, outdir, sname, chrom))
+            jobs.append(job)
+    for job in jobs:
+        r = job.get()
+    pool.close()
+    pool.join()
+
+
 if __name__ == "__main__":
     import fire
+
     fire.core.Display = lambda lines, out: print(*lines, file=out)
     fire.Fire()
