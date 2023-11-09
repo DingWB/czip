@@ -22,7 +22,7 @@ setup(
     author_email="ding.wu.bin.gm@gmail.com",
     url="https://github.com/DingWB/czip",
     packages=find_packages(exclude=('docs',)),
-    # install_requires=['pandas', 'fire', 'numpy'],
+    install_requires=['pandas', 'fire', 'numpy', "git+https://github.com/DingWB/combined-pvalues.git"],
     include_package_data=True,
     package_data={
         '': ['*.txt', '*.tsv', '*.csv', '*.fa', '*Snakefile', '*ipynb']

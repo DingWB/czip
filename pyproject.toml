@@ -1,5 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0", 'pandas', 'fire', 'numpy', "pysam", 'biopython']
+requires = ["setuptools>=61.0", 'pandas', 'fire', 'numpy', "pysam",
+    'biopython', "git+https://github.com/DingWB/combined-pvalues.git"]
 build-backend = "setuptools.build_meta"
 
 [project]
