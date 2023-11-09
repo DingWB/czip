@@ -632,7 +632,9 @@ def merge_cz(indir=None, cz_paths=None, outfile=None, n_jobs=12, formats=['I', '
                 df_ref = pd.DataFrame([
                     record for record in reader.fetch(tuple([chrom]))
                 ], columns=reader.header['Columns'])
+                # insert a column 'start'
                 df_ref.insert(0, chrom_col, chrom)
+                df_ref.insert(1, 'start', df_ref.iloc[:, 1].map(int) - 1)
                 usecols = df_ref.columns.tolist() + columns
             # df=pd.read_csv(infile,sep='\t')
             for df in pd.read_csv(infile, sep='\t', chunksize=chunksize):
@@ -653,7 +655,7 @@ def merge_cz(indir=None, cz_paths=None, outfile=None, n_jobs=12, formats=['I', '
         print(f"Removing temp dir {outdir}")
         os.system(f"rm -rf {outdir}")
     if bgzip:
-        cmd = f"bgzip {outfile} && tabix -b 2 -e 2 -f -s 1 -S 1 {outfile}.gz"
+        cmd = f"bgzip {outfile} && tabix -S 1 -s 1 -b 2 -e 3 -f {outfile}.gz"
         print(f"Run bgzip, CMD: {cmd}")
         os.system(cmd)
 
