@@ -431,7 +431,7 @@ def merge_cz_worker(outfile_cat, outdir, chrom, dims, formats,
         writer1.write_chunk(byte_data, [chrom])
     writer1.close()
     reader1.close()
-    print(chrom, block_idx_start, "done")
+    print(chrom, block_idx_start, "done", "\t" * 8, end='\r')
     return
 
 
@@ -626,7 +626,7 @@ def merge_cz(indir=None, cz_paths=None, outfile=None, n_jobs=12, formats=['I', '
             reader = Reader(reference)
         print("Merging chromosomes..")
         for chrom in chroms:
-            print(chrom, "\t" * 2, end='\r')
+            print(chrom, "\t" * 4, end='\r')
             infile = os.path.join(outdir, f"{chrom}.{ext}")
             if not reference is None:
                 df_ref = pd.DataFrame([
