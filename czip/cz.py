@@ -16,23 +16,29 @@ _BLOCK_MAX_LEN = 65535
 _bcz_eof = b"\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00BM\x02\x00\x1b\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00"
 _version = 1.0
 
+def dtype_func(f):
+    if f in ['f', 'd']:
+        return float
 
-# ==========================================================
-def str2byte(x):
-    return bytes(str(x), 'utf-8')
-# ==========================================================
-dtype_func = {
-    'h': int, 'H': int,
-    'i': int, 'I': int, 'b': int, 'B': int,
-    'L': int, 'l': int, 'q': int, 'Q': int,
-    'f': float, 'd': float,
-    's': str2byte, 'c': str2byte
-}
+    def str2byte(x):
+        return bytes(str(x), 'utf-8')
 
+    if f in ['s', 'c']:
+        return str2byte
+    size = struct.calcsize(f)
+    m = 2 ** (size * 8) - 1
+
+    def int_func(i):
+        if i <= m:
+            return int(i)
+        else:
+            return m
+
+    return int_func
 
 # ==========================================================
 def get_dtfuncs(formats,tobytes=True):
-    D=dtype_func
+    D = {f: dtype_func(f[-1]) for f in formats}
     if not tobytes:
         D['s']=str
         D['c']=str
@@ -1789,27 +1795,6 @@ class Writer:
         """Close a file with WITH statement."""
         self.close()
 # ==========================================================
-def test_difference(file1, file2, usecols1, usecols2, sep='\t', header1=None,
-                    header2=None, intersect=False, index_cols=[0, 1]):
-    df1 = pd.read_csv(file1, usecols=usecols1, sep=sep, header=header1)
-    df2 = pd.read_csv(file2, usecols=usecols2, sep=sep, header=header2)
-    df1.columns = list(range(df1.shape[1]))
-    df2.columns = list(range(df2.shape[1]))
-    if intersect:
-        df1.set_index(index_cols, inplace=True)
-        df2.set_index(index_cols, inplace=True)
-        common_index = list(set(df1.index.tolist()) & set(df2.index.tolist()))
-        df1 = df1.loc[common_index]
-        df2 = df2.loc[common_index]
-    else:
-        df1.sort_values(usecols1, inplace=True)
-        df2.sort_values(usecols2, inplace=True)
-    for i in range(min(len(usecols1), len(usecols2))):
-        print(i)
-        print(df1.iloc[:, i].tolist() == df2.iloc[:,i].tolist())
-
-# ==========================================================
-
 if __name__=="__main__":
     import fire
     fire.core.Display = lambda lines, out: print(*lines, file=out)

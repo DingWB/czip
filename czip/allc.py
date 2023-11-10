@@ -121,7 +121,7 @@ class AllC:
 
 
 def bed2cz(input, outfile, reference=None, missing_value=[0, 0],
-           Formats=['H', 'H'], Columns=['mc', 'cov'], Dimensions=['chrom'],
+           Formats=['B', 'B'], Columns=['mc', 'cov'], Dimensions=['chrom'],
            usecols=[4, 5], pr=0, pa=1, sep='\t', Path_to_chrom=None,
            chunksize=2000):
     """
@@ -420,9 +420,10 @@ def merge_cz_worker(outfile_cat, outdir, chrom, dims, formats,
                      Dimensions=reader1.header['Dimensions'][:1],
                      message=outfile_cat)
     byte_data, i = b'', 0
+    dtfuncs = get_dtfuncs(writer1.Formats)
     for values in data.tolist():
         byte_data += struct.pack(f"<{writer1.fmts}",
-                                 *values)
+                                 *[func(v) for v, func in zip(values, dtfuncs)])
         i += 1
         if i > chunksize:
             writer1.write_chunk(byte_data, [chrom])
@@ -450,7 +451,7 @@ def catchr(outdir, chrom, ext, batch_nblock, chunksize):
     return
 
 
-def merge_cz(indir=None, cz_paths=None, outfile=None, n_jobs=12, formats=['I', 'I'],
+def merge_cz(indir=None, cz_paths=None, outfile=None, n_jobs=12, formats=['H', 'H'],
              Path_to_chrom=None, reference=None,
              keep_cat=False, batchsize=10, temp=False, bgzip=True,
              chunksize=50000):
