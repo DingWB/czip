@@ -2,7 +2,6 @@ import fire
 from .cz import (
     Reader,
     Writer,
-    test_difference,
     extract
 )
 from .allc import (AllC, generate_ssi, bed2cz,
@@ -20,7 +19,6 @@ def main():
             'Reader': Reader,
             'AllC': AllC,
             'bed2cz': bed2cz,
-            'test_diff': test_difference,
             'generate_ssi': generate_ssi,
             'merge_cz': merge_cz,
             'merge_cell_type': merge_cell_type,

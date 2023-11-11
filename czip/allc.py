@@ -123,7 +123,7 @@ class AllC:
 def bed2cz(input, outfile, reference=None, missing_value=[0, 0],
            Formats=['B', 'B'], Columns=['mc', 'cov'], Dimensions=['chrom'],
            usecols=[4, 5], pr=0, pa=1, sep='\t', Path_to_chrom=None,
-           chunksize=2000):
+           chunksize=5000):
     """
     convert allc.tsv.gz to .cz file.
 

@@ -29,8 +29,9 @@ def dtype_func(f):
     m = 2 ** (size * 8) - 1
 
     def int_func(i):
+        i = int(i)
         if i <= m:
-            return int(i)
+            return i
         else:
             return m
 
