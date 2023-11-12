@@ -977,7 +977,7 @@ def agg_beta(Query=None, Matrix=None,
         df_dmr = pd.read_csv(os.path.expanduser(Query), sep='\t',
                              header=None, usecols=[0, 1, 2], skiprows=skiprows)
         df_dmr.columns = ['chrom', 'start', 'end']
-    elif isinstance(Query, list):
+    elif isinstance(Query, (list, tuple)):
         R = []
         for query_path in Query:
             df = pd.read_csv(os.path.expanduser(query_path), sep='\t',
@@ -987,6 +987,7 @@ def agg_beta(Query=None, Matrix=None,
         df_dmr = pd.concat(R, ignore_index=True)
         df_dmr.drop_duplicates(inplace=True)
     else:
+        print(type(Query), Query)
         raise ValueError("Unknown type Query")
 
     if methylpy:
