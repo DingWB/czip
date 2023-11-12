@@ -933,7 +933,7 @@ def prepare_methylpy(indir=None, allc_paths=None, class_table=None,
         print(template)
 
 
-def agg_beta(Query=None, Matrix=None,
+def agg_beta(Query=None, Matrix=None, ext='.bed',
              Outfile='result.bed', skiprows=1, n_ref=5, methylpy=True,
              bedtools_dir=True, chunksize=5000):
     """
@@ -977,6 +977,20 @@ def agg_beta(Query=None, Matrix=None,
         df_dmr = pd.read_csv(os.path.expanduser(Query), sep='\t',
                              header=None, usecols=[0, 1, 2], skiprows=skiprows)
         df_dmr.columns = ['chrom', 'start', 'end']
+    elif isinstance(Query, str) and os.path.isdir(Query):
+        Query = os.path.expanduser(Query)
+        R = []
+        for file in os.listdir(Query):
+            if not file.endswith(ext):
+                continue
+            infile = os.path.join(Query, file)
+            df = pd.read_csv(infile, sep='\t',
+                             header=None, usecols=[0, 1, 2], skiprows=skiprows)
+            df.columns = ['chrom', 'start', 'end']
+            R.append(df)
+        df_dmr = pd.concat(R, ignore_index=True)
+        df_dmr.drop_duplicates(inplace=True)
+        df_dmr.sort_values(['chrom', 'start', 'end'], inplace=True)
     elif isinstance(Query, (list, tuple)):
         R = []
         for query_path in Query:
@@ -986,6 +1000,7 @@ def agg_beta(Query=None, Matrix=None,
             R.append(df)
         df_dmr = pd.concat(R, ignore_index=True)
         df_dmr.drop_duplicates(inplace=True)
+        df_dmr.sort_values(['chrom', 'start', 'end'], inplace=True)
     else:
         print(type(Query), Query)
         raise ValueError("Unknown type Query")
