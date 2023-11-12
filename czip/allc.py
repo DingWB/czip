@@ -882,6 +882,117 @@ def combp(input, outdir="cpv", n_jobs=24, dist=300, temp=True, bed=False):
     if not temp:
         os.system(f"rm -rf {tmpdir}")
 
+
+def prepare_methylpy(indir=None, allc_paths=None, class_table=None,
+                     ext=".allc.tsv.gz",
+                     outname="methylpy_dmr", context='CGN', n_jobs=64, dist=300):
+    """
+    Prepare methylpy DMRfind commands for a series of allc files
+
+    Parameters
+    ----------
+    indir : path
+        if indir is given, allc_paths would be ignored.
+    allc_paths : list
+    class_table : path
+        if class_table is give, methylpy will be run in each cell class, one verse
+        rest for the allc files belong to each cell class.
+    ext : str
+    outname : path
+    context : str
+    n_jobs : int
+    dist : int
+        max distance
+
+    Returns
+    -------
+
+    """
+    if not indir is None:
+        allc_paths = [file for file in os.listdir(indir) if file.endswith(ext)]
+    else:
+        indir = os.path.dirname(allc_paths[0])
+        allc_paths = [os.path.basename(allc_path) for allc_path in allc_paths]
+    if not class_table is None:
+        df_class = pd.read_csv(class_table, sep='\t', header=None,
+                               names=['sname', 'cell_class'])
+        snames = [allc_path.replace(ext, '') for allc_path in allc_paths]
+        df_class = df_class.loc[df_class.sname.isin(snames)]
+        D = df_class.groupby('cell_class').sname.apply(
+            lambda x: x.tolist()).to_dict()
+        for cell_class in D:
+            snames = ' '.join(D[cell_class])
+            allc_files = ' '.join([os.path.join(indir, sname + ext) for sname in D[cell_class]])
+            outname1 = f"{outname}.{cell_class}"
+            template = f"methylpy DMRfind --allc-files {allc_files} --output-prefix {outname1} --samples {snames} --num-procs {n_jobs} --mc-type {context} --dmr-max-dist {dist}"
+            print(template)
+    else:
+        snames = ' '.join([allc_path.replace(ext, '') for allc_path in allc_paths])
+        allc_files = ' '.join([os.path.join(indir, allc_path) for allc_path in allc_paths])
+        template = f"methylpy DMRfind --allc-files {allc_files} --output-prefix {outname} --samples {snames} --num-procs {n_jobs} --mc-type {context} --dmr-max-dist {dist}"
+        print(template)
+
+
+def agg_beta(query="/home/x-wding2/Projects/mouse-pfc/pseudo_cell/CellClass/DMR/methylpy.Exc_rms_results_collapsed.tsv",
+             matrix="/home/x-wding2/Projects/mouse-pfc/pseudo_cell/MajorType/matrix/major_type.beta.bed.gz",
+             outfile='result.bed', skiprows=1, n_ref=5, methylpy=True,
+             bedtools_dir=True, chunksize=5000):
+    """
+    Equal to awk 'BEGIN{FS=OFS="\t"}; {if(NR>1){print($1,$2-1,$3,$4)}}' DMR/methylpy.Exc_rms_results_collapsed.tsv | bedtools intersect -a stdin -b ../MajorType/matrix/major_type.beta.bed.gz -sorted -loj |cat <(zcat ../MajorType/matrix/major_type.beta.bed.gz |head -n 1) - |les
+
+    Parameters
+    ----------
+    query :path
+        a bed file containing chrom, start and end at the first 3 columns, if header
+        is inlcuded, set skiprows=1 (default). query could be DMR regions, and
+        agg_beta could be used to get the mean methylation value for each DMR.
+    matrix :path
+        path to the matrix file, each row is a cytosine, each column is a
+        cell (sample), the first 3 columns should be chrom, start, end.
+    outfile : path
+    skiprows : int
+    n_ref : int
+        Number of reference columns in matrix file (first n_ref are chrom, start,
+        end,...and so on), samples start from the n_ref+1 column.
+    methylpy : bool
+        if query is the DMR result from methylpy, start coordinate will be set
+        to start - 1
+    bedtools_dir : path or bool
+        if True (default), will search path to bedtools automatically, else
+        a directory of bedtools could be given.
+    chunksize : int
+
+    Returns
+    -------
+
+    """
+    import pybedtools
+    if not bedtools_dir is None:
+        if bedtools_dir == True:
+            pybedtools.helpers.set_bedtools_path(path=os.path.dirname(sys.executable))
+        else:  # pybedtools.helpers.get_bedtools_path()
+            pybedtools.helpers.set_bedtools_path(path=os.path.expanduser(bedtools_dir))
+    b = pybedtools.BedTool(os.path.expanduser(matrix))
+    cols = pd.read_csv(os.path.expanduser(matrix), sep='\t', nrows=1).columns.tolist()
+    df_dmr = pd.read_csv(os.path.expanduser(query), sep='\t',
+                         header=None, usecols=[0, 1, 2], skiprows=skiprows)
+    df_dmr.columns = ['chrom', 'start', 'end']
+    if methylpy:
+        df_dmr.start = df_dmr.start - 1
+    a = pybedtools.BedTool.from_dataframe(df_dmr)
+    n_cols = list(range(3 + n_ref + 1, 3 + len(cols) + 1))
+    records = a.intersect(b, loj=True, sorted=True).groupby(g=[1, 2, 3],
+                                                            c=n_cols, o=['mean'])
+    for df in pd.read_csv(records.fn, sep='\t', header=None,
+                          names=['chrom', 'start', 'end'] + cols[n_ref:],
+                          chunksize=chunksize):
+        if not os.path.exists(outfile):
+            df.to_csv(outfile, sep='\t', index=False, header=True)
+        else:
+            df.to_csv(outfile, sep='\t', index=False, header=False, mode='a')
+    pybedtools.cleanup(remove_all=True)
+
+
 if __name__ == "__main__":
     import fire
 

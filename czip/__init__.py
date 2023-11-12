@@ -7,7 +7,7 @@ from .cz import (
 from .allc import (AllC, generate_ssi, bed2cz,
                    merge_cz, extractCG,
                    merge_cell_type,
-                   combp)
+                   combp, prepare_methylpy, agg_beta)
 
 __version__ = "0.2.1"
 
@@ -25,6 +25,8 @@ def main():
             'extract': extract,
             'extractCG': extractCG,
             "combp": combp,
+            'prepare_methylpy': prepare_methylpy,
+            'agg_beta': agg_beta,
         }
 	)
 
