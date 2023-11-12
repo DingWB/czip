@@ -973,7 +973,7 @@ def agg_beta(Query=None, Matrix=None,
             pybedtools.helpers.set_bedtools_path(path=os.path.expanduser(bedtools_dir))
     b = pybedtools.BedTool(os.path.expanduser(Matrix))
     cols = pd.read_csv(os.path.expanduser(Matrix), sep='\t', nrows=1).columns.tolist()
-    if os.path.isfile(Query):
+    if isinstance(Query, str) and os.path.isfile(Query):
         df_dmr = pd.read_csv(os.path.expanduser(Query), sep='\t',
                              header=None, usecols=[0, 1, 2], skiprows=skiprows)
         df_dmr.columns = ['chrom', 'start', 'end']
