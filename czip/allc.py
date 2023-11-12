@@ -933,8 +933,7 @@ def prepare_methylpy(indir=None, allc_paths=None, class_table=None,
         print(template)
 
 
-def agg_beta(Query="/home/x-wding2/Projects/mouse-pfc/pseudo_cell/CellClass/DMR/methylpy.Exc_rms_results_collapsed.tsv",
-             Matrix="/home/x-wding2/Projects/mouse-pfc/pseudo_cell/MajorType/matrix/major_type.beta.bed.gz",
+def agg_beta(Query=None, Matrix=None,
              Outfile='result.bed', skiprows=1, n_ref=5, methylpy=True,
              bedtools_dir=True, chunksize=5000):
     """
@@ -974,9 +973,22 @@ def agg_beta(Query="/home/x-wding2/Projects/mouse-pfc/pseudo_cell/CellClass/DMR/
             pybedtools.helpers.set_bedtools_path(path=os.path.expanduser(bedtools_dir))
     b = pybedtools.BedTool(os.path.expanduser(Matrix))
     cols = pd.read_csv(os.path.expanduser(Matrix), sep='\t', nrows=1).columns.tolist()
-    df_dmr = pd.read_csv(os.path.expanduser(Query), sep='\t',
-                         header=None, usecols=[0, 1, 2], skiprows=skiprows)
-    df_dmr.columns = ['chrom', 'start', 'end']
+    if os.path.isfile(Query):
+        df_dmr = pd.read_csv(os.path.expanduser(Query), sep='\t',
+                             header=None, usecols=[0, 1, 2], skiprows=skiprows)
+        df_dmr.columns = ['chrom', 'start', 'end']
+    elif isinstance(Query, list):
+        R = []
+        for query_path in Query:
+            df = pd.read_csv(os.path.expanduser(query_path), sep='\t',
+                             header=None, usecols=[0, 1, 2], skiprows=skiprows)
+            df.columns = ['chrom', 'start', 'end']
+            R.append(df)
+        df_dmr = pd.concat(R, ignore_index=True)
+        df_dmr.drop_duplicates(inplace=True)
+    else:
+        raise ValueError("Unknown type Query")
+
     if methylpy:
         df_dmr.start = df_dmr.start - 1
     a = pybedtools.BedTool.from_dataframe(df_dmr)
