@@ -878,9 +878,9 @@ def combp(input, outdir="cpv", n_jobs=24, dist=300, temp=True, bed=False):
             else:
                 df.to_csv(outfile, sep='\t', index=False, header=False, mode='a')
     if not bed:
-        os.system(f"fm -rf {bed_dir}")
+        os.system(f"rm -rf {bed_dir}")
     if not temp:
-        os.system(f"fm -rf {tmpdir}")
+        os.system(f"rm -rf {tmpdir}")
 
 if __name__ == "__main__":
     import fire
