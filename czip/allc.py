@@ -933,9 +933,9 @@ def prepare_methylpy(indir=None, allc_paths=None, class_table=None,
         print(template)
 
 
-def agg_beta(query="/home/x-wding2/Projects/mouse-pfc/pseudo_cell/CellClass/DMR/methylpy.Exc_rms_results_collapsed.tsv",
-             matrix="/home/x-wding2/Projects/mouse-pfc/pseudo_cell/MajorType/matrix/major_type.beta.bed.gz",
-             outfile='result.bed', skiprows=1, n_ref=5, methylpy=True,
+def agg_beta(Query="/home/x-wding2/Projects/mouse-pfc/pseudo_cell/CellClass/DMR/methylpy.Exc_rms_results_collapsed.tsv",
+             Matrix="/home/x-wding2/Projects/mouse-pfc/pseudo_cell/MajorType/matrix/major_type.beta.bed.gz",
+             Outfile='result.bed', skiprows=1, n_ref=5, methylpy=True,
              bedtools_dir=True, chunksize=5000):
     """
     Equal to awk 'BEGIN{FS=OFS="\t"}; {if(NR>1){print($1,$2-1,$3,$4)}}' DMR/methylpy.Exc_rms_results_collapsed.tsv | bedtools intersect -a stdin -b ../MajorType/matrix/major_type.beta.bed.gz -sorted -loj |cat <(zcat ../MajorType/matrix/major_type.beta.bed.gz |head -n 1) - |les
@@ -972,9 +972,9 @@ def agg_beta(query="/home/x-wding2/Projects/mouse-pfc/pseudo_cell/CellClass/DMR/
             pybedtools.helpers.set_bedtools_path(path=os.path.dirname(sys.executable))
         else:  # pybedtools.helpers.get_bedtools_path()
             pybedtools.helpers.set_bedtools_path(path=os.path.expanduser(bedtools_dir))
-    b = pybedtools.BedTool(os.path.expanduser(matrix))
-    cols = pd.read_csv(os.path.expanduser(matrix), sep='\t', nrows=1).columns.tolist()
-    df_dmr = pd.read_csv(os.path.expanduser(query), sep='\t',
+    b = pybedtools.BedTool(os.path.expanduser(Matrix))
+    cols = pd.read_csv(os.path.expanduser(Matrix), sep='\t', nrows=1).columns.tolist()
+    df_dmr = pd.read_csv(os.path.expanduser(Query), sep='\t',
                          header=None, usecols=[0, 1, 2], skiprows=skiprows)
     df_dmr.columns = ['chrom', 'start', 'end']
     if methylpy:
@@ -986,10 +986,10 @@ def agg_beta(query="/home/x-wding2/Projects/mouse-pfc/pseudo_cell/CellClass/DMR/
     for df in pd.read_csv(records.fn, sep='\t', header=None,
                           names=['chrom', 'start', 'end'] + cols[n_ref:],
                           chunksize=chunksize):
-        if not os.path.exists(outfile):
-            df.to_csv(outfile, sep='\t', index=False, header=True)
+        if not os.path.exists(Outfile):
+            df.to_csv(Outfile, sep='\t', index=False, header=True)
         else:
-            df.to_csv(outfile, sep='\t', index=False, header=False, mode='a')
+            df.to_csv(Outfile, sep='\t', index=False, header=False, mode='a')
     pybedtools.cleanup(remove_all=True)
 
 
