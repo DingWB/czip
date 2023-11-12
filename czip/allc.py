@@ -342,6 +342,8 @@ def generate_ssi(Input, output=None, pattern="CGN"):
 
 # ==========================================================
 def _fisher_worker(df):
+    import warnings
+    warnings.filterwarnings("ignore")
     from fast_fisher import fast_fisher_exact, odds_ratio
     # one verse rest
     columns = df.columns.tolist()
@@ -763,9 +765,9 @@ def __split_mat(infile, chrom, snames, outdir, n_ref):
         if len(values) < N:
             print(infile, chrom)
             raise ValueError("Number of fields is wrong.")
-        end = int(values[1])
-        beg = end - 1
-        strand, context = values[2], values[3]
+        ch, beg, end, strand = values[:4]
+        beg = int(beg)
+        end = int(end)
         for sname in snames:
             fout_dict[sname].write(f"{chrom}\t{beg}\t{end}\t{strand}")
         for i, sname in enumerate(snames):
@@ -825,7 +827,7 @@ def combp(input, outdir="cpv", n_jobs=24, dist=300, temp=True, bed=False):
         print("Splitting matrix into different samples and chroms.")
         for chrom in chroms:
             job = pool.apply_async(__split_mat,
-                                   (infile, chrom, snames, bed_dir, 4))
+                                   (infile, chrom, snames, bed_dir, 5))
             jobs.append(job)
         for job in jobs:
             r = job.get()
