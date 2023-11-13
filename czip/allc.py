@@ -877,6 +877,21 @@ def combp(input, outdir="cpv", n_jobs=24, dist=300, temp=True, bed=False):
                 df.to_csv(outfile, sep='\t', index=False, header=True)
             else:
                 df.to_csv(outfile, sep='\t', index=False, header=False, mode='a')
+    merged_dmr_path = os.path.join(outdir, 'merged_dmr.txt')
+    data = None
+    for sname in snames:
+        infile = os.path.join(outdir, f"{sname}.bed")
+        df = pd.read_csv(infile, sep='\t')
+        df.drop(['min_p', 'z_p', 'z_sidak_p'], inplace=True, axis=1)
+        df['sname'] = sname
+        if data is None:
+            data = df.copy()
+        else:
+            data = pd.concat([data, df], ignore_index=True)
+    cols = data.columns.tolist()
+    # data=data.groupby(cols[:3]).agg(lambda x:x.tolist())
+    # data=data.applymap(lambda x:x[0] if len(x)==1 else ','.join(list(map(str,x))))
+    data.to_csv(merged_dmr_path, sep='\t', index=True)
     if not bed:
         os.system(f"rm -rf {bed_dir}")
     if not temp:
@@ -934,7 +949,7 @@ def prepare_methylpy(indir=None, allc_paths=None, class_table=None,
 
 
 def agg_beta(Query=None, Matrix=None, ext='.bed',
-             Outfile='result.bed', skiprows=1, n_ref=5, methylpy=True,
+             Outfile='result.txt', skiprows=1, n_ref=5, methylpy=True,
              bedtools_dir=True, chunksize=5000):
     """
     Equal to awk 'BEGIN{FS=OFS="\t"}; {if(NR>1){print($1,$2-1,$3,$4)}}' DMR/methylpy.Exc_rms_results_collapsed.tsv | bedtools intersect -a stdin -b ../MajorType/matrix/major_type.beta.bed.gz -sorted -loj |cat <(zcat ../MajorType/matrix/major_type.beta.bed.gz |head -n 1) - |les
@@ -977,6 +992,8 @@ def agg_beta(Query=None, Matrix=None, ext='.bed',
         df_dmr = pd.read_csv(os.path.expanduser(Query), sep='\t',
                              header=None, usecols=[0, 1, 2], skiprows=skiprows)
         df_dmr.columns = ['chrom', 'start', 'end']
+        df_dmr.drop_duplicates(inplace=True)
+        df_dmr.sort_values(['chrom', 'start', 'end'], inplace=True)
     elif isinstance(Query, str) and os.path.isdir(Query):
         Query = os.path.expanduser(Query)
         R = []
@@ -1020,6 +1037,21 @@ def agg_beta(Query=None, Matrix=None, ext='.bed',
             df.to_csv(Outfile, sep='\t', index=False, header=False, mode='a')
     pybedtools.cleanup(remove_all=True)
 
+
+def annot_dmr(dmr="merged_dmr.txt", matrix="merged_dmr.beta.txt",
+              outfile='dmr.annotated.txt'):
+    data = pd.read_csv(os.path.expanduser(matrix), sep='\t', index_col=[0, 1, 2])
+    df_dmr = pd.read_csv(dmr, sep='\t', index_col=[0, 1, 2])
+    assert data.shape[0] == df_dmr.shape[0]
+    data = data.loc[df_dmr.index.tolist()]
+    cols = data.columns.tolist()
+    a = data.values
+    df_dmr['Hypo'] = [cols[i] for i in np.argmin(a, axis=1)]
+    df_dmr['Hyper'] = [cols[i] for i in np.argmax(a, axis=1)]
+    df_dmr['Max'] = np.max(a, axis=1)
+    df_dmr['Min'] = np.min(a, axis=1)
+    df_dmr['delta_beta'] = df_dmr.Max - df_dmr.Min
+    df_dmr.to_csv(os.path.expanduser(outfile), sep='\t', index=True)
 
 if __name__ == "__main__":
     import fire
