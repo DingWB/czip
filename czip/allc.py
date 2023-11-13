@@ -888,10 +888,10 @@ def combp(input, outdir="cpv", n_jobs=24, dist=300, temp=True, bed=False):
             data = df.copy()
         else:
             data = pd.concat([data, df], ignore_index=True)
-    cols = data.columns.tolist()
+    # cols = data.columns.tolist()
     # data=data.groupby(cols[:3]).agg(lambda x:x.tolist())
     # data=data.applymap(lambda x:x[0] if len(x)==1 else ','.join(list(map(str,x))))
-    data.to_csv(merged_dmr_path, sep='\t', index=True)
+    data.to_csv(merged_dmr_path, sep='\t', index=False)
     if not bed:
         os.system(f"rm -rf {bed_dir}")
     if not temp:
@@ -1038,20 +1038,49 @@ def agg_beta(Query=None, Matrix=None, ext='.bed',
     pybedtools.cleanup(remove_all=True)
 
 
-def annot_dmr(dmr="merged_dmr.txt", matrix="merged_dmr.beta.txt",
-              outfile='dmr.annotated.txt'):
+def annot_dmr(dmr="merged_dmr.txt", matrix="merged_dmr.cell_class.beta.txt",
+              outfile='dmr.annotated.txt', delta_cutoff=None):
+    """
+    Annotate DMR result from cpv.
+
+    Parameters
+    ----------
+    dmr : path
+        Merged dmr from czip combp.
+    matrix :  path
+        result of agg_beta using dmr and output of merge_cz (fraction) as input.
+    outfile : path
+        annotated dmr, containing hypomethylated sname, delta
+    Returns
+    -------
+
+    """
     data = pd.read_csv(os.path.expanduser(matrix), sep='\t', index_col=[0, 1, 2])
-    df_dmr = pd.read_csv(dmr, sep='\t', index_col=[0, 1, 2])
-    assert data.shape[0] == df_dmr.shape[0]
-    data = data.loc[df_dmr.index.tolist()]
+    df_rows = data.index.to_frame()
+    # assert data.shape[0] == df_dmr.shape[0]
+    # data = data.loc[df_dmr.index.tolist()]
     cols = data.columns.tolist()
     a = data.values
-    df_dmr['Hypo'] = [cols[i] for i in np.argmin(a, axis=1)]
-    df_dmr['Hyper'] = [cols[i] for i in np.argmax(a, axis=1)]
-    df_dmr['Max'] = np.max(a, axis=1)
-    df_dmr['Min'] = np.min(a, axis=1)
-    df_dmr['delta_beta'] = df_dmr.Max - df_dmr.Min
-    df_dmr.to_csv(os.path.expanduser(outfile), sep='\t', index=True)
+    df_rows['Hypo'] = [cols[i] for i in np.argmin(a, axis=1)]
+    df_rows['Hyper'] = [cols[i] for i in np.argmax(a, axis=1)]
+    df_rows['Max'] = np.max(a, axis=1)
+    df_rows['Min'] = np.min(a, axis=1)
+    df_rows['delta_beta'] = df_rows.Max - df_rows.Min
+    df_dmr = pd.read_csv(dmr, sep='\t')
+    cols = df_dmr.columns.tolist()
+    n_cpg = df_dmr.iloc[:, :4].drop_duplicates().set_index(cols[:3])[cols[3]].to_dict()
+    dmr_sample_dict = df_dmr.loc[:, cols[:3] + ['sname']].drop_duplicates().groupby(
+        cols[:3]).sname.agg(lambda x: x.tolist())
+    df_rows['n_dms'] = df_rows.index.to_series().map(n_cpg)
+    df_rows['sname'] = df_rows.index.to_series().map(dmr_sample_dict)
+    df_rows['sname'] = df_rows.apply(lambda x: x.Hypo if x.Hypo in x.sname else np.nan, axis=1)
+    # only keep hypomethylated DMR
+    df_rows = df_rows.loc[~ df_rows.sname.isna()]
+    if not delta_cutoff is None:
+        df_rows = df_rows.loc[df_rows.delta_beta >= delta_cutoff]
+    df_rows.drop(['Hyper', 'sname'], axis=1, inplace=True)
+    df_rows.to_csv(os.path.expanduser(outfile),
+                   sep='\t', index=False)
 
 if __name__ == "__main__":
     import fire
