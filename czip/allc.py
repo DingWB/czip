@@ -453,10 +453,11 @@ def catchr(outdir, chrom, ext, batch_nblock, chunksize):
     return
 
 
-def merge_cz(indir=None, cz_paths=None, outfile=None, n_jobs=12, formats=['H', 'H'],
+def merge_cz(indir=None, cz_paths=None, class_table=None,
+             outfile=None, n_jobs=12, formats=['H', 'H'],
              Path_to_chrom=None, reference=None,
              keep_cat=False, batchsize=10, temp=False, bgzip=True,
-             chunksize=50000):
+             chunksize=50000, ext='.cz'):
     """
     Merge multiple .cz files. For example:
     czip merge_cz -i ./ -o major_type.2D.txt -n 96 -f 2D \
@@ -468,6 +469,10 @@ def merge_cz(indir=None, cz_paths=None, outfile=None, n_jobs=12, formats=['H', '
     indir :path
         If cz_paths is not provided, indir will be used to get cz_paths.
     cz_paths :paths
+    class_table: path
+        If class_table is given, multiple output will be generated based on the
+        snames and class from this class_table, each output will have a suffix of
+        class name in this table.
     outfile : path
     n_jobs :int
     formats : str of list
@@ -490,6 +495,22 @@ def merge_cz(indir=None, cz_paths=None, outfile=None, n_jobs=12, formats=['H', '
     -------
 
     """
+    if not class_table is None:
+        df_class = pd.read_csv(class_table, sep='\t', header=None,
+                               names=['sname', 'cell_class'])
+        snames = [file.replace(ext, '') for file in os.listdir(indir)]
+        df_class = df_class.loc[df_class.sname.isin(snames)]
+        D = df_class.groupby('cell_class').sname.apply(
+            lambda x: x.tolist()).to_dict()
+        for key in D:
+            cz_paths = [sname + ext for sname in D[key]]
+            merge_cz(indir, cz_paths, class_table=None,
+                     outfile=f"{outfile}.{key}{ext}", n_jobs=n_jobs,
+                     formats=formats, Path_to_chrom=Path_to_chrom,
+                     reference=reference, keep_cat=keep_cat,
+                     batchsize=batchsize, temp=temp, bgzip=bgzip,
+                     chunksize=chunksize, ext=ext)
+        return None
     if outfile is None:
         outfile = 'merged.cz' if formats not in ['fraction', '2D'] else 'merged.txt'
     outfile = os.path.abspath(os.path.expanduser(outfile))
@@ -497,7 +518,7 @@ def merge_cz(indir=None, cz_paths=None, outfile=None, n_jobs=12, formats=['H', '
         print(f"{outfile} existed, skip.")
         return
     if cz_paths is None:
-        cz_paths = [file for file in os.listdir(indir) if file.endswith('.cz')]
+        cz_paths = [file for file in os.listdir(indir) if file.endswith(ext)]
     reader = Reader(os.path.join(indir, cz_paths[0]))
     header = reader.header
     reader.close()
@@ -896,7 +917,6 @@ def combp(input, outdir="cpv", n_jobs=24, dist=300, temp=True, bed=False):
         os.system(f"rm -rf {bed_dir}")
     if not temp:
         os.system(f"rm -rf {tmpdir}")
-
 
 def prepare_methylpy(indir=None, allc_paths=None, class_table=None,
                      ext=".allc.tsv.gz",
