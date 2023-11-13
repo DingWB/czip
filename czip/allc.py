@@ -1038,7 +1038,7 @@ def agg_beta(Query=None, Matrix=None, ext='.bed',
     pybedtools.cleanup(remove_all=True)
 
 
-def annot_dmr(dmr="merged_dmr.txt", matrix="merged_dmr.cell_class.beta.txt",
+def annot_dmr(input="merged_dmr.txt", matrix="merged_dmr.cell_class.beta.txt",
               outfile='dmr.annotated.txt', delta_cutoff=None):
     """
     Annotate DMR result from cpv.
@@ -1066,7 +1066,7 @@ def annot_dmr(dmr="merged_dmr.txt", matrix="merged_dmr.cell_class.beta.txt",
     df_rows['Max'] = np.max(a, axis=1)
     df_rows['Min'] = np.min(a, axis=1)
     df_rows['delta_beta'] = df_rows.Max - df_rows.Min
-    df_dmr = pd.read_csv(dmr, sep='\t')
+    df_dmr = pd.read_csv(os.path.expanduser(input), sep='\t')
     cols = df_dmr.columns.tolist()
     n_cpg = df_dmr.iloc[:, :4].drop_duplicates().set_index(cols[:3])[cols[3]].to_dict()
     dmr_sample_dict = df_dmr.loc[:, cols[:3] + ['sname']].drop_duplicates().groupby(
