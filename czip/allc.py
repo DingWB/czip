@@ -780,7 +780,7 @@ def __split_mat(infile, chrom, snames, outdir, n_ref):
     fout_dict = {}
     for sname in snames:
         fout_dict[sname] = open(os.path.join(outdir, f"{sname}.{chrom}.bed"), 'w')
-        fout_dict[sname].write("chrom\tstart\tend\tstrand\tpval\n")
+        fout_dict[sname].write("chrom\tstart\tend\tstrand\tpval\todd_ratio\n")
     for line in records:
         values = line.replace('\n', '').split('\t')
         if len(values) < N:
@@ -789,11 +789,12 @@ def __split_mat(infile, chrom, snames, outdir, n_ref):
         ch, beg, end, strand = values[:4]
         beg = int(beg)
         end = int(end)
-        for sname in snames:
-            fout_dict[sname].write(f"{chrom}\t{beg}\t{end}\t{strand}")
         for i, sname in enumerate(snames):
+            OR = float(values[n_ref + i * 2])
+            if OR >= 1:  # hyper methylation
+                continue  # only keep hypomethylated
             pval = values[n_ref + i * 2 + 1]
-            fout_dict[sname].write(f"\t{pval}\n")
+            fout_dict[sname].write(f"{chrom}\t{beg}\t{end}\t{strand}\t{pval}\t{OR}\n")
     for sname in snames:
         fout_dict[sname].close()
     tbi.close()
