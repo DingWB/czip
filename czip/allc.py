@@ -434,7 +434,7 @@ def merge_cz_worker(outfile_cat, outdir, chrom, dims, formats,
         writer1.write_chunk(byte_data, [chrom])
     writer1.close()
     reader1.close()
-    print(chrom, block_idx_start, "done", "\t" * 8, end='\r')
+    # print(chrom, block_idx_start, "done", "\t" * 8, end='\r')
     return
 
 
@@ -517,6 +517,7 @@ def merge_cz(indir=None, cz_paths=None, class_table=None,
             outfile = 'merged.cz' if formats not in ['fraction', '2D'] else 'merged.txt'
         else:
             outfile = f'{prefix}.cz' if formats not in ['fraction', '2D'] else f'{prefix}.txt'
+    print(outfile)
     outfile = os.path.abspath(os.path.expanduser(outfile))
     if os.path.exists(outfile):
         print(f"{outfile} existed, skip.")
