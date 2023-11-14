@@ -506,7 +506,7 @@ def merge_cz(indir=None, cz_paths=None, class_table=None,
             print(key)
             cz_paths = [sname + ext for sname in D[key]]
             merge_cz(indir, cz_paths, class_table=None,
-                     outfile=outfile, prefix=prefix, n_jobs=n_jobs,
+                     outfile=None, prefix=prefix, n_jobs=n_jobs,
                      formats=formats, Path_to_chrom=Path_to_chrom,
                      reference=reference, keep_cat=keep_cat,
                      batchsize=batchsize, temp=temp, bgzip=bgzip,
