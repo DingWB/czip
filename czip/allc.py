@@ -414,7 +414,7 @@ def merge_cz_worker(outfile_cat, outdir, chrom, dims, formats,
         if formats == 'fisher':
             df = _fisher_worker(df)
         df.to_csv(outname, sep='\t', index=False)
-        print(chrom, block_idx_start, "done")
+        # print(chrom, block_idx_start, "done")
         return
 
     writer1 = Writer(outname, Formats=formats,
@@ -506,7 +506,7 @@ def merge_cz(indir=None, cz_paths=None, class_table=None,
             print(key)
             cz_paths = [sname + ext for sname in D[key]]
             merge_cz(indir, cz_paths, class_table=None,
-                     outfile=None, prefix=prefix, n_jobs=n_jobs,
+                     outfile=None, prefix=f"{prefix}.{key}", n_jobs=n_jobs,
                      formats=formats, Path_to_chrom=Path_to_chrom,
                      reference=reference, keep_cat=keep_cat,
                      batchsize=batchsize, temp=temp, bgzip=bgzip,
@@ -777,7 +777,6 @@ def extractCG(input=None, outfile=None, ssi=None, chunksize=5000,
     reader.close()
     ssi_reader.close()
 
-
 def __split_mat(infile, chrom, snames, outdir, n_ref):
     tbi = pysam.TabixFile(infile)
     records = tbi.fetch(reference=chrom)
@@ -795,11 +794,17 @@ def __split_mat(infile, chrom, snames, outdir, n_ref):
         beg = int(beg)
         end = int(end)
         for i, sname in enumerate(snames):
-            OR = float(values[n_ref + i * 2])
+            or_value = values[n_ref + i * 2]
+            try:
+                OR = float(or_value)
+            except:
+                OR = 1
             if OR >= 1:  # hyper methylation
-                continue  # only keep hypomethylated
-            pval = values[n_ref + i * 2 + 1]
-            fout_dict[sname].write(f"{chrom}\t{beg}\t{end}\t{strand}\t{pval}\t{OR}\n")
+                # continue  # only keep hypomethylated
+                pval = 1
+            else:
+                pval = values[n_ref + i * 2 + 1]
+            fout_dict[sname].write(f"{chrom}\t{beg}\t{end}\t{strand}\t{pval}\t{or_value}\n")
     for sname in snames:
         fout_dict[sname].close()
     tbi.close()
