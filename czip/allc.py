@@ -503,6 +503,7 @@ def merge_cz(indir=None, cz_paths=None, class_table=None,
         D = df_class.groupby('cell_class').sname.apply(
             lambda x: x.tolist()).to_dict()
         for key in D:
+            print(key)
             cz_paths = [sname + ext for sname in D[key]]
             merge_cz(indir, cz_paths, class_table=None,
                      outfile=outfile, prefix=prefix, n_jobs=n_jobs,
@@ -681,7 +682,7 @@ def merge_cz(indir=None, cz_paths=None, class_table=None,
     if not temp:
         print(f"Removing temp dir {outdir}")
         os.system(f"rm -rf {outdir}")
-    if bgzip:
+    if bgzip and not outfile.endswith(ext):
         cmd = f"bgzip {outfile} && tabix -S 1 -s 1 -b 2 -e 3 -f {outfile}.gz"
         print(f"Run bgzip, CMD: {cmd}")
         os.system(cmd)
