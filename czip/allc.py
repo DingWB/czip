@@ -514,9 +514,9 @@ def merge_cz(indir=None, cz_paths=None, class_table=None,
         return None
     if outfile is None:
         if prefix is None:
-            outfile = 'merged.cz' if formats not in ['fraction', '2D'] else 'merged.txt'
+            outfile = 'merged.cz' if formats not in ['fraction', '2D', 'fisher'] else 'merged.txt'
         else:
-            outfile = f'{prefix}.cz' if formats not in ['fraction', '2D'] else f'{prefix}.txt'
+            outfile = f'{prefix}.cz' if formats not in ['fraction', '2D', 'fisher'] else f'{prefix}.txt'
     print(outfile)
     outfile = os.path.abspath(os.path.expanduser(outfile))
     if os.path.exists(outfile):
@@ -582,12 +582,12 @@ def merge_cz(indir=None, cz_paths=None, class_table=None,
 
     # First, merge different batch for each chrom
     if formats in ['fraction', '2D', 'fisher']:
-        ext = 'txt'
+        out_ext = 'txt'
     else:
-        ext = 'cz'
-    if ext == 'cz':
+        out_ext = 'cz'
+    if out_ext == 'cz':
         for chrom in chroms:
-            outname = os.path.join(outdir, f"{chrom}.{ext}")
+            outname = os.path.join(outdir, f"{chrom}.{out_ext}")
             writer = Writer(Output=outname, Formats=formats,
                             Columns=header['Columns'], Dimensions=header['Dimensions'],
                             message=outfile_cat)
@@ -599,7 +599,7 @@ def merge_cz(indir=None, cz_paths=None, class_table=None,
             writer._block_1st_record_virtual_offsets = []
             writer._chunk_dims = [chrom]
             block_idx_start = 0
-            infile = os.path.join(outdir, chrom + f'.{block_idx_start}.{ext}')
+            infile = os.path.join(outdir, chrom + f'.{block_idx_start}.{out_ext}')
             while os.path.exists(infile):
                 reader = Reader(infile)
                 reader._load_chunk(reader.header['header_size'])
@@ -617,7 +617,7 @@ def merge_cz(indir=None, cz_paths=None, class_table=None,
                     block_start_offset = None
                 reader.close()
                 block_idx_start += batch_nblock
-                infile = os.path.join(outdir, chrom + f'.{block_idx_start}.{ext}')
+                infile = os.path.join(outdir, chrom + f'.{block_idx_start}.{out_ext}')
             # write chunk tail
             writer.close()
     else:  # txt
@@ -625,7 +625,7 @@ def merge_cz(indir=None, cz_paths=None, class_table=None,
         jobs = []
         for chrom in chroms:
             job = pool.apply_async(catchr,
-                                   (outdir, chrom, ext, batch_nblock, chunksize))
+                                   (outdir, chrom, out_ext, batch_nblock, chunksize))
             jobs.append(job)
         for job in jobs:
             r = job.get()
@@ -633,7 +633,7 @@ def merge_cz(indir=None, cz_paths=None, class_table=None,
         pool.join()
 
     # Second, merge chromosomes to outfile
-    if ext == 'cz':
+    if out_ext == 'cz':
         writer = Writer(Output=outfile, Formats=formats,
                         Columns=header['Columns'], Dimensions=header['Dimensions'],
                         message="merged")
@@ -656,7 +656,7 @@ def merge_cz(indir=None, cz_paths=None, class_table=None,
         print("Merging chromosomes..")
         for chrom in chroms:
             print(chrom, "\t" * 4, end='\r')
-            infile = os.path.join(outdir, f"{chrom}.{ext}")
+            infile = os.path.join(outdir, f"{chrom}.{out_ext}")
             if not reference is None:
                 df_ref = pd.DataFrame([
                     record for record in reader.fetch(tuple([chrom]))
