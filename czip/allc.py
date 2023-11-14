@@ -454,7 +454,7 @@ def catchr(outdir, chrom, ext, batch_nblock, chunksize):
 
 
 def merge_cz(indir=None, cz_paths=None, class_table=None,
-             outfile=None, n_jobs=12, formats=['H', 'H'],
+             outfile=None, prefix=None, n_jobs=12, formats=['H', 'H'],
              Path_to_chrom=None, reference=None,
              keep_cat=False, batchsize=10, temp=False, bgzip=True,
              chunksize=50000, ext='.cz'):
@@ -505,14 +505,17 @@ def merge_cz(indir=None, cz_paths=None, class_table=None,
         for key in D:
             cz_paths = [sname + ext for sname in D[key]]
             merge_cz(indir, cz_paths, class_table=None,
-                     outfile=f"{outfile}.{key}{ext}", n_jobs=n_jobs,
+                     outfile=outfile, prefix=prefix, n_jobs=n_jobs,
                      formats=formats, Path_to_chrom=Path_to_chrom,
                      reference=reference, keep_cat=keep_cat,
                      batchsize=batchsize, temp=temp, bgzip=bgzip,
                      chunksize=chunksize, ext=ext)
         return None
     if outfile is None:
-        outfile = 'merged.cz' if formats not in ['fraction', '2D'] else 'merged.txt'
+        if prefix is None:
+            outfile = 'merged.cz' if formats not in ['fraction', '2D'] else 'merged.txt'
+        else:
+            outfile = f'{prefix}.cz' if formats not in ['fraction', '2D'] else f'{prefix}.txt'
     outfile = os.path.abspath(os.path.expanduser(outfile))
     if os.path.exists(outfile):
         print(f"{outfile} existed, skip.")
