@@ -7,7 +7,8 @@ from .cz import (
 from .allc import (AllC, generate_ssi, bed2cz,
                    merge_cz, extractCG,
                    merge_cell_type,
-                   combp, prepare_methylpy, agg_beta, annot_dmr)
+                   combp, prepare_methylpy, agg_beta, annot_dmr,
+                   methylpy_heatmap)
 
 __version__ = "0.2.1"
 
@@ -28,6 +29,7 @@ def main():
             'prepare_methylpy': prepare_methylpy,
             'agg_beta': agg_beta,
             'annot_dmr': annot_dmr,
+            'methylpy_heatmap': methylpy_heatmap,
         }
 	)
 
