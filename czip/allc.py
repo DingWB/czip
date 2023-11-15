@@ -1220,7 +1220,7 @@ def methylpy_heatmap(Data="dmr.major_type.beta.txt",
                                cmap='parula', rasterized=True, label='Scaled Avg Beta',
                                row_split_gap=1, col_split_gap=0.8, legend_gap=8,
                                xlabel=xlabel,
-                               ylabel=f"{ylabel}(n_cpg>={n_cpgs} & delta >= {delta};No= {data.shape[0]}; )",
+                               ylabel=f"{ylabel}(n_cpgs>={n_cpgs} & delta >= {delta};N= {data.shape[0]})",
                                xlabel_kws=dict(color='black', fontsize=14, labelpad=0),
                                ylabel_kws=dict(color='black', fontsize=14, labelpad=0),
                                # increace labelpad manually using labelpad (points)
