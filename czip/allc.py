@@ -1178,6 +1178,7 @@ def methylpy_heatmap(Data="dmr.major_type.beta.txt",
     else:
         row_split_order = snames
     if not Col is None:
+        col_cluster = True
         col_ha = pch.HeatmapAnnotation(
             # label=pch.anno_label(df_col[cell_type_col],
             #                         merge=True, rotation=15,
@@ -1191,9 +1192,12 @@ def methylpy_heatmap(Data="dmr.major_type.beta.txt",
             axis=1)
         col_split = df_col[cell_type_col]
     else:
+        col_cluster = False
+        df_col = df_col.loc[snames]
+        data = data.loc[:, snames]
         col_ha = pch.HeatmapAnnotation(
             label=pch.anno_label(df_col[cell_type_col],
-                                 merge=True, rotation=15,
+                                 merge=True, rotation=45,
                                  colors='black'),
             axis=1)
         col_split = None
@@ -1205,7 +1209,7 @@ def methylpy_heatmap(Data="dmr.major_type.beta.txt",
         height = 3.5
     plt.figure(figsize=(6, height))
     cm = pch.ClusterMapPlotter(data=data, top_annotation=col_ha,
-                               left_annotation=row_ha,
+                               left_annotation=row_ha, col_cluster=col_cluster,
                                standard_scale=standard_scale,
                                show_rownames=False, show_colnames=False,
                                row_dendrogram=False, col_dendrogram=False,
