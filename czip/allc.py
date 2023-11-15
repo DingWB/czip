@@ -1194,7 +1194,7 @@ def methylpy_heatmap(Data="dmr.major_type.beta.txt",
         col_ha = pch.HeatmapAnnotation(
             label=pch.anno_label(df_col[cell_type_col],
                                  merge=True, rotation=15,
-                                 colors=colors),
+                                 colors='black'),
             axis=1)
         col_split = None
 
