@@ -1117,7 +1117,7 @@ def annot_dmr(input="merged_dmr.txt", matrix="merged_dmr.cell_class.beta.txt",
 
 def methylpy_heatmap(Data="dmr.major_type.beta.txt",
                      Row="methylpy_rms_results_collapsed.tsv",
-                     Col="~/Projects/mouse-pfc/5kb_mC_hic_clustering/L2/major_type_to_cell_class.tsv",
+                     Col=None,
                      outfile="heatmap.pdf", standard_scale=0, xlabel='Cell Types', ylabel='DMRs',
                      delta=0.3, sample=None, n_cpgs=2, no_multi_group=True,
                      save_data=True):
@@ -1143,11 +1143,14 @@ def methylpy_heatmap(Data="dmr.major_type.beta.txt",
     df_row.start = df_row.start - 1
     cols = df_row.columns.tolist()
     df_row.set_index(cols[:3], inplace=True)
-    print("Reading and processing df_col..")
-    df_col = pd.read_csv(os.path.expanduser(Col), sep='\t', index_col=0)
     print("Reading and processing data..")
     data = pd.read_csv(os.path.expanduser(Data), sep='\t', index_col=[0, 1, 2])
     common_rows = list(set(df_row.index.tolist()) & set(data.index.tolist()))
+    print("Reading and processing df_col..")
+    if not Col is None:
+        df_col = pd.read_csv(os.path.expanduser(Col), sep='\t', index_col=0)
+    else:
+        df_col = data.columns.to_frame(name='samples')
     common_cols = list(set(df_col.index.tolist()) & set(data.columns.tolist()))
     df_row = df_row.loc[common_rows]
     df_col = df_col.loc[common_cols]
@@ -1174,17 +1177,27 @@ def methylpy_heatmap(Data="dmr.major_type.beta.txt",
         row_split_order = snames + ['Multi']
     else:
         row_split_order = snames
-    col_ha = pch.HeatmapAnnotation(
-        # label=pch.anno_label(df_col[cell_type_col],
-        #                         merge=True, rotation=15,
-        #                      colors=colors),
-        CellType=pch.anno_simple(df_col[cell_type_col],
-                                 add_text=True, colors=colors,
-                                 legend=False, height=5,
-                                 text_kws=dict(
-                                     weight='bold'
-                                 )),
-        axis=1)
+    if not Col is None:
+        col_ha = pch.HeatmapAnnotation(
+            # label=pch.anno_label(df_col[cell_type_col],
+            #                         merge=True, rotation=15,
+            #                      colors=colors),
+            CellType=pch.anno_simple(df_col[cell_type_col],
+                                     add_text=True, colors=colors,
+                                     legend=False, height=5,
+                                     text_kws=dict(
+                                         weight='bold'
+                                     )),
+            axis=1)
+        col_split = df_col[cell_type_col]
+    else:
+        col_ha = pch.HeatmapAnnotation(
+            label=pch.anno_label(df_col[cell_type_col],
+                                 merge=True, rotation=15,
+                                 colors=colors),
+            axis=1)
+        col_split = None
+
     height = data.shape[0] * 0.01
     if height > 12:
         height = 12
@@ -1197,7 +1210,7 @@ def methylpy_heatmap(Data="dmr.major_type.beta.txt",
                                show_rownames=False, show_colnames=False,
                                row_dendrogram=False, col_dendrogram=False,
                                row_split=df_row.Samples,
-                               col_split=df_col[cell_type_col],
+                               col_split=col_split,
                                col_split_order=snames,
                                row_split_order=row_split_order,
                                cmap='parula', rasterized=True, label='Scaled Avg Beta',
