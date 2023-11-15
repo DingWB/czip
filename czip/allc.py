@@ -1104,14 +1104,124 @@ def annot_dmr(input="merged_dmr.txt", matrix="merged_dmr.cell_class.beta.txt",
         cols[:3]).sname.agg(lambda x: x.tolist())
     df_rows['n_dms'] = df_rows.index.to_series().map(n_cpg)
     df_rows['sname'] = df_rows.index.to_series().map(dmr_sample_dict)
-    df_rows['sname'] = df_rows.apply(lambda x: x.Hypo if x.Hypo in x.sname else np.nan, axis=1)
+    # df_rows['sname'] = df_rows.apply(lambda x: x.Hypo if x.Hypo in x.sname else np.nan, axis=1)
     # only keep hypomethylated DMR
-    df_rows = df_rows.loc[~ df_rows.sname.isna()]
+    # df_rows = df_rows.loc[~ df_rows.sname.isna()]
+    df_rows['sname'] = df_rows['sname'].apply(lambda x: ','.join(x))
     if not delta_cutoff is None:
         df_rows = df_rows.loc[df_rows.delta_beta >= delta_cutoff]
-    df_rows.drop(['Hyper', 'sname'], axis=1, inplace=True)
+    # df_rows.drop(['Hyper'], axis=1, inplace=True)
     df_rows.to_csv(os.path.expanduser(outfile),
                    sep='\t', index=False)
+
+
+def methylpy_heatmap(Data="dmr.major_type.beta.txt",
+                     Row="methylpy_rms_results_collapsed.tsv",
+                     Col="~/Projects/mouse-pfc/5kb_mC_hic_clustering/L2/major_type_to_cell_class.tsv",
+                     outfile="heatmap.pdf", standard_scale=0, xlabel='Cell Types', ylabel='DMRs',
+                     delta=0.3, sample=None, n_cpgs=2, no_multi_group=True,
+                     save_data=True):
+    import matplotlib.pylab as plt
+    import PyComplexHeatmap as pch
+    import pickle
+    print("Reading and processing df_row..")
+    df_row = pd.read_csv(os.path.expanduser(Row), sep='\t', index_col=[0, 1, 2])
+    df_row.columns = [col.lstrip('methylation_level_') if col.startswith(
+        'methylation_level_') else col
+                      for col in df_row.columns.tolist()]
+    df_row.rename(columns={'hypomethylated_samples': 'Samples',
+                           'number_of_dms': 'N'}, inplace=True)
+    df_row.drop('hypermethylated_samples', axis=1, inplace=True)
+    snames = df_row.columns.tolist()[2:]
+    a = df_row.loc[:, snames].values
+    df_row.insert(2, 'Delta', np.max(a, axis=1) - np.min(a, axis=1))
+    df_row = df_row.loc[~ df_row.Samples.isna()]
+    df_row = df_row.loc[df_row.Delta >= delta]
+    df_row = df_row.loc[:, ['Samples', 'N', 'Delta']]
+    df_row.Samples = df_row.Samples.apply(lambda x: x if ',' not in x else 'Multi')
+    df_row.reset_index(inplace=True)
+    df_row.start = df_row.start - 1
+    cols = df_row.columns.tolist()
+    df_row.set_index(cols[:3], inplace=True)
+    print("Reading and processing df_col..")
+    df_col = pd.read_csv(os.path.expanduser(Col), sep='\t', index_col=0)
+    print("Reading and processing data..")
+    data = pd.read_csv(os.path.expanduser(Data), sep='\t', index_col=[0, 1, 2])
+    common_rows = list(set(df_row.index.tolist()) & set(data.index.tolist()))
+    common_cols = list(set(df_col.index.tolist()) & set(data.columns.tolist()))
+    df_row = df_row.loc[common_rows]
+    df_col = df_col.loc[common_cols]
+    cell_type_col = df_col.columns.tolist()[0]
+    if not sample is None:
+        df_row = df_row.sample(sample)
+    if not n_cpgs is None:
+        df_row = df_row.loc[df_row.N >= n_cpgs]
+    if no_multi_group:
+        df_row = df_row.loc[df_row.Samples != 'Multi']
+    data = data.loc[df_row.index.tolist(), df_col.index.tolist()]
+    print(data.shape)
+
+    row_ha = pch.HeatmapAnnotation(
+        CellType=pch.anno_simple(df_row.Samples, cmap='Set1',
+                                 rasterized=True,
+                                 # add_text=True,
+                                 # text_kws=dict(color='black')
+                                 ),
+        axis=0)
+    colors = row_ha.annotations[0].color_dict.copy()
+    if 'Multi' in colors:
+        del colors['Multi']
+        row_split_order = snames + ['Multi']
+    else:
+        row_split_order = snames
+    col_ha = pch.HeatmapAnnotation(
+        # label=pch.anno_label(df_col[cell_type_col],
+        #                         merge=True, rotation=15,
+        #                      colors=colors),
+        CellType=pch.anno_simple(df_col[cell_type_col],
+                                 add_text=True, colors=colors,
+                                 legend=False, height=5,
+                                 text_kws=dict(
+                                     weight='bold'
+                                 )),
+        axis=1)
+    height = data.shape[0] * 0.01
+    if height > 12:
+        height = 12
+    if height < 3.5:
+        height = 3.5
+    plt.figure(figsize=(6, height))
+    cm = pch.ClusterMapPlotter(data=data, top_annotation=col_ha,
+                               left_annotation=row_ha,
+                               standard_scale=standard_scale,
+                               show_rownames=False, show_colnames=False,
+                               row_dendrogram=False, col_dendrogram=False,
+                               row_split=df_row.Samples,
+                               col_split=df_col[cell_type_col],
+                               col_split_order=snames,
+                               row_split_order=row_split_order,
+                               cmap='parula', rasterized=True, label='Scaled Avg Beta',
+                               row_split_gap=1, col_split_gap=0.8, legend_gap=8,
+                               xlabel=xlabel,
+                               ylabel=f"{ylabel}(n_cpg>={n_cpgs} & delta >= {delta};No= {data.shape[0]}; )",
+                               xlabel_kws=dict(color='black', fontsize=14, labelpad=0),
+                               ylabel_kws=dict(color='black', fontsize=14, labelpad=0),
+                               # increace labelpad manually using labelpad (points)
+                               # xlabel_bbox_kws=dict(facecolor='chocolate'),xlabel_side='top',
+                               )
+    # cm.ax.set_title("Beta", y=1.03, fontdict={'fontweight': 'bold'})
+    plt.savefig(outfile, bbox_inches='tight')
+    plt.show()
+    if save_data:
+        df_row.to_csv(outfile + '.rows.txt', sep='\t', index=True)
+        df_col.to_csv(outfile + '.cols.txt', sep='\t', index=True)
+        data.to_csv(outfile + '.data.txt', sep='\t', index=True)
+        f = open(outfile + '.colors.pkl', 'wb')
+        pickle.dump(colors, f)
+        f.close()
+        # f=open(outfile+'.colors.pkl','rb')
+        # pickle.load(f)
+
 
 if __name__ == "__main__":
     import fire
