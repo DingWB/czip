@@ -1066,7 +1066,7 @@ def agg_beta(Query=None, Matrix=None, ext='.bed',
             df.to_csv(Outfile, sep='\t', index=False, header=True)
         else:
             df.to_csv(Outfile, sep='\t', index=False, header=False, mode='a')
-    pybedtools.cleanup(remove_all=True)
+    # pybedtools.cleanup(remove_all=True)
 
 
 def annot_dmr(input="merged_dmr.txt", matrix="merged_dmr.cell_class.beta.txt",
@@ -1207,7 +1207,7 @@ def methylpy_heatmap(Data="dmr.major_type.beta.txt",
         height = 12
     if height < 3.5:
         height = 3.5
-    plt.figure(figsize=(6, height))
+    plt.figure(figsize=(6.5, height))
     cm = pch.ClusterMapPlotter(data=data, top_annotation=col_ha,
                                left_annotation=row_ha, col_cluster=col_cluster,
                                standard_scale=standard_scale,
@@ -1219,7 +1219,7 @@ def methylpy_heatmap(Data="dmr.major_type.beta.txt",
                                row_split_order=row_split_order,
                                cmap='parula', rasterized=True, label='Scaled Avg Beta',
                                row_split_gap=1, col_split_gap=0.8, legend_gap=8,
-                               xlabel=xlabel,
+                               xlabel=xlabel, legend_hpad=0,
                                ylabel=f"{ylabel}(n_cpgs>={n_cpgs} & delta >= {delta};N= {data.shape[0]})",
                                xlabel_kws=dict(color='black', fontsize=14, labelpad=0),
                                ylabel_kws=dict(color='black', fontsize=14, labelpad=0),
