@@ -1239,7 +1239,6 @@ def methylpy_heatmap(Data="dmr.major_type.beta.txt",
         # f=open(outfile+'.colors.pkl','rb')
         # pickle.load(f)
 
-
 if __name__ == "__main__":
     import fire
 

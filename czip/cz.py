@@ -15,6 +15,7 @@ _chunk_magic = b"MC"
 _BLOCK_MAX_LEN = 65535
 _bcz_eof = b"\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00BM\x02\x00\x1b\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00"
 _version = 1.0
+__compiled__ = "python"
 
 def dtype_func(f):
     if f in ['f', 'd']:
