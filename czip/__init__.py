@@ -4,10 +4,10 @@ from .cz import (
     Writer,
     extract
 )
-from .allc import (AllC, generate_ssi, bed2cz,
+from .allc import (AllC, generate_ssi1, bed2cz, generate_ssi2,
                    merge_cz, extractCG,
                    merge_cell_type,
-                   combp, prepare_methylpy, agg_beta, annot_dmr,
+                   combp, prepare_methylpy, intersect, annot_dmr,
                    methylpy_heatmap)
 
 __version__ = "0.2.1"
@@ -20,14 +20,15 @@ def main():
             'Reader': Reader,
             'AllC': AllC,
             'bed2cz': bed2cz,
-            'generate_ssi': generate_ssi,
+            'generate_ssi1': generate_ssi1,
+            'generate_ssi2': generate_ssi2,
             'merge_cz': merge_cz,
             'merge_cell_type': merge_cell_type,
             'extract': extract,
             'extractCG': extractCG,
             "combp": combp,
             'prepare_methylpy': prepare_methylpy,
-            'agg_beta': agg_beta,
+            'intersect': intersect,
             'annot_dmr': annot_dmr,
             'methylpy_heatmap': methylpy_heatmap,
         }

@@ -307,9 +307,10 @@ def _isCH(record):
 
 
 # ==========================================================
-def generate_ssi(Input, output=None, pattern="CGN"):
+def generate_ssi1(input, output=None, pattern="CGN"):
     """
-    Generate ssi (subset index) for a given input .cz
+    Generate 1D ssi (subset index) for a given input .cz, 1D means calculating
+    the ID list for a given pattern.
 
     Parameters
     ----------
@@ -330,15 +331,42 @@ def generate_ssi(Input, output=None, pattern="CGN"):
     else:
         raise ValueError("Currently, only CGN, CHN, +CGN supported")
     if output is None:
-        output = Input + '.' + pattern + '.ssi'
+        output = input + '.' + pattern + '.ssi'
     else:
         output = os.path.abspath(os.path.expanduser(output))
-    reader = Reader(Input)
+    reader = Reader(input)
     reader.category_ssi(output=output, formats=['I'], columns=['ID'],
                         dimensions=['chrom'], match_func=judge_func,
                         chunksize=2000)
     reader.close()
 
+
+def generate_ssi2(input, output=None, bed=None,
+                  n_jobs=4):  # 2D ssi
+    """
+    Generate subset index for a genomic region bed file. For example:
+        czip generate_ssi2 -i ~/Ref/mm10/annotations/mm10_with_chrL.allc.cz \
+        -o mm10_with_chrL.allc.genes_flank2k.ssi -b genes_flank2k.bed.gz -n 4
+    Parameters
+    ----------
+    input :
+    output :
+    bed :
+    n_jobs :
+
+    Returns
+    -------
+
+    """
+    bed = os.path.abspath(os.path.expanduser(bed))
+    input = os.path.abspath(os.path.expanduser(input))
+    if output is None:
+        output = input + '.' + os.path.basename(bed) + '.ssi'
+    else:
+        output = os.path.abspath(os.path.expanduser(output))
+    reader = Reader(input)
+    reader.regions_ssi(output=output, bed=bed, n_jobs=n_jobs)
+    reader.close()
 
 # ==========================================================
 def _fisher_worker(df):
@@ -708,7 +736,7 @@ def merge_cell_type(indir=None, cell_table=None, outdir=None,
                  outfile=outfile, n_jobs=n_jobs, Path_to_chrom=Path_to_chrom)
 # ==========================================================
 def extractCG(input=None, outfile=None, ssi=None, chunksize=5000,
-              merge_strand=False):
+              merge_cg=False):
     """
     Extract CG context from .cz file
 
@@ -718,7 +746,7 @@ def extractCG(input=None, outfile=None, ssi=None, chunksize=5000,
     outfile :path
     ssi : path
         ssi should be ssi to mm10_with_chrL.allc.cz.CGN.ssi, not forward
-        strand ssi, but after merge (if merge_strand is True), forward ssi
+        strand ssi, but after merge (if merge_cg is True), forward ssi
         mm10_with_chrL.allc.cz.+CGN.ssi should be used to generate
          reference, one can
         run: czip extract -m mm10_with_chrL.allc.cz
@@ -726,7 +754,7 @@ def extractCG(input=None, outfile=None, ssi=None, chunksize=5000,
         -b mm10_with_chrL.allc.cz.+CGN.ssi and use
         mm10_with_chrL.allCG.forward.cz as new reference.
     chunksize :int
-    merge_strand: bool
+    merge_cg: bool
         after merging, only forward strand would be kept, reverse strand values
         would be added to the corresponding forward strand.
 
@@ -751,7 +779,7 @@ def extractCG(input=None, outfile=None, ssi=None, chunksize=5000,
         records = reader._getRecordsByIds(dim, IDs)
         data, count = b'', 0
         # for CG, if pos is forward (+), then pos+1 is reverse strand (-)
-        if merge_strand:
+        if merge_cg:
             for i, record in enumerate(records):  # unpacked bytes
                 if i % 2 == 0:
                     v0 = struct.unpack(f"<{reader.fmts}", record)
@@ -979,9 +1007,9 @@ def prepare_methylpy(indir=None, allc_paths=None, class_table=None,
         print(template)
 
 
-def agg_beta(Query=None, Matrix=None, ext='.bed',
-             Outfile='result.txt', skiprows=1, n_ref=5, methylpy=True,
-             bedtools_dir=True, chunksize=5000):
+def intersect(Query=None, Matrix=None, ext='.bed',
+              Outfile='result.txt', skiprows=1, n_ref=5, methylpy=True,
+              bedtools_dir=True, chunksize=5000):
     """
     Equal to awk 'BEGIN{FS=OFS="\t"}; {if(NR>1){print($1,$2-1,$3,$4)}}' DMR/methylpy.Exc_rms_results_collapsed.tsv | bedtools intersect -a stdin -b ../MajorType/matrix/major_type.beta.bed.gz -sorted -loj |cat <(zcat ../MajorType/matrix/major_type.beta.bed.gz |head -n 1) - |les
 

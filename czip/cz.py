@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import gzip
 import math
+import multiprocessing
 
 _bcz_magic = b'BMZIP'
 _block_magic = b"MB"
@@ -44,7 +45,7 @@ def get_dtfuncs(formats,tobytes=True):
     if not tobytes:
         D['s']=str
         D['c']=str
-    return [D[t[-1]] for t in formats]
+    return [D[t] for t in formats]
 
 
 # ==========================================================
@@ -590,6 +591,74 @@ class Reader:
         if not reference is None:
             ref_reader.close()
 
+    @staticmethod
+    def regions_ssi_worker(input, output, dim, df1, Formats, Columns, Dimensions,
+                           chunksize):
+        print(dim)
+        reader = Reader(input)
+        positions = df1.loc[:, ['start', 'end']].values.tolist()
+        records = reader.pos2id(dim, positions, col_to_query=0)
+
+        writer = Writer(output, Formats=Formats,
+                        Columns=Columns, Dimensions=Dimensions,
+                        message=os.path.basename(input))
+        data, i = b'', 0
+        dtfuncs = get_dtfuncs(writer.Formats)
+
+        for record, name in zip(records, df1.Name.tolist()):
+            if record is None:
+                continue
+            id_start, id_end = record
+            # print(id_start,id_end,name)
+            data += struct.pack(f"<{writer.fmts}",
+                                *[func(v) for v, func in zip([id_start, id_end, name],
+                                                             dtfuncs)])
+            i += 1
+            if (i % chunksize) == 0:
+                writer.write_chunk(data, dim)
+                data = b''
+                i = 0
+        if len(data) > 0:
+            writer.write_chunk(data, dim)
+        writer.close()
+        reader.close()
+
+    def regions_ssi(self, output, formats=['I', 'I'],
+                    columns=['ID_start', 'ID_end'],
+                    dimensions=['chrom'], bed=None,
+                    chunksize=2000, n_jobs=4):
+        n_dim = len(dimensions)
+        df = pd.read_csv(bed, sep='\t', header=None, usecols=list(range(n_dim + 3)),
+                         names=['chrom', 'start', 'end', 'Name'])
+        max_name_len = df.Name.apply(lambda x: len(x)).max()
+        Formats = formats + [f'{max_name_len}s']
+        Columns = columns + ['Name']
+        Dimensions = dimensions
+        pool = multiprocessing.Pool(n_jobs)
+        jobs = []
+        outdir = output + '.tmp'
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        for chrom, df1 in df.groupby('chrom'):
+            dim = tuple([chrom])
+            if dim not in self.dim2chunk_start:
+                continue
+            outfile = os.path.join(outdir, chrom + '.cz')
+            job = pool.apply_async(self.regions_ssi_worker,
+                                   (self.Input, outfile, dim, df1, Formats, Columns,
+                                    Dimensions, chunksize))
+            jobs.append(job)
+        for job in jobs:
+            r = job.get()
+        pool.close()
+        pool.join()
+        # merge
+        writer = Writer(Output=output, Formats=Formats,
+                        Columns=Columns, Dimensions=Dimensions,
+                        message=os.path.basename(bed))
+        writer.catcz(Input=f"{outdir}/*.cz")
+        os.system(f"rm -rf {outdir}")
+
     def category_ssi(self, output=None, formats=['I'], columns=['ID'],
                      dimensions=['chrom'], match_func=_isForwardCG,
                      chunksize=2000):
@@ -876,7 +945,9 @@ class Reader:
         regions : list
             list of list, first element is a tuple (dims), second is start, third is end,.
         s : int
+            column index in self.Columns for start position
         e : int
+            column index in self.Columns for end position
 
         Returns
         -------
@@ -927,7 +998,7 @@ class Reader:
             while record[e] <= end:
                 yield dim, record
                 record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
-            start_block_index_tmp = start_block_index
+            # start_block_index_tmp = start_block_index
 
     def pos2id(self, dim, positions, col_to_query=0):  # return IDs (primary_id)
         self._load_chunk(self.dim2chunk_start[dim], jump=False)
@@ -935,27 +1006,40 @@ class Reader:
             self._seek_and_read_1record(offset)[col_to_query]
             for offset in self._chunk_block_1st_record_virtual_offsets
         ]
-        start_block_index_tmp = 0
-        R = []
-        for pos in positions:  # positions is sorted, [[0,1],[3,4],[7,8]]
-            for idx in range(start_block_index_tmp, self._chunk_nblocks - 1):
-                if block_1st_starts[idx + 1] > pos:
-                    start_block_index = idx
+        start_block_index = 0
+        # R=[]
+        for start, end in positions:  # positions is sorted, [[0,1],[3,4],[2,8]]
+            while start_block_index < self._chunk_nblocks - 1:
+                if block_1st_starts[start_block_index + 1] > start:
                     break
-                start_block_index = self._chunk_nblocks - 1
+                start_block_index += 1
             virtual_offset = self._chunk_block_1st_record_virtual_offsets[start_block_index]
             self.seek(virtual_offset)  # seek to the target block, self._buffer
             block_start_offset = self._block_start_offset
             record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
-            while record[col_to_query] < pos:
-                record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
+            while record[col_to_query] < start:
+                try:
+                    record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
+                except:
+                    break
+            if record[col_to_query] < start:
+                yield None
+                continue
             if self._block_start_offset > block_start_offset:
                 start_block_index += 1
             primary_id = int((_BLOCK_MAX_LEN * start_block_index +
                               self._within_block_offset) / self._unit_size)
-            R.append(primary_id)
-            start_block_index_tmp = start_block_index
-        return R
+            id_start = primary_id
+            while record[col_to_query] < end:
+                try:
+                    record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
+                    primary_id += 1
+                except:
+                    break
+            id_end = primary_id  # ID for end position,should be included
+            # R.append([id_start,id_end]) #real_IDs=range(id_start,id_end+1)
+            yield [id_start, id_end]
+        # return R
 
     def query(self, Dimension=None, start=None, end=None, Regions=None,
               query_col=[0], reference=None, printout=True):
@@ -1013,11 +1097,15 @@ class Reader:
                     chunk_info = chunk_info.loc[chunk_info[d] == v]
                 Dimension = chunk_info.index.tolist()
                 Regions = [[dim, start, end] for dim in Dimension]
+            elif isinstance(Dimension, tuple):
+                Regions = [[Dimension, start, end]]
+            else:
+                raise ValueError("Unknown types of Dimension")
         else:
             if isinstance(Regions, str):
                 region_path = os.path.abspath(os.path.expanduser(Regions))
                 if os.path.exists(region_path):
-                    n_dim = self.header['Dimensions']
+                    n_dim = len(self.header['Dimensions'])
                     usecols = list(range(n_dim + 2))
                     df = pd.read_csv(region_path, sep='\t', header=None,
                                      usecols=usecols)
@@ -1037,7 +1125,7 @@ class Reader:
         elif len(query_col) == 2:
             s, e = query_col
         else:
-            raise ValueError("length of query_col can not be greater then 2.")
+            raise ValueError("length of query_col can not be greater than 2.")
 
         if reference is None:  # query position in this .cz file.
             for i in set([s, e]):
@@ -1517,7 +1605,8 @@ class Writer:
              sep='\t', chunksize=5000, header=None, skiprows=0):
         """
         Pack dataframe, stdin or a file path into .cz file with or without reference
-        coordinates file.
+        coordinates file. For example:
+            czip Writer -O genes_flank2k.cz -F Q,Q,21s,c,20s,35s -C begin,end,EnsemblID,strand,gene_name,gene_type -D chrom tocz -I genes_flank2k.bed.gz -u 1,2,3,5,6,7
 
         Parameters
         ----------
