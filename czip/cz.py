@@ -535,9 +535,9 @@ class Reader:
             if isinstance(Dimension, str):
                 order_path = os.path.abspath(os.path.expanduser(Dimension))
                 if os.path.exists(order_path):
-                    dim = pd.read_csv(order_path, sep='\t', header=None,
-                                      usecols=show_dim)[show_dim].apply(lambda x: tuple(x.tolist()),
-                                                                        axis=1).tolist()
+                    Dimension = pd.read_csv(order_path, sep='\t', header=None,
+                                            usecols=show_dim)[show_dim].apply(lambda x: tuple(x.tolist()),
+                                                                              axis=1).tolist()
                 else:
                     Dimension = Dimension.split(',')
             if isinstance(Dimension, (list, tuple)) and isinstance(Dimension[0], str):
@@ -751,8 +751,10 @@ class Reader:
         generator
         """
         self._load_chunk(self.dim2chunk_start[dim], jump=False)
-        block_start_offsets_tmp = None
+        pre_id_end = float("inf")
         for id_start, id_end in IDs:
+            if id_start < pre_id_end:
+                block_start_offsets_tmp = None
             block_index = ((id_start - 1) * self._unit_size) // (_BLOCK_MAX_LEN)
             block_start_offset = self._chunk_block_1st_record_virtual_offsets[
                                      block_index] >> 16
@@ -761,7 +763,9 @@ class Reader:
                 block_start_offsets_tmp = block_start_offset
             self._within_block_offset = ((id_start - 1) * self._unit_size
                                          ) % _BLOCK_MAX_LEN
+            # when the current id_start < previous id_end, would get an error.
             yield [self.read(self._unit_size) for i in range(id_start, id_end + 1)]
+            pre_id_end = id_end
 
     def getRecordsByIdRegions(self, dim=None, reference=None, IDs=None):
         """

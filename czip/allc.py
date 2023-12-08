@@ -615,6 +615,7 @@ def merge_cz(indir=None, cz_paths=None, class_table=None,
         out_ext = 'cz'
     if out_ext == 'cz':
         for chrom in chroms:
+            # merge batches into chrom (chunk)
             outname = os.path.join(outdir, f"{chrom}.{out_ext}")
             writer = Writer(Output=outname, Formats=formats,
                             Columns=header['Columns'], Dimensions=header['Dimensions'],
@@ -661,7 +662,7 @@ def merge_cz(indir=None, cz_paths=None, class_table=None,
         pool.join()
 
     # Second, merge chromosomes to outfile
-    if out_ext == 'cz':
+    if out_ext == 'cz':  # merge chroms into final output
         writer = Writer(Output=outfile, Formats=formats,
                         Columns=header['Columns'], Dimensions=header['Dimensions'],
                         message="merged")
@@ -804,6 +805,45 @@ def extractCG(input=None, outfile=None, ssi=None, chunksize=5000,
     writer.close()
     reader.close()
     ssi_reader.close()
+
+
+def aggregate(input=None, outfile=None, ssi=None, intersect=None, exclude=None,
+              chunksize=5000, formats=['H', 'H']):
+    cz_path = os.path.abspath(os.path.expanduser(input))
+    ssi_path = os.path.abspath(os.path.expanduser(ssi))
+    ssi_reader = Reader(ssi_path)
+    reader = Reader(cz_path)
+    writer = Writer(outfile, Formats=formats,
+                    Columns=reader.header['Columns'],
+                    Dimensions=reader.header['Dimensions'],
+                    message=os.path.basename(ssi_path))
+    dtfuncs = get_dtfuncs(writer.Formats)
+    for dim in reader.dim2chunk_start.keys():
+        if dim not in ssi_reader.dim2chunk_start.keys():
+            continue
+        # print(dim)
+        IDs = ssi_reader.get_ids_from_ssi(dim)
+        # names=[str(record[0], 'utf-8').rstrip('\x00') for record in ssi_reader.__fetch__(dim, s=2, e=3)]
+        # if len(IDs.shape) == 1:
+        #     records = reader._getRecordsByIds(dim, IDs)
+        assert len(IDs.shape) == 2
+        records = reader.getRecordsByIdRegions(dim=dim, IDs=IDs)
+        data, count = b'', 0
+        for record in records:  # unpacked bytes
+            # record is an array, nrows, two columns (mc and cov)
+            data += struct.pack(f"<{writer.fmts}",
+                                *[func(v) for v, func in zip(np.sum(record, axis=0),
+                                                             dtfuncs)])
+            count += 1
+            if count > chunksize:
+                writer.write_chunk(data, dim)
+                data, count = b'', 0
+        if len(data) > 0:
+            writer.write_chunk(data, dim)
+    writer.close()
+    reader.close()
+    ssi_reader.close()
+
 
 def __split_mat(infile, chrom, snames, outdir, n_ref):
     tbi = pysam.TabixFile(infile)
