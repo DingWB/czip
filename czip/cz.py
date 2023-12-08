@@ -1442,10 +1442,8 @@ class Writer:
         self._magic_size = len(_bcz_magic)
         self.verbose = verbose
         self.message = message
-        # if self.verbose > 0:
-        #     print(self.Formats, self.Columns, self.Dimensions)
-        #     print(type(self.Formats), type(self.Columns), type(self.Dimensions))
-        self.write_header()
+        if 'a' not in mode:
+            self.write_header()
 
     def write_header(self):
         f = self._handle

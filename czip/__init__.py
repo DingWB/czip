@@ -5,7 +5,7 @@ from .cz import (
     extract
 )
 from .allc import (AllC, generate_ssi1, bed2cz, generate_ssi2,
-                   merge_cz, extractCG,
+                   merge_cz, extractCG, aggregate,
                    merge_cell_type,
                    combp, prepare_methylpy, intersect, annot_dmr,
                    methylpy_heatmap)
@@ -26,6 +26,7 @@ def main():
             'merge_cell_type': merge_cell_type,
             'extract': extract,
             'extractCG': extractCG,
+            'aggregate': aggregate,
             "combp": combp,
             'prepare_methylpy': prepare_methylpy,
             'intersect': intersect,

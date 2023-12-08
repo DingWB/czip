@@ -807,13 +807,31 @@ def extractCG(input=None, outfile=None, ssi=None, chunksize=5000,
     ssi_reader.close()
 
 
-def aggregate(input=None, outfile=None, ssi=None, intersect=None, exclude=None,
+def aggregate(Input=None, Outfile=None, ssi=None, intersect=None, exclude=None,
               chunksize=5000, formats=['H', 'H']):
-    cz_path = os.path.abspath(os.path.expanduser(input))
+    """
+    Aggregate a given genomic region on a .cz file, for example:
+        /usr/bin/time -f "%e\t%M\t%P" czip aggregate -I test.cz -O test_gene.cz \
+        -s mm10_with_chrL.allc.genes_flank2k.ssi
+    Parameters
+    ----------
+    Input :
+    Outfile :
+    ssi :
+    intersect :
+    exclude :
+    chunksize :
+    formats :
+
+    Returns
+    -------
+
+    """
+    cz_path = os.path.abspath(os.path.expanduser(Input))
     ssi_path = os.path.abspath(os.path.expanduser(ssi))
     ssi_reader = Reader(ssi_path)
     reader = Reader(cz_path)
-    writer = Writer(outfile, Formats=formats,
+    writer = Writer(Outfile, Formats=formats,
                     Columns=reader.header['Columns'],
                     Dimensions=reader.header['Dimensions'],
                     message=os.path.basename(ssi_path))
@@ -829,7 +847,7 @@ def aggregate(input=None, outfile=None, ssi=None, intersect=None, exclude=None,
         assert len(IDs.shape) == 2
         records = reader._getRecordsByIdRegions(dim=dim, IDs=IDs)
         data, count = b'', 0
-        for record in records:  # unpacked bytes, many values
+        for record in records:  # unpacked bytes, many values, zip with names
             # record is an array, nrows, two columns (mc and cov)
             sum_v = np.array([0, 0])
             for r in record:  # for every C in a gene region
