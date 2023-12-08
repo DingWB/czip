@@ -821,19 +821,21 @@ def aggregate(input=None, outfile=None, ssi=None, intersect=None, exclude=None,
     for dim in reader.dim2chunk_start.keys():
         if dim not in ssi_reader.dim2chunk_start.keys():
             continue
-        # print(dim)
+        print(dim)
         IDs = ssi_reader.get_ids_from_ssi(dim)
         # names=[str(record[0], 'utf-8').rstrip('\x00') for record in ssi_reader.__fetch__(dim, s=2, e=3)]
         # if len(IDs.shape) == 1:
         #     records = reader._getRecordsByIds(dim, IDs)
         assert len(IDs.shape) == 2
-        records = reader.getRecordsByIdRegions(dim=dim, IDs=IDs)
+        records = reader._getRecordsByIdRegions(dim=dim, IDs=IDs)
         data, count = b'', 0
-        for record in records:  # unpacked bytes
+        for record in records:  # unpacked bytes, many values
             # record is an array, nrows, two columns (mc and cov)
+            sum_v = np.array([0, 0])
+            for r in record:  # for every C in a gene region
+                sum_v += np.array(struct.unpack(f"<{reader.fmts}", r))
             data += struct.pack(f"<{writer.fmts}",
-                                *[func(v) for v, func in zip(np.sum(record, axis=0),
-                                                             dtfuncs)])
+                                *[func(v) for v, func in zip(sum_v, dtfuncs)])
             count += 1
             if count > chunksize:
                 writer.write_chunk(data, dim)
@@ -843,7 +845,6 @@ def aggregate(input=None, outfile=None, ssi=None, intersect=None, exclude=None,
     writer.close()
     reader.close()
     ssi_reader.close()
-
 
 def __split_mat(infile, chrom, snames, outdir, n_ref):
     tbi = pysam.TabixFile(infile)
