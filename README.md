@@ -19,8 +19,9 @@ pip install git+http://github.com/DingWB/czip
 | Quickly Merge?                   | No       | No        | Yes   |
 
 ![img.png](docs/images/tab1.png)
+<!---
 ![docs/images/img.png](docs/images/design.png)
-
+-->
 ## Usage
 
 [Documentation](https://dingwb.github.io/czip)
