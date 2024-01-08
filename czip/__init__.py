@@ -10,7 +10,7 @@ from .allc import (AllC, generate_ssi1, bed2cz, generate_ssi2,
                    combp, annot_dmr
                    )
 
-__version__ = "0.3"
+__version__ = "0.4.1"
 
 def main():
     fire.core.Display = lambda lines, out: print(*lines, file=out)

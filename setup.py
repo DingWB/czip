@@ -10,7 +10,7 @@ from pathlib import Path
 # from Cython.Build import cythonize
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
-__version__ = "0.3"
+__version__ = "0.4.1"
 
 setup(
     name="czip",
