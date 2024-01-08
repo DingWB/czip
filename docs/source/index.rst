@@ -8,6 +8,7 @@ Chunk ZIP
 
   quick_start
   dnam
+  dev
   benchmark
   modules
 

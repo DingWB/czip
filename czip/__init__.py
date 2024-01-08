@@ -7,10 +7,10 @@ from .cz import (
 from .allc import (AllC, generate_ssi1, bed2cz, generate_ssi2,
                    merge_cz, extractCG, aggregate,
                    merge_cell_type,
-                   combp, prepare_methylpy, intersect, annot_dmr,
-                   methylpy_heatmap)
+                   combp, annot_dmr
+                   )
 
-__version__ = "0.2.1"
+__version__ = "0.3"
 
 def main():
     fire.core.Display = lambda lines, out: print(*lines, file=out)
@@ -28,10 +28,7 @@ def main():
             'extractCG': extractCG,
             'aggregate': aggregate,
             "combp": combp,
-            'prepare_methylpy': prepare_methylpy,
-            'intersect': intersect,
             'annot_dmr': annot_dmr,
-            'methylpy_heatmap': methylpy_heatmap,
         }
 	)
 
