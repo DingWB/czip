@@ -1089,8 +1089,8 @@ class Reader:
             raise ValueError("Please query by Dimension,start,end or by regions, "
                              "not both !")
         if not Dimension is None:
-            assert not start is None
-            assert not end is None
+			assert not start is None, "To query the whole chromosome, please use view, instead of query"
+			assert not end is None, "To query the whole chromosome, please use view, instead of query"
             if isinstance(Dimension, str):
                 Dimension = tuple([Dimension])
                 Regions = [[Dimension, start, end]]
