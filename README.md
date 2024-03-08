@@ -25,3 +25,7 @@ pip install git+http://github.com/DingWB/czip
 ## Usage
 
 [Documentation](https://dingwb.github.io/czip)
+
+## Example dataset
+
+[https://figshare.com/articles/dataset/czip_example_data/25374073](https://figshare.com/articles/dataset/czip_example_data/25374073)
