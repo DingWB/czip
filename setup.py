@@ -10,11 +10,12 @@ from pathlib import Path
 # from Cython.Build import cythonize
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
-__version__ = "0.4.1"
+# __version__ = "0.4.1"
 
 setup(
     name="czip",
-    version=__version__,
+	setup_requires=['setuptools_scm'],
+	use_scm_version=True,  # version=__version__,
     description="czip: Chunk based ZIP",
     long_description=long_description,
     long_description_content_type='text/markdown',

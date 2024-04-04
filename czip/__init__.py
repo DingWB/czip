@@ -10,7 +10,10 @@ from .allc import (AllC, generate_ssi1, bed2cz, generate_ssi2,
                    combp, annot_dmr
                    )
 
-__version__ = "0.4.1"
+from ._version import version as __version__
+
+
+# __version__ = "0.4.1"
 
 def main():
     fire.core.Display = lambda lines, out: print(*lines, file=out)
@@ -32,5 +35,6 @@ def main():
         }
 	)
 
-if __name__=="_main__":
+
+if __name__ == "__main__":
     main()
