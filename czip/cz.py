@@ -18,6 +18,42 @@ _bcz_eof = b"\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00BM\x02\x00\x1b\x00\
 _version = 1.0
 __compiled__ = "python"
 
+# Try to import accelerated Cython functions. If unavailable, fall back to
+# pure-Python implementations below.
+try:
+	from .cz_accel import load_bcz_block as _c_load_bcz_block, compress_block as _c_compress_block
+	from .cz_accel import unpack_records as _c_unpack_records
+	from .cz_accel import c_read as _c_read
+	from .cz_accel import c_readline as _c_readline
+	from .cz_accel import c_pos2id as _c_pos2id
+	from .cz_accel import c_read_1record as _c_read_1record
+	from .cz_accel import c_seek_and_read_1record as _c_seek_and_read_1record
+	from .cz_accel import c_query_regions as _c_query_regions
+	from .cz_accel import c_write_chunk_tail as _c_write_chunk_tail
+	from .cz_accel import c_adjust_virtual_offsets as _c_adjust_virtual_offsets
+	from .cz_accel import c_pack_records as _c_pack_records
+	from .cz_accel import c_pack_records_fast as _c_pack_records_fast
+	from .cz_accel import c_fetch_chunk as _c_fetch_chunk
+	from .cz_accel import c_get_records_by_ids as _c_get_records_by_ids
+	from .cz_accel import c_block_first_values as _c_block_first_values
+except Exception:
+	_c_load_bcz_block = None
+	_c_compress_block = None
+	_c_unpack_records = None
+	_c_read = None
+	_c_readline = None
+	_c_pos2id = None
+	_c_read_1record = None
+	_c_seek_and_read_1record = None
+	_c_query_regions = None
+	_c_write_chunk_tail = None
+	_c_adjust_virtual_offsets = None
+	_c_pack_records = None
+	_c_pack_records_fast = None
+	_c_fetch_chunk = None
+	_c_get_records_by_ids = None
+	_c_block_first_values = None
+
 def dtype_func(f):
 	if f in ['f', 'd']:
 		return float
@@ -82,36 +118,25 @@ def SummaryBczBlocks(handle):
 		data_start += data_len
 
 # ==========================================================
-def _load_bcz_block(handle, decompress=False):
+def _py_load_bcz_block(handle, decompress=False):
+	"""Pure-Python fallback for reading a BCZ block from `handle`."""
 	magic = handle.read(2)
 	if not magic or magic != _block_magic:  # next chunk or EOF
 		raise StopIteration
 	block_size = struct.unpack("<H", handle.read(2))[0]
-	# block size is the size of compressed data + 4 (header + tail)
-	"""
-	2 bytes is the size of block_size
-	10 bytes for the GZIP header.
-	2 bytes for the block tail: block_data_len
-	1 byte for the empty GZIP trailer.
-	"""
 	if decompress:
-		"""
-		# there is no gzip header for deflate compressed format
-		to (de-)compress deflate format, use wbits = -zlib.MAX_WBITS (-15)
-		to (de-)compress zlib format, use wbits = zlib.MAX_WBITS
-		to (de-)compress gzip format, use wbits = zlib.MAX_WBITS | 16
-		"""
 		deflate_size = block_size - 6
-		d = zlib.decompressobj(-15)  # -zlib.MAX_WBITS, means no headers
+		d = zlib.decompressobj(-15)
 		data = d.decompress(handle.read(deflate_size)) + d.flush()
 		data_len = struct.unpack("<H", handle.read(2))[0]
-		# refer to: http://samtools.github.io/hts-specs/SAMv1.pdf
-		# data_len = len(data) #uncompressed data length
 		return block_size, data
 	else:
 		handle.seek(block_size - 6, 1)
 		data_len = struct.unpack("<H", handle.read(2))[0]
 		return block_size, data_len
+
+# Use accelerated loader if available, otherwise use Python fallback.
+_load_bcz_block = _c_load_bcz_block if _c_load_bcz_block is not None else _py_load_bcz_block
 # ==========================================================
 def open1(infile):
 	if hasattr(infile, 'readline'):
@@ -437,8 +462,13 @@ class Reader:
 			# deal with such case: unit_size is 10, but data(_buffer) size is 18,
 			self._cached_data += self._buffer
 			end_index = len(self._cached_data) - (len(self._cached_data) % self._unit_size)
-			for result in struct.iter_unpack(f"<{self.fmts}", self._cached_data[:end_index]):
-				R.append(result)
+			chunk_bytes = self._cached_data[:end_index]
+			if _c_unpack_records is not None:
+				for result in _c_unpack_records(chunk_bytes, self.fmts):
+					R.append(result)
+			else:
+				for result in struct.iter_unpack(f"<{self.fmts}", chunk_bytes):
+					R.append(result)
 			if not chunksize is None and i >= chunksize:
 				df = pd.DataFrame(R, columns=self.header['Columns'])
 				R = []
@@ -712,6 +742,12 @@ class Reader:
 		block_start_offset_tmp = None
 		for block_start_offset, within_block_offset in zip(
 			block_start_offsets, within_block_offsets):
+			# fast path using C helper
+			if _c_get_records_by_ids is not None:
+				self._load_chunk(self.dim2chunk_start[dim], jump=False)
+				for rec in _c_get_records_by_ids(self._handle, self._chunk_block_1st_record_virtual_offsets, self._unit_size, IDs):
+					yield rec
+				return
 			if block_start_offset != block_start_offset_tmp:
 				self._load_block(block_start_offset)
 				block_start_offset_tmp = block_start_offset
@@ -865,8 +901,13 @@ class Reader:
 		while self._block_raw_length > 0:
 			self._cached_data += self._buffer
 			end_index = len(self._cached_data) - (len(self._cached_data) % self._unit_size)
-			for result in struct.iter_unpack(f"<{self.fmts}", self._cached_data[:end_index]):
-				yield result[s:e]  # a tuple
+			chunk_bytes = self._cached_data[:end_index]
+			if _c_unpack_records is not None:
+				for result in _c_unpack_records(chunk_bytes, self.fmts):
+					yield result[s:e]
+			else:
+				for result in struct.iter_unpack(f"<{self.fmts}", chunk_bytes):
+					yield result[s:e]  # a tuple
 			# print(result)
 			self._cached_data = self._cached_data[end_index:]
 			self._load_block()
@@ -892,16 +933,39 @@ class Reader:
 		i, _cached_data = 1, self._buffer
 		while self._block_raw_length > 0:
 			self._load_block()
+			if _c_fetch_chunk is not None:
+				# fast path: fetch entire chunk into memory and unpack
+				chunk_bytes = _c_fetch_chunk(self._handle, self._chunk_start_offset + 10,
+									self._chunk_block_1st_record_virtual_offsets,
+									self.fmts, self._unit_size)
+				if chunk_bytes:
+					if _c_unpack_records is not None:
+						for result in _c_unpack_records(chunk_bytes, self.fmts):
+							yield result[s:e]
+					else:
+						for result in struct.iter_unpack(f"<{self.fmts}", chunk_bytes):
+							yield result[s:e]
+				# we've consumed the chunk, break out
+				break
 			if i < unit_nblock:
 				_cached_data += self._buffer
 				i += 1
 			else:
-				for result in struct.iter_unpack(f"<{self.fmts}", _cached_data):
-					yield result[s:e]  # a tuple
+				# unpack the whole buffer
+				if _c_unpack_records is not None:
+					for result in _c_unpack_records(_cached_data, self.fmts):
+						yield result[s:e]
+				else:
+					for result in struct.iter_unpack(f"<{self.fmts}", _cached_data):
+						yield result[s:e]  # a tuple
 				i, _cached_data = 1, self._buffer
 		if len(_cached_data) > 0:
-			for result in struct.iter_unpack(f"<{self.fmts}", _cached_data):
-				yield result[s:e]  # a tuple
+			if _c_unpack_records is not None:
+				for result in _c_unpack_records(_cached_data, self.fmts):
+					yield result[s:e]
+			else:
+				for result in struct.iter_unpack(f"<{self.fmts}", _cached_data):
+					yield result[s:e]  # a tuple
 
 	def fetch(self, dim):
 		for record in self.__fetch__(dim):
@@ -935,29 +999,20 @@ class Reader:
 			yield struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
 
 	def _read_1record(self):
+		# accelerated single-record read
+		if _c_read_1record is not None:
+			rec, self._block_raw_length, self._buffer, self._within_block_offset = _c_read_1record(
+				self._handle, self._block_raw_length, self._buffer,
+				self._within_block_offset, self.fmts, self._unit_size
+			)
+			return rec
+		# fallback
 		tmp = self._buffer[
 			  self._within_block_offset:self._within_block_offset + self._unit_size]
 		self._within_block_offset += self._unit_size
 		return struct.unpack(f"<{self.fmts}", tmp)
 
 	def _query_regions(self, regions, s, e):
-		"""
-		query given regions, start and end index to the columns of data columns.
-
-		Parameters
-		----------
-		regions : list
-			list of list, first element is a tuple (dims), second is start, third is end,.
-		s : int
-			column index in self.Columns for start position
-		e : int
-			column index in self.Columns for end position
-
-		Returns
-		-------
-		Return a generator, the first element of generator is start offset of the
-		1st record.
-		"""
 		dim_tmp = None
 		for dim, start, end in regions:
 			if dim != dim_tmp:
@@ -965,7 +1020,16 @@ class Reader:
 				start_block_index = 0
 				dim_tmp = dim
 				r = self._load_chunk(self.dim2chunk_start[dim], jump=False)
-				# find the closest block to a given start position
+				# Try to use accelerated query for this chunk
+				if _c_query_regions is not None:
+					# gather regions for current dim (may be only one here)
+					res = _c_query_regions(self._handle,
+								self._chunk_block_1st_record_virtual_offsets,
+								self.fmts, self._unit_size, [(start, end)], s, e, dim)
+					for item in res:
+						yield item
+					continue
+				# fallback: compute block first starts and scan
 				block_1st_starts = np.array([
 					self._seek_and_read_1record(offset)[s]
 					for offset in self._chunk_block_1st_record_virtual_offsets
@@ -1002,17 +1066,48 @@ class Reader:
 			while record[e] <= end:
 				yield dim, record
 				record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
+			virtual_offset = self._chunk_block_1st_record_virtual_offsets[start_block_index]
+			self.seek(virtual_offset)  # seek to the target block, self._buffer
+			block_start_offset = self._block_start_offset
+			record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
+			while record[s] < start:
+				# record = self._read_1record()
+				record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
+			# here we got the 1st record, return the id (row number) of 1st record.
+			# size of each block is 65535 (2**16-1=_BLOCK_MAX_LEN)
+			# primary_id = int((_BLOCK_MAX_LEN * block_index +
+			#                   self._within_block_offset) / self._unit_size)
+			if self._block_start_offset > block_start_offset:
+				start_block_index += 1
+			primary_id = int((_BLOCK_MAX_LEN * start_block_index +
+							  self._within_block_offset) / self._unit_size)
+			# primary_id is the current record (record[s] == start),
+			# with_block_offset is the end of current record
+			# 1-based, primary_id >=1, cause _within_block_offset >= self._unit_size
+			yield "primary_id_&_dim:", primary_id, dim
+			while record[e] <= end:
+				yield dim, record
+				record = struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
 		# start_block_index_tmp = start_block_index
 
 	def pos2id(self, dim, positions, col_to_query=0):  # return IDs (primary_id)
 		self._load_chunk(self.dim2chunk_start[dim], jump=False)
+		# Try accelerated implementation if available
+		if _c_pos2id is not None:
+			# pass handle and relevant chunk metadata
+			res = _c_pos2id(self._handle,
+			                 self._chunk_block_1st_record_virtual_offsets,
+			                 self.fmts, self._unit_size, positions, col_to_query)
+			for r in res:
+				yield r
+			return
+		# fallback python implementation
 		block_1st_starts = [
 			self._seek_and_read_1record(offset)[col_to_query]
 			for offset in self._chunk_block_1st_record_virtual_offsets
 		]
 		start_block_index = 0
-		# R=[]
-		for start, end in positions:  # positions is sorted, [[0,1],[3,4],[2,8]]
+		for start, end in positions:
 			while start_block_index < self._chunk_nblocks - 1:
 				if block_1st_starts[start_block_index + 1] > start:
 					break
@@ -1032,7 +1127,7 @@ class Reader:
 			if self._block_start_offset > block_start_offset:
 				start_block_index += 1
 			primary_id = int((_BLOCK_MAX_LEN * start_block_index +
-							  self._within_block_offset) / self._unit_size)
+				                  self._within_block_offset) / self._unit_size)
 			id_start = primary_id
 			while record[col_to_query] < end:
 				try:
@@ -1041,7 +1136,6 @@ class Reader:
 				except:
 					break
 			id_end = primary_id  # ID for end position,should be included
-			# R.append([id_start,id_end]) #real_IDs=range(id_start,id_end+1)
 			yield [id_start, id_end]
 
 	# return R
@@ -1227,6 +1321,8 @@ class Reader:
 			ref_reader.close()
 
 	def _seek_and_read_1record(self, virtual_offset):
+		if _c_seek_and_read_1record is not None:
+			return _c_seek_and_read_1record(self._handle, virtual_offset, self.fmts, self._unit_size)
 		self.seek(virtual_offset)
 		return struct.unpack(f"<{self.fmts}", self.read(self._unit_size))
 
@@ -1265,29 +1361,40 @@ class Reader:
 
 	def read(self, size=1):
 		"""Read method for the BGZF module."""
+		# accelerated path
+		if _c_read is not None:
+			data, self._block_raw_length, self._buffer, self._within_block_offset = _c_read(
+				self._handle, self._block_raw_length, self._buffer,
+				self._within_block_offset, size
+			)
+			return data
+		# fallback
 		result = b""
 		while size and self._block_raw_length:
 			if self._within_block_offset + size <= len(self._buffer):
-				# This may leave us right at the end of a block
-				# (lazy loading, don't load the next block unless we have too)
 				data = self._buffer[
-					   self._within_block_offset: self._within_block_offset + size
-					   ]
+					self._within_block_offset: self._within_block_offset + size
+					]
 				self._within_block_offset += size
-				# if not data:
-				#     raise ValueError("Must be at least 1 byte")
 				result += data
 				break
 			else:  # need to load the enxt block
 				data = self._buffer[self._within_block_offset:]
 				size -= len(data)
-				self._load_block()  # will reset offsets and _within_block_offset
+				self._load_block()
 				result += data
-
 		return result
 
 	def readline(self):
 		"""Read a single line for the BGZF file."""
+		# accelerated path
+		if _c_readline is not None:
+			data, self._block_raw_length, self._buffer, self._within_block_offset = _c_readline(
+				self._handle, self._block_raw_length, self._buffer,
+				self._within_block_offset, getattr(self, '_newline', b'\n')
+			)
+			return data
+		# fallback
 		result = b""
 		while self._block_raw_length:
 			i = self._buffer.find(self._newline, self._within_block_offset)
@@ -1483,16 +1590,16 @@ class Writer:
 	def _write_block(self, block):
 		# if len(block) > _BLOCK_MAX_LEN:  # 65536 = 1 << 16 = 2**16
 		#     raise ValueError(f"{len(block)} Block length > {_BLOCK_MAX_LEN}")
-		c = zlib.compressobj(
-			self.level, zlib.DEFLATED, -15, zlib.DEF_MEM_LEVEL, 0
-		)
-		"""
-		deflate_compress = zlib.compressobj(9, zlib.DEFLATED, -zlib.MAX_WBITS)
-		zlib_compress = zlib.compressobj(9, zlib.DEFLATED, zlib.MAX_WBITS)
-		gzip_compress = zlib.compressobj(9, zlib.DEFLATED, zlib.MAX_WBITS | 16)
-		"""
-		compressed = c.compress(block) + c.flush()
-		del c
+		# Use Cython-accelerated compressor if available, otherwise fall back
+		# to the pure-Python zlib.compressobj route.
+		if _c_compress_block is not None:
+			compressed = _c_compress_block(block, self.level)
+		else:
+			c = zlib.compressobj(
+				self.level, zlib.DEFLATED, -15, zlib.DEF_MEM_LEVEL, 0
+			)
+			compressed = c.compress(block) + c.flush()
+			del c
 		# if len(compressed) > _BLOCK_MAX_LEN:
 		#     raise RuntimeError(
 		#         "Didn't compress enough, try less data in this block"
@@ -1518,6 +1625,11 @@ class Writer:
 		# tail: chunk_data_len (Q,8bytes) + n_blocks (Q, 8bytes)
 		# + list of block start offsets (n_blocks * 8 bytes)
 		# + List of dimensions ()
+		if _c_write_chunk_tail is not None:
+			_c_write_chunk_tail(self._handle, self._chunk_data_len,
+							self._block_1st_record_virtual_offsets, self._chunk_dims)
+			return
+		# fallback
 		self._handle.write(struct.pack("<Q", self._chunk_data_len))
 		self._handle.write(struct.pack("<Q", len(self._block_1st_record_virtual_offsets)))
 		for block_offset in self._block_1st_record_virtual_offsets:
@@ -1694,8 +1806,15 @@ class Writer:
 		#     print(self.usecols, self.dim_cols)
 		#     print(type(self.usecols), type(self.dim_cols))
 		for df, dim in data_generator:
-			data = df.apply(lambda x: struct.pack(f"<{self.fmts}", *x.tolist()),
-							axis=1).sum()
+			if _c_pack_records_fast is not None:
+				rows = df.values.tolist()
+				data = _c_pack_records_fast(rows, self.fmts)
+			elif _c_pack_records is not None:
+				rows = df.values.tolist()
+				data = _c_pack_records(rows, self.fmts)
+			else:
+				data = df.apply(lambda x: struct.pack(f"<{self.fmts}", *x.tolist()),
+						axis=1).sum()
 			self.write_chunk(data, dim)
 		self.close()
 
@@ -1807,13 +1926,16 @@ class Writer:
 				# self._handle.write(reader._handle.read(end_offset - start_offset))
 				self._handle.write(reader._handle.read(chunk_size + 16))
 				# modify the chunk_black_1st_record_virtual_offsets
-				new_block_1st_record_vof = []
-				for offset in b1str_virtual_offsets:
-					block_offset, within_block_offset = split_virtual_offset(offset)
-					new_block_offset = delta_offset + block_offset
-					new_1st_rd_vof = make_virtual_offset(new_block_offset,
-														 within_block_offset)
-					new_block_1st_record_vof.append(new_1st_rd_vof)
+				if _c_adjust_virtual_offsets is not None:
+					new_block_1st_record_vof = _c_adjust_virtual_offsets(delta_offset, b1str_virtual_offsets)
+				else:
+					new_block_1st_record_vof = []
+					for offset in b1str_virtual_offsets:
+						block_offset, within_block_offset = split_virtual_offset(offset)
+						new_block_offset = delta_offset + block_offset
+						new_1st_rd_vof = make_virtual_offset(new_block_offset,
+								 within_block_offset)
+						new_block_1st_record_vof.append(new_1st_rd_vof)
 				# write new_block_1st_record_vof
 				for block_offset in new_block_1st_record_vof:
 					self._handle.write(struct.pack("<Q", block_offset))
@@ -1888,6 +2010,7 @@ class Writer:
 	def __exit__(self, type, value, traceback):
 		"""Close a file with WITH statement."""
 		self.close()
+
 # ==========================================================
 if __name__=="__main__":
 	import fire

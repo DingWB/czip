@@ -7,10 +7,12 @@ try:
 except ImportError:
     from distutils.core import setup, find_packages
 from pathlib import Path
-# from Cython.Build import cythonize
+from Cython.Build import cythonize
+from setuptools import Extension
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 # __version__ = "0.4.1"
+
 
 setup(
     name="czip",
@@ -35,5 +37,24 @@ setup(
             ],
     },
 
-    # ext_modules=cythonize("czip/cz.pyx",language_level = "3"), #python setup.py build_ext --inplace
+    # Build the acceleration extension(s). If Cython is available this will
+    # compile the .pyx module we added (`czip/cz_accel.pyx`). Silence a few
+    # clang warnings that are benign on macOS by passing extra compile args.
+    ext_modules=cythonize(
+        [
+            Extension(
+                "czip.cz_accel",
+                ["czip/cz_accel.pyx"],
+                extra_compile_args=[
+                    "-Wno-unreachable-code-fallthrough",
+                    "-Wno-unused-result",
+                    "-Wno-sign-compare",
+                ],
+            )
+        ],
+        language_level="3",
+    ),
 )
+
+
+# python setup.py build_ext --inplace

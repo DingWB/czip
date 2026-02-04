@@ -1,0 +1,11 @@
+packaging>=20
+setuptools
+tomli>=1
+typing-extensions
+
+[rich]
+rich
+
+[simple]
+
+[toml]

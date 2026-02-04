@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" serverName="x-wding2@anvil.rcac.purdue.edu:22 key" uploadOnCheckin="d72b8809-822a-4bf5-9405-6a34cecfa60c" remoteFilesAllowedToDisappearOnAutoupload="false">
+    <serverData>
+      <paths name="anvil-6000">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/Projects/Github/czip" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="x-wding2@anvil.rcac.purdue.edu:22 key">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/Projects/Github/czip" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myUploadOnCheckinName" value="anvil-6000" />
+  </component>
+</project>

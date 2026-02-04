@@ -1,4 +1,3 @@
-import fire
 from .cz import (
     Reader,
     Writer,
@@ -16,6 +15,7 @@ from ._version import version as __version__
 # __version__ = "0.4.1"
 
 def main():
+    import fire
     fire.core.Display = lambda lines, out: print(*lines, file=out)
     fire.Fire(
         {
@@ -32,7 +32,7 @@ def main():
             'aggregate': aggregate,
             "combp": combp,
             'annot_dmr': annot_dmr,
-        }
+        },serialize=lambda x:print(x) if not x is None else print("")
 	)
 
 

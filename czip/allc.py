@@ -18,6 +18,7 @@ from scipy import stats
 import math
 from .cz import (Reader, Writer, get_dtfuncs,
                  _BLOCK_MAX_LEN, _chunk_magic)
+from .cz import _c_pack_records_fast as _c_pack_records_fast, _c_pack_records as _c_pack_records
 
 # ==========================================================
 def WriteC(record, outdir, chunksize=5000):
@@ -34,6 +35,7 @@ def WriteC(record, outdir, chunksize=5000):
                     Dimensions=['chrom'])
     dtfuncs = get_dtfuncs(writer.Formats)
     N = record.seq.__len__()
+    rows_buf = []
     data = b''
     for i in range(N):  # 0-based
         base = record.seq[i:i + 1].upper()
@@ -54,12 +56,24 @@ def WriteC(record, outdir, chunksize=5000):
 
         # f.write(f"{chrom}\t{i}\t{i + 1}\t{context}\t{strand}\n")
         values = [func(v) for v, func in zip([i + 1, strand, context], dtfuncs)]
-        data += struct.pack(writer.fmts, *values)
+        rows_buf.append(values)
         # position is 0-based (start) 1-based (end position, i+1)
-        if i % chunksize == 0 and len(data) > 0:
+        if (i % chunksize == 0 and len(rows_buf) > 0):
+            if _c_pack_records_fast is not None:
+                data = _c_pack_records_fast(rows_buf, writer.fmts)
+            elif _c_pack_records is not None:
+                data = _c_pack_records(rows_buf, writer.fmts)
+            else:
+                data = b''.join(struct.pack(writer.fmts, *r) for r in rows_buf)
             writer.write_chunk(data, [chrom])
-            data = b''
-    if len(data) > 0:
+            rows_buf = []
+    if len(rows_buf) > 0:
+        if _c_pack_records_fast is not None:
+            data = _c_pack_records_fast(rows_buf, writer.fmts)
+        elif _c_pack_records is not None:
+            data = _c_pack_records(rows_buf, writer.fmts)
+        else:
+            data = b''.join(struct.pack(writer.fmts, *r) for r in rows_buf)
         writer.write_chunk(data, [chrom])
     writer.close()
 
@@ -196,39 +210,56 @@ def bed2cz(input, outfile, reference=None, missing_value=[0, 0],
         for chrom in all_chroms:
             # print(chrom,'\t'*4,end='\r')
             # method 1
-            ref_positions = ref_reader.__fetch__(tuple([chrom]), s=pr, e=pr + 1)
-            records = tbi.fetch(chrom)
-            data, i = b'', 0
-            row_query = next(records).rstrip('\n').split(sep)
-            row_query_pos = int(row_query[pa])
-            for ref_pos in ref_positions:
-                if ref_pos[0] < row_query_pos:
-                    data += na_value_bytes
-                    i += 1
-                else:
-                    if ref_pos[0] == row_query_pos:  # match
-                        data += struct.pack(f"<{writer.fmts}",
-                                            *[func(row_query[i]) for i, func in
-                                              zip(usecols, dtfuncs)
-                                              ])
+                ref_positions = ref_reader.__fetch__(tuple([chrom]), s=pr, e=pr + 1)
+                records = tbi.fetch(chrom)
+                rows_buf = []
+                i = 0
+                row_query = next(records).rstrip('\n').split(sep)
+                row_query_pos = int(row_query[pa])
+                for ref_pos in ref_positions:
+                    if ref_pos[0] < row_query_pos:
+                        rows_buf.append(tuple(missing_value))
                         i += 1
-                    try:
-                        row_query = next(records).rstrip('\n').split(sep)
-                        row_query_pos = int(row_query[pa])
-                    except:
-                        break
-                if i > chunksize:
+                    else:
+                        if ref_pos[0] == row_query_pos:  # match
+                            vals = tuple(func(row_query[j]) for j, func in zip(usecols, dtfuncs))
+                            rows_buf.append(vals)
+                            i += 1
+                        try:
+                            row_query = next(records).rstrip('\n').split(sep)
+                            row_query_pos = int(row_query[pa])
+                        except:
+                            break
+                    if i > chunksize:
+                        if _c_pack_records_fast is not None:
+                            data = _c_pack_records_fast(rows_buf, writer.fmts)
+                        elif _c_pack_records is not None:
+                            data = _c_pack_records(rows_buf, writer.fmts)
+                        else:
+                            data = b''.join(struct.pack(f"<{writer.fmts}", *r) for r in rows_buf)
+                        writer.write_chunk(data, [chrom])
+                        rows_buf, i = [], 0
+                # when break: write all the rest reference positions (na_value)
+                for ref_pos in ref_positions:
+                    rows_buf.append(tuple(missing_value))
+                    i += 1
+                    if i > chunksize:
+                        if _c_pack_records_fast is not None:
+                            data = _c_pack_records_fast(rows_buf, writer.fmts)
+                        elif _c_pack_records is not None:
+                            data = _c_pack_records(rows_buf, writer.fmts)
+                        else:
+                            data = b''.join(struct.pack(f"<{writer.fmts}", *r) for r in rows_buf)
+                        writer.write_chunk(data, [chrom])
+                        rows_buf, i = [], 0
+                if len(rows_buf) > 0:
+                    if _c_pack_records_fast is not None:
+                        data = _c_pack_records_fast(rows_buf, writer.fmts)
+                    elif _c_pack_records is not None:
+                        data = _c_pack_records(rows_buf, writer.fmts)
+                    else:
+                        data = b''.join(struct.pack(f"<{writer.fmts}", *r) for r in rows_buf)
                     writer.write_chunk(data, [chrom])
-                    data, i = b'', 0
-            # when break: write all the rest reference positions (na_value_bytes)
-            for ref_pos in ref_positions:
-                data += na_value_bytes
-                i += 1
-                if i > chunksize:
-                    writer.write_chunk(data, [chrom])
-                    data, i = b'', 0
-            if len(data) > 0:
-                writer.write_chunk(data, [chrom])
 
             # methd 2, similar speed, but larger memory requirement.
             # ref_positions = np.array([pos[0] for pos in ref_reader.__fetch__(tuple([chrom]), s=pr, e=pr + 1)])
@@ -281,10 +312,29 @@ def bed2cz(input, outfile, reference=None, missing_value=[0, 0],
             #     writer.write_chunk(data, [chrom])
 
             # method 2
+            rows_buf = []
+            i = 0
             for line in tbi.fetch(chrom):
                 values = line.rstrip('\n').split(sep)
-                data = struct.pack(f"<{writer.fmts}",
-                                   *[func(values[i]) for i, func in zip(usecols, dtfuncs)])
+                vals = tuple(func(values[j]) for j, func in zip(usecols, dtfuncs))
+                rows_buf.append(vals)
+                i += 1
+                if i >= chunksize:
+                    if _c_pack_records_fast is not None:
+                        data = _c_pack_records_fast(rows_buf, writer.fmts)
+                    elif _c_pack_records is not None:
+                        data = _c_pack_records(rows_buf, writer.fmts)
+                    else:
+                        data = b''.join(struct.pack(f"<{writer.fmts}", *r) for r in rows_buf)
+                    writer.write_chunk(data, [chrom])
+                    rows_buf, i = [], 0
+            if len(rows_buf) > 0:
+                if _c_pack_records_fast is not None:
+                    data = _c_pack_records_fast(rows_buf, writer.fmts)
+                elif _c_pack_records is not None:
+                    data = _c_pack_records(rows_buf, writer.fmts)
+                else:
+                    data = b''.join(struct.pack(f"<{writer.fmts}", *r) for r in rows_buf)
                 writer.write_chunk(data, [chrom])
     writer.close()
     tbi.close()

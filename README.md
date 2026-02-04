@@ -29,3 +29,9 @@ pip install git+http://github.com/DingWB/czip
 ## Example dataset
 
 [https://figshare.com/articles/dataset/czip_example_data/25374073](https://figshare.com/articles/dataset/czip_example_data/25374073)
+
+
+## dev
+```shell
+python setup.py build_ext --inplace
+```
